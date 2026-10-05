@@ -152,6 +152,17 @@ model ArticleTranslation {
   @@index([locale])
 }
 
+/// Uploaded bytes, when STORAGE_DRIVER=db. Serverless hosts (Vercel and the
+/// like) have no writable disk that survives a request, so the database is the
+/// one place every host agrees on. On a VPS leave the driver on `disk`.
+model MediaBlob {
+  id          String   @id // the file name used in /media/<id>
+  contentType String
+  size        Int
+  bytes       Bytes
+  createdAt   DateTime @default(now())
+}
+
 model Media {
   id        String    @id @default(cuid())
   articleId String

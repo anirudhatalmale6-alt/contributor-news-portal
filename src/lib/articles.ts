@@ -137,8 +137,24 @@ export async function articleForLocale(locale: Locale, slug: string) {
   };
 }
 
-/** Slugs to pre-render for a locale. */
+/**
+ * Slugs to pre-render for a locale.
+ *
+ * Returns nothing if the database is unreachable or the tables do not exist
+ * yet: the very first deploy on a fresh host builds before `migrate deploy`
+ * has run, and a build that dies there is a terrible first impression. Pages
+ * are generated on demand afterwards either way.
+ */
 export async function publishedSlugs(locale: Locale, take = 200) {
+  try {
+    return await slugsFor(locale, take);
+  } catch (err) {
+    console.warn("publishedSlugs: database not ready, skipping prerender", err);
+    return [];
+  }
+}
+
+async function slugsFor(locale: Locale, take: number) {
   const [originals, translations] = await Promise.all([
     prisma.article.findMany({
       where: { status: "APPROVED", language: locale },

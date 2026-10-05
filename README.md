@@ -118,10 +118,16 @@ audit trail. Every state change is written to the `Review` table with who did it
 
 ## Media
 
-Uploads are written to `UPLOAD_DIR` (default `./storage/uploads`) and served by `/media/:name`,
-never from `public/`. Two reasons: files written into `public/` after a build are invisible to
-`next start`, and they vanish entirely on a serverless host. Swapping to S3 / R2 / Cloudinary
-means rewriting `src/lib/storage.ts` alone - nothing else in the app knows where bytes live.
+Uploads are served by `/media/:name`, never from `public/` - files written into `public/` after a
+build are invisible to `next start` and vanish entirely on a serverless host. Two storage drivers,
+picked with `STORAGE_DRIVER`:
+
+- `disk` (default) - a directory, `UPLOAD_DIR`, default `./storage/uploads`. Right for a VPS.
+- `db` - bytes in Postgres (`MediaBlob`). Right for Vercel / Netlify, which have no writable disk.
+
+The whole app addresses media as `/media/<name>` either way, and the full test suite passes
+against both drivers. Moving to S3 / R2 / Cloudinary later means rewriting `src/lib/storage.ts`
+alone.
 
 Limits: images 8 MB (jpeg, png, webp, gif, avif), video 128 MB (mp4, webm, mov). The first image
 attached becomes the cover shot.
@@ -153,6 +159,12 @@ app: it boots a second copy of the build with placeholder keys and asserts that 
 off to the right provider with the right `client_id`, the right `/api/auth/callback/...` URL and
 PKCE + state + nonce. The outbound request is intercepted, so nothing leaves the machine. 11
 checks.
+
+## Deploying
+
+See [DEPLOY.md](DEPLOY.md) - Vercel + Neon in about ten minutes with no server to manage, or
+`deploy/setup-vps.sh` which turns a bare Ubuntu box into Node + Postgres + nginx + HTTPS in one
+command. It also contains a click-by-click test walkthrough for a non-developer.
 
 ## API
 

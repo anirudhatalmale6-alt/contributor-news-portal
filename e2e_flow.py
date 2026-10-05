@@ -12,7 +12,7 @@ import sys
 import time
 from playwright.sync_api import sync_playwright, expect
 
-BASE = "http://127.0.0.1:3300"
+BASE = os.environ.get("BASE_URL", "http://127.0.0.1:3300")
 SHOTS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "shots")
 os.makedirs(SHOTS, exist_ok=True)
 
