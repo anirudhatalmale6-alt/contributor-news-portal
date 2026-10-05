@@ -13,6 +13,7 @@ type ArticleState = {
   dek: string;
   body: string;
   category: string;
+  language: "EN" | "BN";
   status: string;
   coverImage: string | null;
   slug: string;
@@ -34,6 +35,7 @@ export function Composer({
     dek: article.dek,
     body: article.body,
     category: article.category,
+    language: article.language,
   });
   const [status, setStatus] = useState(article.status);
   const [media, setMedia] = useState<MediaItem[]>(article.media);
@@ -196,6 +198,7 @@ export function Composer({
         value={form.title}
         onChange={(e) => update("title", e.target.value)}
         disabled={locked}
+        lang={form.language === "BN" ? "bn" : "en"}
         placeholder="Headline"
         className="w-full border-b border-line pb-2 font-serif text-2xl font-bold outline-none placeholder:text-ink-soft/50 focus:border-navy disabled:bg-transparent sm:text-3xl"
       />
@@ -208,26 +211,45 @@ export function Composer({
         className="w-full rounded-lg border border-line px-3 py-2.5 text-sm outline-none focus:border-navy"
       />
 
-      <label className="flex flex-wrap items-center gap-2 text-sm">
-        <span className="font-medium">Section</span>
-        <select
-          value={form.category}
-          onChange={(e) => update("category", e.target.value)}
-          disabled={locked}
-          className="rounded-lg border border-line px-3 py-2 outline-none focus:border-navy"
-        >
-          {CATEGORIES.map((c) => (
-            <option key={c} value={c}>
-              {c}
-            </option>
-          ))}
-        </select>
-      </label>
+      <div className="flex flex-wrap items-center gap-4 text-sm">
+        <label className="flex flex-wrap items-center gap-2">
+          <span className="font-medium">Section</span>
+          <select
+            value={form.category}
+            onChange={(e) => update("category", e.target.value)}
+            disabled={locked}
+            className="rounded-lg border border-line px-3 py-2 outline-none focus:border-navy"
+          >
+            {CATEGORIES.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="flex flex-wrap items-center gap-2">
+          <span className="font-medium">Writing in</span>
+          <select
+            value={form.language}
+            onChange={(e) => update("language", e.target.value)}
+            disabled={locked}
+            className="rounded-lg border border-line px-3 py-2 outline-none focus:border-navy"
+          >
+            <option value="EN">English</option>
+            <option value="BN">বাংলা</option>
+          </select>
+          <span className="text-xs text-ink-soft">
+            An editor writes the {form.language === "EN" ? "Bangla" : "English"} version.
+          </span>
+        </label>
+      </div>
 
       <textarea
         value={form.body}
         onChange={(e) => update("body", e.target.value)}
         disabled={locked}
+        lang={form.language === "BN" ? "bn" : "en"}
         rows={18}
         placeholder={"Write your piece here.\n\nBlank line starts a new paragraph. Use ## for a subheading, > for a pull quote and - for a bullet."}
         className="prose-article w-full rounded-xl border border-line p-4 outline-none focus:border-navy"

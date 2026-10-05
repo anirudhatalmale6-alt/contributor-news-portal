@@ -2,10 +2,12 @@
 
 A fast, mobile-first news site with a full writing and moderation workflow behind it.
 
-- Public pages are server-rendered and cached, with no webfonts and no third-party requests.
+- Two languages, English at `/` and Bangla at `/bn`, every piece carrying an editor's translation.
+- Public pages are server-rendered and cached, with no third-party requests at all.
 - Contributors draft, attach images or video, save, come back, and submit.
 - Every submission - verified or not - sits in an editorial queue until an editor approves it.
 - On approval the editor sets an estimated payout; the writer sees it, and their running total, immediately.
+- Contributors keep their own payment details (bKash, Nagad, Rocket, bank, PayPal, Wise); only they and an Admin can read them.
 
 Stack: Next.js 16 (App Router) · TypeScript · Tailwind CSS 4 · Prisma · PostgreSQL · Auth.js (credentials + Google/Facebook).
 
@@ -50,6 +52,37 @@ callback URL is built from. Both providers run with PKCE, `state` and (for Googl
 Someone who signed up by email and later uses Google keeps the same account. Adding Apple, X,
 LinkedIn or GitHub later is a three-line block in `src/auth.ts`.
 
+## Two languages
+
+| | English | Bangla |
+| --- | --- | --- |
+| Front page | `/` | `/bn` |
+| Article | `/article/<slug>` | `/bn/article/<slug>` |
+
+A contributor chooses the language they are writing in. The editor writes the other version on the
+review screen, side by side with the original, and the piece cannot be published until that exists
+(Admin can switch the requirement off under payment settings). Both versions share one article
+record, so they share media, payout, author and audit trail - and the language switch on an
+article links straight to its counterpart, with `hreflang` set for search engines.
+
+Bangla pages are typeset in Noto Sans / Noto Serif Bengali, both self-hosted in `public/fonts`
+as single variable files. A Bengali face has to ship with the site: most desktops do not have one
+and the text would otherwise render as empty boxes. Dates and numbers are localised too
+(৫ অক্টোবর ২০২৬, ৩ মিনিটের পড়া).
+
+## Payment details
+
+Each contributor fills in their own payout destination at `/dashboard/payout`:
+
+- bKash / Nagad / Rocket - 11-digit wallet number, validated
+- Bank transfer - bank, branch, account number, routing number
+- PayPal / Wise - email
+
+Who can see what: the contributor sees their own in full, an **Admin** can reveal any of them (they
+are the one sending money, and the reveal is an explicit click, not a wall of account numbers on
+screen), and an **Editor** has no route to them at all - `/api/admin/users/:id/payout` answers 403.
+Lists show the method plus the last four digits only.
+
 ## Roles
 
 | | Admin | Editor | Contributor |
@@ -57,7 +90,9 @@ LinkedIn or GitHub later is a three-line block in `src/auth.ts`.
 | Write / edit own drafts | yes | yes | yes |
 | Editorial queue, edit anyone's copy | yes | yes | no |
 | Approve / reject, set payout | yes | yes | no |
+| Write the translation | yes | yes | no |
 | Change roles, flag Verified | yes | no | no |
+| See a contributor's payment details | yes | no | own only |
 | Payment settings | yes | read-only | no |
 
 Contributors carry a tier - `GENERAL` or `VERIFIED`. The tier changes the byline badge and the
@@ -96,9 +131,11 @@ attached becomes the cover shot.
 ## Tests
 
 `e2e_flow.py` (repo root, Playwright) walks the entire workflow against a running build and
-asserts 34 things: signup, draft, upload, save-survives-reload, submit, queue, editor edit,
-approve with payout, earnings total, role guards, API 401s, mobile layout, and a zero-JS-error
-check. Screenshots land in `shots/`.
+asserts 53 things: signup, draft, upload, save-survives-reload, payment details with a rejected
+bad wallet number, submit, queue, editor edit, the publish-blocked-without-translation rule, the
+Bangla version going live, the language switch, Bengali font resolution, approve with payout,
+earnings total, role guards, admin payout reveal, API 401/403s, mobile layout, and a
+zero-JS-error check. Screenshots land in `shots/`.
 
 ```bash
 npm run build && npm run start      # terminal 1

@@ -33,20 +33,58 @@ enum MediaKind {
   VIDEO
 }
 
+// The site runs in two languages: every piece has an original and an editor's
+// translation into the other one.
+enum Locale {
+  EN
+  BN
+}
+
+enum PayoutMethod {
+  BKASH
+  NAGAD
+  ROCKET
+  BANK
+  PAYPAL
+  WISE
+}
+
 model User {
-  id              String          @id @default(cuid())
-  email           String          @unique
-  name            String
-  passwordHash    String? // null when the account came from Google / a social provider
-  image           String?
-  role            Role            @default(CONTRIBUTOR)
-  tier            ContributorTier @default(GENERAL)
-  bio             String?
-  createdAt       DateTime        @default(now())
-  articles        Article[]       @relation("author")
-  reviewed        Article[]       @relation("reviewer")
-  accounts        OAuthAccount[]
-  reviews         Review[]
+  id           String               @id @default(cuid())
+  email        String               @unique
+  name         String
+  passwordHash String? // null when the account came from Google / a social provider
+  image        String?
+  role         Role                 @default(CONTRIBUTOR)
+  tier         ContributorTier      @default(GENERAL)
+  bio          String?
+  createdAt    DateTime             @default(now())
+  articles     Article[]            @relation("author")
+  reviewed     Article[]            @relation("reviewer")
+  accounts     OAuthAccount[]
+  reviews      Review[]
+  payout       PayoutProfile?
+  translations ArticleTranslation[] @relation("translator")
+}
+
+/// Where a contributor wants their payouts sent. Visible to the contributor
+/// themselves and to an Admin; editors never see these numbers.
+model PayoutProfile {
+  id            String       @id @default(cuid())
+  userId        String       @unique
+  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  method        PayoutMethod
+  accountName   String // name exactly as it appears on the account
+  walletNumber  String? // bKash / Nagad / Rocket
+  bankName      String?
+  branch        String?
+  accountNumber String?
+  routingNumber String?
+  email         String? // PayPal / Wise
+  country       String       @default("Bangladesh")
+  note          String?
+  updatedAt     DateTime     @updatedAt
+  createdAt     DateTime     @default(now())
 }
 
 // One row per linked social identity (google, facebook, ...)
@@ -61,32 +99,57 @@ model OAuthAccount {
 }
 
 model Article {
-  id          String        @id @default(cuid())
-  slug        String        @unique
-  title       String
-  dek         String? // standfirst / summary shown in the feed
-  body        String // markdown-ish rich text
-  coverImage  String?
-  category    String        @default("General")
-  status      ArticleStatus @default(DRAFT)
-  authorId    String
-  author      User          @relation("author", fields: [authorId], references: [id], onDelete: Cascade)
-  reviewerId  String?
-  reviewer    User?         @relation("reviewer", fields: [reviewerId], references: [id])
+  id         String        @id @default(cuid())
+  slug       String        @unique
+  title      String
+  dek        String? // standfirst / summary shown in the feed
+  body       String // markdown-ish rich text
+  coverImage String?
+  category   String        @default("General")
+  status     ArticleStatus @default(DRAFT)
+  authorId   String
+  author     User          @relation("author", fields: [authorId], references: [id], onDelete: Cascade)
+  reviewerId String?
+  reviewer   User?         @relation("reviewer", fields: [reviewerId], references: [id])
 
   // payout, in minor units (cents) so money never touches a float
-  payoutCents Int           @default(0)
+  payoutCents Int @default(0)
+
+  // The language the contributor wrote in; the other one comes from the editor.
+  language Locale @default(EN)
 
   submittedAt DateTime?
   publishedAt DateTime?
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
-  media       Media[]
-  reviews     Review[]
+  media        Media[]
+  reviews      Review[]
+  translations ArticleTranslation[]
 
   @@index([status, publishedAt])
   @@index([authorId, status])
+}
+
+/// The editor's translation of a piece into the other language. One row per
+/// article per locale, so a Bangla original and its English version live
+/// side by side and share the same media.
+model ArticleTranslation {
+  id           String   @id @default(cuid())
+  articleId    String
+  article      Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  locale       Locale
+  title        String
+  dek          String?
+  body         String
+  slug         String   @unique
+  translatorId String?
+  translator   User?    @relation("translator", fields: [translatorId], references: [id])
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([articleId, locale])
+  @@index([locale])
 }
 
 model Media {
@@ -101,16 +164,16 @@ model Media {
 
 // Audit trail: every approve / reject / resubmit, with the editor's note
 model Review {
-  id         String        @id @default(cuid())
+  id         String         @id @default(cuid())
   articleId  String
-  article    Article       @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  article    Article        @relation(fields: [articleId], references: [id], onDelete: Cascade)
   editorId   String?
-  editor     User?         @relation(fields: [editorId], references: [id])
+  editor     User?          @relation(fields: [editorId], references: [id])
   action     String // SUBMITTED | APPROVED | REJECTED | RESUBMITTED | PAYOUT_UPDATED
   note       String?
   fromStatus ArticleStatus?
   toStatus   ArticleStatus?
-  createdAt  DateTime      @default(now())
+  createdAt  DateTime       @default(now())
 
   @@index([articleId, createdAt])
 }
@@ -122,4 +185,7 @@ model PaymentSettings {
   defaultPayout    Int    @default(2500) // cents, pre-filled in the editor's payout box
   verifiedBonusPct Int    @default(20) // Verified Contributors get +20% suggested
   payoutNote       String @default("Payouts are estimates and are settled on the 1st of each month.")
+
+  /// When on, an editor cannot publish a piece until the translation exists.
+  requireTranslation Boolean @default(true)
 }

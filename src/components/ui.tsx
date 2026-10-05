@@ -1,5 +1,7 @@
 import Link from "next/link";
-import { longDate, money, readingTime } from "@/lib/format";
+import { money, readingTime } from "@/lib/format";
+import { type Locale, localeDate, localeNumber, t } from "@/lib/i18n";
+import type { LocalisedArticle } from "@/lib/articles";
 
 const STATUS_STYLE: Record<string, string> = {
   DRAFT: "bg-paper-soft text-ink-soft border-line",
@@ -27,7 +29,18 @@ export function StatusPill({ status }: { status: string }) {
   );
 }
 
-export function TierBadge({ tier, role }: { tier: string; role?: string }) {
+export function TierBadge({
+  tier,
+  role,
+  label,
+  generalLabel,
+}: {
+  tier: string;
+  role?: string;
+  /** Lets the public pages pass the Bangla wording. */
+  label?: string;
+  generalLabel?: string;
+}) {
   if (role === "ADMIN" || role === "EDITOR") {
     return (
       <span className="inline-flex items-center rounded-full border border-indigo-200 bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-800">
@@ -41,13 +54,13 @@ export function TierBadge({ tier, role }: { tier: string; role?: string }) {
         <svg viewBox="0 0 20 20" aria-hidden className="size-3 fill-sky-600">
           <path d="M10 1.5l2.1 1.6 2.6-.2.9 2.5 2.2 1.4-.9 2.5.9 2.5-2.2 1.4-.9 2.5-2.6-.2L10 18.5l-2.1-1.6-2.6.2-.9-2.5L2.2 13.2l.9-2.5-.9-2.5 2.2-1.4.9-2.5 2.6.2L10 1.5zm-1 10.9l4.3-4.3-1.1-1.1L9 10.2 7.3 8.5 6.2 9.6 9 12.4z" />
         </svg>
-        Verified contributor
+        {label ?? "Verified contributor"}
       </span>
     );
   }
   return (
     <span className="inline-flex items-center rounded-full border border-line bg-paper-soft px-2 py-0.5 text-xs font-medium text-ink-soft">
-      Contributor
+      {generalLabel ?? "Contributor"}
     </span>
   );
 }
@@ -82,26 +95,24 @@ export function StatCard({
   );
 }
 
-export type FeedArticle = {
-  slug: string;
-  title: string;
-  dek: string | null;
-  body: string;
-  category: string;
-  coverImage: string | null;
-  publishedAt: Date | null;
-  author: { name: string; tier: string };
-};
-
-export function ArticleCard({ article, lead }: { article: FeedArticle; lead?: boolean }) {
-  const minutes = readingTime(article.body);
+export function ArticleCard({
+  article,
+  locale = "EN",
+  lead,
+}: {
+  article: LocalisedArticle;
+  locale?: Locale;
+  lead?: boolean;
+}) {
+  const copy = t(locale);
+  const minutes = localeNumber(readingTime(article.body), locale);
   return (
     <article
       className={`group border-line ${lead ? "" : "border-t pt-5"} ${
         lead ? "pb-6 sm:pb-8" : ""
       }`}
     >
-      <Link href={`/article/${article.slug}`} className="block">
+      <Link href={article.href} className="block">
         {article.coverImage ? (
           <div
             className={`mb-3 overflow-hidden rounded-xl bg-paper-soft ${
@@ -120,7 +131,7 @@ export function ArticleCard({ article, lead }: { article: FeedArticle; lead?: bo
         ) : null}
 
         <p className="text-xs font-semibold uppercase tracking-wide text-brand">
-          {article.category}
+          {copy.sections[article.category] ?? article.category}
         </p>
         <h2
           className={`balance mt-1 font-serif font-bold leading-tight group-hover:underline ${
@@ -139,14 +150,14 @@ export function ArticleCard({ article, lead }: { article: FeedArticle; lead?: bo
       <p className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-ink-soft">
         <span className="font-medium text-ink">{article.author.name}</span>
         {article.author.tier === "VERIFIED" ? (
-          <svg viewBox="0 0 20 20" aria-label="Verified contributor" className="size-3.5 fill-sky-600">
+          <svg viewBox="0 0 20 20" aria-label={copy.verified} className="size-3.5 fill-sky-600">
             <path d="M10 1.5l2.1 1.6 2.6-.2.9 2.5 2.2 1.4-.9 2.5.9 2.5-2.2 1.4-.9 2.5-2.6-.2L10 18.5l-2.1-1.6-2.6.2-.9-2.5L2.2 13.2l.9-2.5-.9-2.5 2.2-1.4.9-2.5 2.6.2L10 1.5zm-1 10.9l4.3-4.3-1.1-1.1L9 10.2 7.3 8.5 6.2 9.6 9 12.4z" />
           </svg>
         ) : null}
         <span aria-hidden>·</span>
-        {article.publishedAt ? <span>{longDate(article.publishedAt)}</span> : null}
+        {article.publishedAt ? <span>{localeDate(article.publishedAt, locale)}</span> : null}
         <span aria-hidden>·</span>
-        <span>{minutes} min read</span>
+        <span>{copy.minRead(minutes)}</span>
       </p>
     </article>
   );

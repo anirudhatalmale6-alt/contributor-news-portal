@@ -10,6 +10,35 @@ import bcrypt from "bcryptjs";
 const prisma = new PrismaClient();
 const PASSWORD = "demo1234";
 
+const TRANSLATIONS: Record<string, { title: string; dek: string; body: string; locale?: "EN" | "BN" }> = {
+  "the-night-bus-that-never-came": {
+    "title": "যে রাতের বাস কখনো আসেনি",
+    "dek": "তিন মাস ধরে রাতের সার্ভিস বাতিল, আর পরিবহন সংস্থা এখনও বলছে এটি সাময়িক জনবল সংকট।",
+    "body": "শুক্রবার রাতে ডিপো থেকে শেষ বাসটি ছাড়ার কথা ১২টা ৪১ মিনিটে। গত তেরো শুক্রবারের মধ্যে এগারোটিতেই সেটি আদৌ ছাড়েনি।\n\n## তথ্য যা বলছে\nসংস্থাটি বাতিলের হিসাব প্রকাশ করে মাসিক শতাংশে। ঘণ্টা ধরে ভাগ করলে ছবিটা বদলে যায়: মধ্যরাতের পরের সার্ভিস বাতিল হয় সকালের ব্যস্ত সময়ের তুলনায় নয় গুণ বেশি।\n\n> \"আমাদের বলা হয় এটি সাময়িক সমস্যা। সাময়িক সমস্যা তিন মাস ধরে চলে না।\"\n\nচালকেরা বলছেন, রোস্টারটি দাঁড়িয়ে আছে এমন ওভারটাইমের ওপর যা কেউ নিতে চায় না। নাম প্রকাশে অনিচ্ছুক দুজন চালক জানিয়েছেন, বসন্ত থেকেই রাতের শিফটে দুজন চালক কম চলছে।\n\n## অপেক্ষায় থাকেন যাঁরা\n- সন্ধ্যার শিফট শেষ করা হাসপাতালের কর্মীরা\n- রাতের ভাড়া না থাকা হোটেল-রেস্তোরাঁর কর্মীরা\n- রিং রোডের ওপারের শিক্ষার্থীরা\n\nসিটি কর্তৃপক্ষ বলছে, তারা \"পারফরম্যান্স নিবিড়ভাবে পর্যবেক্ষণ করছে\"। চুক্তি অনুযায়ী বার্ষিক ভর্তুকির চার শতাংশ পর্যন্ত জরিমানা করা যায়। আজ পর্যন্ত একবারও তা করা হয়নি।"
+  },
+  "the-corner-shop-that-outlived-the-chain": {
+    "title": "চেইন শপের চেয়ে বেশি দিন টিকে গেল মোড়ের দোকান",
+    "dek": "২০১৯ সালে উল্টো দিকে সুপারশপ খোলে। যে দোকানটি বন্ধ হয়ে যাওয়ার কথা ছিল, সেটি এখন নতুন কর্মী নিচ্ছে।",
+    "body": "উল্টো দিকে চেইন শপ খোলার পর সবাই ফরিদাকে দোকান বিক্রি করে দিতে বলেছিল।\n\nছয় বছর পর চেইন শপ দুবার খোলার সময় কমিয়েছে, আর তিনি দুজন কর্মী বাড়িয়েছেন।\n\n## ভিড় নয়, মুনাফার হিসাব\nফরিদার উত্তরটি সাদামাটা: চেইন শপ যে চল্লিশটি পণ্য সবচেয়ে কমে বিক্রি করে, সেগুলোতে প্রতিযোগিতা ছেড়ে দিয়ে তিনি বাড়িয়েছেন সেই পণ্যের সংগ্রহ, যা ওরা রাখেই না।\n\n> \"দুধের দামে ওরা আমাকে হারাতে পারে। কিন্তু মিসেস ওয়াসু বৃহস্পতিবার কোন রুটি চান, সেটা ওরা জানে না।\"\n\nদোকানটি এখন একাশিটি পরিবারে পণ্য পৌঁছে দেয়। এর কিছুই অনলাইনে নয়। সবই ক্যাশবাক্সের পেছনে রাখা একটি খাতায় লেখা।"
+  },
+  "a-field-recording-of-a-city-waking-up": {
+    "title": "একটি শহরের ঘুম ভাঙার শব্দ-নথি",
+    "dek": "একটি মাইক্রোফোন, একটি ছাদ, টানা নব্বই সকাল।",
+    "body": "প্রথম শব্দটি প্রায় সব সময়ই দোকানের শাটার ওঠার।\n\nনব্বইটি সকালে একজন শব্দশিল্পী একই ছাদে মাইক্রোফোন বসিয়ে সূর্যোদয়ের আগে-পরের এক ঘণ্টা রেকর্ড করেছেন। ফলাফল একটি শহরের দৈনন্দিন রুটিনের নথি, আর সেই দিনগুলোরও, যেদিন রুটিন ভেঙেছে।\n\n## কী বদলায়, কী বদলায় না\nগাঙচিলেরা আগস্ট আর নভেম্বরে একই মিনিটে আসে। একই সময়ে যানবাহনের শব্দ সরে যায় চল্লিশ মিনিট। ধর্মঘটের সকালে রেকর্ডিং প্রায় এগারো মিনিট নিঃশব্দ।"
+  },
+  "the-heat-pump-waiting-list": {
+    "title": "হিট পাম্পের অপেক্ষমাণ তালিকা, যার হিসাব কেউ রাখে না",
+    "dek": "নয় মাসের সারি, আর কতজন হাল ছেড়ে দিলেন তার কোনো প্রকাশিত সংখ্যা নেই।",
+    "body": "অনুদান আছে। মিস্ত্রি আছে। এই দুইয়ের মাঝের সারিটিতেই প্রকল্পটি নিঃশব্দে ব্যর্থ হচ্ছে।\n\n## গড়ে নয় মাস\nজরিপ করা ২১২টি পরিবারের মধ্যে আবেদন থেকে স্থাপন পর্যন্ত মধ্যমা অপেক্ষা ছিল ৩৮ সপ্তাহ। ঊনত্রিশটি পরিবার মিস্ত্রি আসার আগেই আবেদন প্রত্যাহার করেছে।\n\nদপ্তর আবেদন ও সম্পন্ন কাজের সংখ্যা প্রকাশ করে। প্রত্যাহারের সংখ্যা প্রকাশ করে না, অর্থাৎ যে সংখ্যাটি প্রকল্পের ফাঁক দেখিয়ে দিত, সেটিই কেউ সংগ্রহ করে না।"
+  },
+  "notun-sorok-puratan-khaler-opore": {
+    "locale": "EN",
+    "title": "A new road over an old canal",
+    "dek": "The canal that carried the monsoon away now runs under four lanes of traffic.",
+    "body": "The canal on the eastern edge of the city still exists on paper. It does not exist on the ground.\n\n## What the drawings said\nThe 2017 drawings put the road alongside the canal. The approved drawings put it on top, leaving two culverts for the water.\n\n> \"Rain that used to drain in half an hour now takes a day.\"\n\nWaterlogging records from five wards show the average standing-water time has more than tripled since the road opened.\n\n## What happens now\n- A canal restoration proposal has been filed, with no budget line attached\n- No action has been taken against the contractor\n- The revised design promises more culverts"
+  }
+};
+
 async function main() {
   const hash = await bcrypt.hash(PASSWORD, 11);
 
@@ -52,6 +81,34 @@ async function main() {
   await prisma.paymentSettings.upsert({
     where: { id: 1 },
     create: { id: 1 },
+    update: {},
+  });
+
+  // Two contributors have told us where to send the money; Leo has not, so his
+  // dashboard shows the prompt.
+  await prisma.payoutProfile.upsert({
+    where: { userId: maya.id },
+    create: {
+      userId: maya.id,
+      method: "BKASH",
+      accountName: "Maya Iyer",
+      walletNumber: "01712345678",
+      country: "Bangladesh",
+    },
+    update: {},
+  });
+  await prisma.payoutProfile.upsert({
+    where: { userId: sam.id },
+    create: {
+      userId: sam.id,
+      method: "BANK",
+      accountName: "Sam Whitfield",
+      bankName: "Dutch-Bangla Bank",
+      branch: "Gulshan",
+      accountNumber: "1041200456789",
+      routingNumber: "090261726",
+      country: "Bangladesh",
+    },
     update: {},
   });
 
@@ -145,6 +202,32 @@ The department publishes applications and completions. It does not publish withd
       media: [{ kind: "IMAGE" as const, url: "/uploads/seed/climate.jpg", caption: null }],
     },
     {
+      slug: "notun-sorok-puratan-khaler-opore",
+      title: "পুরোনো খালের ওপর নতুন সড়ক",
+      dek: "যে খাল দিয়ে বর্ষার পানি নামত, তার ওপর দিয়েই এখন চার লেনের সড়ক।",
+      category: "Politics",
+      cover: "/uploads/seed/politics.jpg",
+      author: sam,
+      status: "APPROVED" as const,
+      payout: 11000,
+      published: hoursAgo(9),
+      language: "BN" as const,
+      body: `শহরের পূর্ব প্রান্তের খালটি কাগজে এখনও আছে। মাঠে নেই।
+
+## নকশায় যা ছিল
+২০১৭ সালের নকশায় সড়কটি খালের পাশ দিয়ে যাওয়ার কথা ছিল। অনুমোদিত নকশায় সেটি খালের ওপরে উঠে এসেছে, আর পানি নামার জন্য রাখা হয়েছে দুটি কালভার্ট।
+
+> "বর্ষায় দুই ঘণ্টার বৃষ্টিতে যে পানি নামত আধ ঘণ্টায়, এখন তা নামে এক দিনে।"
+
+পাঁচটি ওয়ার্ডের জলাবদ্ধতার তথ্য বলছে, সড়ক চালুর পর গড় জলাবদ্ধতার সময় বেড়েছে তিন গুণের বেশি।
+
+## এখন কী হবে
+- খাল পুনরুদ্ধারের প্রকল্প প্রস্তাব জমা পড়েছে, বরাদ্দ হয়নি
+- ঠিকাদারের বিরুদ্ধে কোনো ব্যবস্থা নেওয়া হয়নি
+- নতুন নকশায় কালভার্টের সংখ্যা বাড়ানোর কথা বলা হয়েছে`,
+      media: [{ kind: "IMAGE" as const, url: "/uploads/seed/politics.jpg", caption: "নতুন সড়কের নিচে পুরোনো খালের মুখ।" }],
+    },
+    {
       slug: "inside-the-permit-office-backlog",
       title: "Inside the permit office backlog",
       dek: "Twenty-two thousand applications, one scanner, and a rule that says paper only.",
@@ -229,6 +312,7 @@ The council advanced a loan of sixty thousand in the spring. The accounts filed 
         category: a.category,
         coverImage: a.cover,
         status: a.status,
+        language: "language" in a ? (a.language as "EN" | "BN") : "EN",
         authorId: a.author.id,
         payoutCents: a.payout,
         reviewerId: a.status === "APPROVED" || a.status === "REJECTED" ? editor.id : null,
@@ -242,6 +326,22 @@ The council advanced a loan of sixty thousand in the spring. The accounts filed 
         media: { create: a.media },
       },
     });
+
+    // The editor's Bangla version, where the demo data has one.
+    const tr = TRANSLATIONS[a.slug];
+    if (tr) {
+      await prisma.articleTranslation.create({
+        data: {
+          articleId: created.id,
+          locale: tr.locale ?? "BN",
+          title: tr.title,
+          dek: tr.dek,
+          body: tr.body,
+          slug: `${a.slug}-${(tr.locale ?? "BN").toLowerCase()}`,
+          translatorId: editor.id,
+        },
+      });
+    }
 
     // Audit trail that matches the state each piece is in.
     if (a.status !== "DRAFT") {

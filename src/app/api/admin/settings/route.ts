@@ -8,6 +8,7 @@ const schema = z.object({
   defaultPayout: z.coerce.number().int().min(0).max(100_000_00).optional(),
   verifiedBonusPct: z.coerce.number().int().min(0).max(500).optional(),
   payoutNote: z.string().trim().max(400).optional(),
+  requireTranslation: z.boolean().optional(),
 });
 
 /** GET /api/admin/settings - payment settings (Editors read, Admin writes). */

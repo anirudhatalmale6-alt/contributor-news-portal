@@ -6,6 +6,7 @@ import { longDate, money, timeAgo } from "@/lib/format";
 import { paymentSettings } from "@/lib/settings";
 import { SiteHeader } from "@/components/site-header";
 import { StatCard, StatusPill, TierBadge } from "@/components/ui";
+import { maskedDestination, methodLabel } from "@/lib/payout";
 import { NewDraftButton } from "./new-draft-button";
 
 export const metadata = { title: "My desk" };
@@ -14,7 +15,7 @@ export default async function DashboardPage() {
   const user = await currentUser();
   if (!user) redirect("/login");
 
-  const [articles, settings] = await Promise.all([
+  const [articles, settings, payout] = await Promise.all([
     prisma.article.findMany({
       where: { authorId: user.id },
       orderBy: { updatedAt: "desc" },
@@ -29,6 +30,7 @@ export default async function DashboardPage() {
       },
     }),
     paymentSettings(),
+    prisma.payoutProfile.findUnique({ where: { userId: user.id } }),
   ]);
 
   const published = articles.filter((a) => a.status === "APPROVED");
@@ -69,7 +71,34 @@ export default async function DashboardPage() {
           />
         </section>
 
-        <p className="-mt-2 mb-6 text-xs text-ink-soft">{settings.payoutNote}</p>
+        <p className="-mt-2 mb-4 text-xs text-ink-soft">{settings.payoutNote}</p>
+
+        <section
+          className={`mb-8 flex flex-wrap items-center justify-between gap-3 rounded-xl border p-4 ${
+            payout ? "border-line bg-paper" : "border-amber-200 bg-amber-50"
+          }`}
+        >
+          <div>
+            <p className="text-sm font-medium">
+              {payout ? "Payment details" : "Add your payment details"}
+            </p>
+            <p className="mt-0.5 text-sm text-ink-soft">
+              {payout
+                ? `${methodLabel(payout.method)} · ${payout.accountName} · ${maskedDestination(payout)}`
+                : "We cannot send your earnings anywhere until you tell us where. Takes a minute."}
+            </p>
+          </div>
+          <Link
+            href="/dashboard/payout"
+            className={`rounded-full px-4 py-2 text-sm font-medium ${
+              payout
+                ? "border border-line hover:bg-paper-soft"
+                : "bg-brand text-white hover:bg-brand-dark"
+            }`}
+          >
+            {payout ? "Update" : "Add payment details"}
+          </Link>
+        </section>
 
         <section>
           <h2 className="mb-3 text-xs font-bold uppercase tracking-widest text-ink-soft">

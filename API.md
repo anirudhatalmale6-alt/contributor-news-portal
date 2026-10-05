@@ -42,8 +42,10 @@ review note.
 Create a draft. All fields optional.
 
 ```json
-{ "title": "Untitled draft", "dek": "", "body": "", "category": "General", "coverImage": null }
+{ "title": "Untitled draft", "dek": "", "body": "", "category": "General", "coverImage": null, "language": "EN" }
 ```
+
+`language` is `EN` or `BN` - what the contributor is writing in. The editor supplies the other one.
 
 `201` → `{ "article": { ... } }`
 
@@ -52,7 +54,7 @@ The draft plus its media and full review history. `403` if it is not yours.
 
 ### `PATCH /api/drafts/:id`
 Save (the composer autosaves two seconds after typing stops). Any subset of
-`title`, `dek`, `body`, `category`, `coverImage`.
+`title`, `dek`, `body`, `category`, `coverImage`, `language`.
 
 - A `SUBMITTED` article returns `409` - it is locked while the editors have it.
 - An `APPROVED` article returns `409` - published copy is edited by an editor.
@@ -118,6 +120,55 @@ the contributor's dashboard reflects it on their next page load.
 
 ---
 
+## Translations (EDITOR, ADMIN)
+
+### `GET /api/editorial/:id/translation`
+The original plus every translation of the piece, with who wrote each one.
+
+### `PUT /api/editorial/:id/translation`
+
+```json
+{ "locale": "BN", "title": "...", "dek": "...", "body": "..." }
+```
+
+Upserts - saving twice updates the same row (`@@unique([articleId, locale])`). `409` if the locale
+is the language the piece was written in. Slug: the ASCII slug of the translated title, or the
+original slug with a `-bn` / `-en` suffix when the title has no ASCII to work with. Logged as
+`TRANSLATION_SAVED` in the audit trail.
+
+### `DELETE /api/editorial/:id/translation?locale=BN`
+
+### Effect on publishing
+While `requireTranslation` is on (Admin setting, default on), `POST /api/editorial/:id/decision`
+with `APPROVE` returns `422` until the other language exists.
+
+---
+
+## Payment details
+
+### `GET /api/profile/payout` · `PUT /api/profile/payout` · `DELETE /api/profile/payout`
+The signed-in contributor's own payout destination.
+
+```json
+{
+  "method": "BKASH",
+  "accountName": "Rosa Delgado",
+  "walletNumber": "01819445203",
+  "country": "Bangladesh"
+}
+```
+
+Required fields depend on the method: `walletNumber` for BKASH / NAGAD / ROCKET (11 digits,
+`01XXXXXXXXX`), `bankName` + `accountNumber` for BANK, `email` for PAYPAL / WISE. `422` lists the
+offending fields in `issues`.
+
+### `GET /api/admin/users/:id/payout`
+**ADMIN only** - full details, for the person actually sending the money. An Editor gets `403`.
+The admin user list carries the method and the last four digits only until the admin clicks to
+reveal.
+
+---
+
 ## Earnings (contributor)
 
 ### `GET /api/earnings`
@@ -152,11 +203,12 @@ Either field alone is fine. An admin cannot remove their own Admin role (`409`).
 ### `PATCH /api/admin/settings` (ADMIN)
 
 ```json
-{ "currency": "USD", "defaultPayout": 2500, "verifiedBonusPct": 20, "payoutNote": "..." }
+{ "currency": "USD", "defaultPayout": 2500, "verifiedBonusPct": 20, "payoutNote": "...", "requireTranslation": true }
 ```
 
 `defaultPayout` pre-fills the editor's payout box; `verifiedBonusPct` is added to that
 suggestion for Verified contributors. Neither changes a payout already assigned.
+`requireTranslation` is the publish gate described above.
 
 ---
 

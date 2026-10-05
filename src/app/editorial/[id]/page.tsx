@@ -7,6 +7,7 @@ import { paymentSettings } from "@/lib/settings";
 import { SiteHeader } from "@/components/site-header";
 import { StatusPill, TierBadge } from "@/components/ui";
 import { ReviewPanel } from "./review-panel";
+import { TranslationPanel } from "./translation-panel";
 
 export const metadata = { title: "Review" };
 
@@ -22,6 +23,7 @@ export default async function ReviewPage({ params }: { params: Promise<{ id: str
       include: {
         author: { select: { name: true, email: true, tier: true } },
         media: { orderBy: { createdAt: "asc" } },
+        translations: { include: { translator: { select: { name: true } } } },
         reviews: {
           orderBy: { createdAt: "desc" },
           include: { editor: { select: { name: true, role: true } } },
@@ -31,6 +33,9 @@ export default async function ReviewPage({ params }: { params: Promise<{ id: str
     paymentSettings(),
   ]);
   if (!article) notFound();
+
+  const needed = article.language === "EN" ? "BN" : "EN";
+  const translation = article.translations.find((t) => t.locale === needed) ?? null;
 
   // A Verified Contributor's suggested figure carries the admin's bonus.
   const suggested =
@@ -56,6 +61,20 @@ export default async function ReviewPage({ params }: { params: Promise<{ id: str
           <TierBadge tier={article.author.tier} />
           <span className="text-xs text-ink-soft">
             {article.submittedAt ? `submitted ${timeAgo(article.submittedAt)}` : "not submitted"}
+          </span>
+          <span className="rounded-full border border-line bg-paper-soft px-2 py-0.5 text-xs font-medium text-ink-soft">
+            written in {article.language === "BN" ? "Bangla" : "English"}
+          </span>
+          <span
+            className={`rounded-full border px-2 py-0.5 text-xs font-medium ${
+              translation
+                ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                : "border-amber-200 bg-amber-50 text-amber-800"
+            }`}
+          >
+            {translation
+              ? `${needed === "BN" ? "Bangla" : "English"} version ready`
+              : `${needed === "BN" ? "Bangla" : "English"} version missing`}
           </span>
         </div>
 
@@ -85,7 +104,8 @@ export default async function ReviewPage({ params }: { params: Promise<{ id: str
             authorTier={article.author.tier}
           />
 
-          <aside className="rounded-xl border border-line p-4 lg:sticky lg:top-24">
+
+          <aside className="rounded-xl border border-line p-4">
             <h2 className="text-xs font-bold uppercase tracking-widest text-ink-soft">
               Activity
             </h2>
@@ -107,6 +127,28 @@ export default async function ReviewPage({ params }: { params: Promise<{ id: str
               ))}
             </ol>
           </aside>
+
+          <div className="lg:col-span-2">
+            <TranslationPanel
+              articleId={article.id}
+              sourceLocale={article.language}
+              source={{
+                title: article.title,
+                dek: article.dek ?? "",
+                body: article.body,
+              }}
+              existing={
+                translation
+                  ? {
+                      title: translation.title,
+                      dek: translation.dek ?? "",
+                      body: translation.body,
+                      translator: translation.translator?.name ?? null,
+                    }
+                  : null
+              }
+            />
+          </div>
         </div>
       </main>
     </>

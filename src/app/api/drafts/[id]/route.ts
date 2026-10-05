@@ -9,6 +9,7 @@ const patchSchema = z.object({
   body: z.string().max(200_000).optional(),
   category: z.string().trim().max(60).optional(),
   coverImage: z.string().trim().max(500).nullable().optional(),
+  language: z.enum(["EN", "BN"]).optional(),
 });
 
 type Ctx = { params: Promise<{ id: string }> };

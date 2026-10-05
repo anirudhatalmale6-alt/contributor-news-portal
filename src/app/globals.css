@@ -1,14 +1,38 @@
 @import "tailwindcss";
 
 /*
-  No webfonts on purpose: the public pages make zero external requests, so
-  first paint is not waiting on a font round-trip.
+  Bangla needs a real Bengali face - most desktops do not ship one, and a
+  missing font shows as empty boxes. Both files are variable (one file covers
+  every weight) and self-hosted, so the pages still make zero external requests.
+*/
+@font-face {
+  font-family: "Noto Sans Bengali";
+  src: url("/fonts/noto-sans-bengali.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0951-0952, U+0964-0965, U+0980-09FE, U+200C-200D, U+20B9, U+25CC;
+}
+
+@font-face {
+  font-family: "Noto Serif Bengali";
+  src: url("/fonts/noto-serif-bengali.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0951-0952, U+0964-0965, U+0980-09FE, U+200C-200D, U+20B9, U+25CC;
+}
+
+/*
+  English pages use the reader's own system fonts, so first paint never waits
+  on a font download. Bangla pages load the two self-hosted files above -
+  still nothing fetched from a third-party host.
 */
 @theme {
   --font-sans:
     ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial,
-    sans-serif;
-  --font-serif: ui-serif, Georgia, Cambria, "Times New Roman", serif;
+    "Noto Sans Bengali", sans-serif;
+  --font-serif: ui-serif, Georgia, Cambria, "Times New Roman", "Noto Serif Bengali", serif;
 
   /* Taken off the masthead: the navy of "Document" and the red of the D swoosh. */
   --color-ink: #0d1726;
@@ -80,4 +104,26 @@ body {
 /* Keeps a long headline from pushing the layout sideways on a 320px phone. */
 .balance {
   text-wrap: balance;
+}
+
+/* Bangla pages: Bengali faces first, and a little more line height - conjuncts
+   and the matra line need the room. */
+:lang(bn),
+[lang="bn"] {
+  font-family: "Noto Sans Bengali", var(--font-sans);
+}
+
+[lang="bn"] .font-serif,
+[lang="bn"] .prose-article {
+  font-family: "Noto Serif Bengali", var(--font-serif);
+}
+
+[lang="bn"] .prose-article {
+  line-height: 1.95;
+}
+
+[lang="bn"] h1,
+[lang="bn"] h2,
+[lang="bn"] h3 {
+  line-height: 1.45;
 }

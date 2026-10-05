@@ -6,6 +6,7 @@ import { money } from "@/lib/format";
 import { paymentSettings } from "@/lib/settings";
 import { SiteHeader } from "@/components/site-header";
 import { StatCard } from "@/components/ui";
+import { maskedDestination } from "@/lib/payout";
 import { UserTable } from "./user-table";
 import { SettingsForm } from "./settings-form";
 
@@ -26,6 +27,7 @@ export default async function AdminPage() {
         role: true,
         tier: true,
         accounts: { select: { provider: true } },
+        payout: { select: { method: true, accountName: true, walletNumber: true, accountNumber: true, email: true } },
         _count: { select: { articles: true } },
       },
     }),
@@ -79,6 +81,7 @@ export default async function AdminPage() {
             defaultPayout: settings.defaultPayout,
             verifiedBonusPct: settings.verifiedBonusPct,
             payoutNote: settings.payoutNote,
+            requireTranslation: settings.requireTranslation,
           }}
         />
 
@@ -92,6 +95,9 @@ export default async function AdminPage() {
             role: u.role,
             tier: u.tier,
             providers: u.accounts.map((a) => a.provider),
+            payout: u.payout
+              ? { method: u.payout.method, masked: maskedDestination(u.payout) }
+              : null,
             articles: u._count.articles,
             earnedCents: earned.get(u.id) ?? 0,
           }))}

@@ -8,6 +8,7 @@ type Settings = {
   defaultPayout: number;
   verifiedBonusPct: number;
   payoutNote: string;
+  requireTranslation: boolean;
 };
 
 export function SettingsForm({ settings }: { settings: Settings }) {
@@ -18,6 +19,7 @@ export function SettingsForm({ settings }: { settings: Settings }) {
     verifiedBonusPct: String(settings.verifiedBonusPct),
     payoutNote: settings.payoutNote,
   });
+  const [requireTranslation, setRequireTranslation] = useState(settings.requireTranslation);
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(false);
 
@@ -33,6 +35,7 @@ export function SettingsForm({ settings }: { settings: Settings }) {
         defaultPayout: Math.round(Number(form.defaultPayout) * 100),
         verifiedBonusPct: Number(form.verifiedBonusPct),
         payoutNote: form.payoutNote,
+        requireTranslation,
       }),
     });
     setBusy(false);
@@ -88,6 +91,22 @@ export function SettingsForm({ settings }: { settings: Settings }) {
           onChange={(e) => setForm({ ...form, payoutNote: e.target.value })}
           className="rounded-lg border border-line px-3 py-2 outline-none focus:border-navy"
         />
+      </label>
+
+      <label className="flex items-start gap-3 rounded-lg border border-line bg-paper-soft p-3 text-sm">
+        <input
+          type="checkbox"
+          checked={requireTranslation}
+          onChange={(e) => setRequireTranslation(e.target.checked)}
+          className="mt-0.5 size-4"
+        />
+        <span>
+          <span className="font-medium">Require a translation before publishing</span>
+          <span className="mt-0.5 block text-xs text-ink-soft">
+            On: an editor cannot approve a piece until the Bangla or English version exists, so both
+            sides of the site always carry the same stories.
+          </span>
+        </span>
       </label>
 
       <button

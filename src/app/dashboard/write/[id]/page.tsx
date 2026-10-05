@@ -44,6 +44,7 @@ export default async function WritePage({ params }: { params: Promise<{ id: stri
             dek: article.dek ?? "",
             body: article.body,
             category: article.category,
+            language: article.language,
             status: article.status,
             coverImage: article.coverImage,
             slug: article.slug,

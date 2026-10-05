@@ -9,6 +9,7 @@ const createSchema = z.object({
   body: z.string().max(200_000).default(""),
   category: z.string().trim().max(60).default("General"),
   coverImage: z.string().trim().max(500).optional(),
+  language: z.enum(["EN", "BN"]).default("EN"),
 });
 
 /** GET /api/drafts - every article belonging to the signed-in contributor. */
@@ -48,6 +49,7 @@ export async function POST(req: Request) {
         body: data.body,
         category: data.category,
         coverImage: data.coverImage ?? null,
+        language: data.language,
         slug: await uniqueSlug(data.title),
         authorId: user.id,
         status: "DRAFT",

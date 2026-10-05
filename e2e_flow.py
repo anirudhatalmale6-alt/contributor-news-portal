@@ -24,6 +24,19 @@ NEW_EMAIL = f"rosa.{STAMP}@thedocument.test"
 NEW_PASS = "demo1234"
 NEW_NAME = "Rosa Delgado"
 HEADLINE = "The allotment that became a flood defence"
+BN_HEADLINE = "যে বরাদ্দ জমি বন্যা প্রতিরোধের বাঁধ হয়ে উঠল"
+BN_DEK = "এগারো বছর ধরে কাউন্সিল জমিটি কিনতে রাজি হয়নি। তারপর পানি এল।"
+BN_BODY = (
+    "জমিটি সড়কের চেয়ে দুই মিটার নিচে, আর পুরো গল্পটা সেখানেই।\n\n"
+    "## এগারো বছরের প্রত্যাখ্যান\n"
+    "২০১৪ সালে নামমাত্র দামে জমিটি কাউন্সিলকে দেওয়ার প্রস্তাব করা হয়েছিল। চারটি আলাদা কমিটির কার্যবিবরণীতে একই আপত্তি লেখা আছে: "
+    "জমি কেনার জন্য বাজেট নেই, আইনি বাধ্যবাধকতাও নেই।\n\n"
+    "> \"আমাদের বলা হয়েছিল এটি শখের বাগান। এখন এটিই সারি সারি বাড়ি আর খালের মাঝের একমাত্র ঢাল।\"\n\n"
+    "২০২৩ সালের বন্যায় প্লটগুলো নয়শো ঘনমিটার পানি দুই দিনের বেশি ধরে রেখেছিল। পরে জমা দেওয়া প্রকৌশল নোটে জায়গাটিকে বলা হয়েছে "
+    "অনানুষ্ঠানিক জলাধার, যার সহজ অর্থ: কাউন্সিল যে কাজের জন্য কখনো টাকা দেয়নি, জমিটি সেটিই করেছে।"
+)
+# filled in once the test account exists, so the admin check can hit its API
+NEW_USER_ID = [""]
 
 results = []
 
@@ -169,7 +182,33 @@ def main():
         check("submit puts the piece in the editorial queue", "In review" in page.content())
         page.goto(f"{BASE}/dashboard", wait_until="networkidle")
         check("dashboard shows it as in review", "In review" in page.content())
+        check(
+            "a contributor with no payment details is prompted for them",
+            "Add your payment details" in page.content(),
+        )
         shot(page, "05-dashboard-contributor.png")
+
+        # --- 5b. payment details on the contributor profile ------------------
+        page.click('a:has-text("Add payment details")')
+        page.wait_for_url("**/dashboard/payout", timeout=20000)
+        page.select_option("select", "BKASH")
+        page.fill('input[placeholder="Exactly as it appears on the account"]', NEW_NAME)
+        page.fill('input[placeholder="01XXXXXXXXX"]', "12345")
+        page.click('button:has-text("payment details")')
+        page.wait_for_selector("text=Use an 11-digit number", timeout=20000)
+        check("a malformed bKash number is refused", "Use an 11-digit number" in page.content())
+
+        page.fill('input[placeholder="01XXXXXXXXX"]', "01819 445 203")
+        shot(page, "16-payout-form.png")
+        page.click('button:has-text("payment details")')
+        page.wait_for_selector("text=Payment details saved", timeout=20000)
+        check("payment details save", "Payment details saved" in page.content())
+
+        page.goto(f"{BASE}/dashboard", wait_until="networkidle")
+        check(
+            "the dashboard shows the method and only the last four digits",
+            "bKash" in page.content() and "5203" in page.content() and "01819" not in page.content(),
+        )
 
         # a contributor must not reach the newsroom
         page.goto(f"{BASE}/editorial", wait_until="networkidle")
@@ -189,12 +228,39 @@ def main():
         page.wait_for_load_state("networkidle")
         check("review screen loads the submitted copy", "attenuation basin" in page.content())
 
+        check(
+            "the queue flags that the Bangla version is missing",
+            "Bangla version missing" in page.content(),
+        )
+
         # editor fine-tunes the headline, then approves with a payout
         edited = HEADLINE + " - and the council that refused to buy it"
-        page.fill('input.font-serif', edited)
+        page.fill('input.font-serif >> nth=0', edited)
         page.fill('input[inputmode="decimal"]', "132.50")
         page.fill("textarea >> nth=1", "Tightened the headline and cut one line from the close. Good find.")
         shot(page, "07-review-panel.png", scroll="section:has-text('DECISION'), section:has(h2:text('Decision'))")
+
+        # publishing before the translation exists must fail
+        page.click('button:has-text("Approve and publish")')
+        page.wait_for_selector("text=before publishing", timeout=20000)
+        check(
+            "a piece cannot be published until the editor has translated it",
+            "Add the Bangla version before publishing" in page.content(),
+        )
+
+        # --- 6b. the editor writes the Bangla version ------------------------
+        page.fill('input[placeholder="শিরোনাম"]', BN_HEADLINE)
+        page.fill('input[placeholder="সংক্ষিপ্ত বিবরণ"]', BN_DEK)
+        page.fill('textarea[placeholder="অনুবাদ এখানে লিখুন"]', BN_BODY)
+        shot(
+            page,
+            "17-translation-panel.png",
+            scroll="section:has-text('Translation - বাংলা (Bangla)')",
+        )
+        page.click('button:has-text("Save translation")')
+        page.wait_for_selector("text=version saved", timeout=20000)
+        check("the Bangla version saves", "বাংলা (Bangla) version saved" in page.content())
+
         page.click('button:has-text("Approve and publish")')
         page.wait_for_selector("text=Published.", timeout=20000)
         check("approval confirms the payout the writer will see", "132.50" in page.content())
@@ -216,11 +282,47 @@ def main():
         check("approved piece is live on the public feed", "refused to buy it" in page.content())
         shot(page, "10-public-feed-culture.png")
 
+        # --- 8b. the same piece on the Bangla side of the site ---------------
+        page.goto(f"{BASE}/bn", wait_until="networkidle")
+        bn_home = page.content()
+        check("the Bangla front page is in Bangla", "সর্বশেষ" in bn_home and "আজকের আরও খবর" in bn_home)
+        check("the editor's Bangla headline is live", BN_HEADLINE in bn_home)
+        check(
+            "a piece written in Bangla by a contributor is also there",
+            "পুরোনো খালের ওপর নতুন সড়ক" in bn_home,
+        )
+        shot(page, "18-bangla-feed.png")
+
+        page.locator(f"a:has-text('{BN_HEADLINE}')").first.click()
+        page.wait_for_url("**/bn/article/**", timeout=20000)
+        page.wait_for_load_state("networkidle")
+        check("the Bangla article renders the translated body", BN_BODY[:24] in page.content())
+        check("the page is marked as Bangla for screen readers", 'lang="bn"' in page.content())
+        font = page.evaluate(
+            "getComputedStyle(document.querySelector('.prose-article')).fontFamily"
+        )
+        check("Bangla copy is set in a Bengali face, not a fallback box", "Bengali" in font, font)
+        shot(page, "19-bangla-article.png")
+
+        # the language switch returns to the English version of the same story
+        page.click("text=Read in English")
+        page.wait_for_url(lambda u: "/bn/" not in u, timeout=20000)
+        check("the language switch lands on the English version", "refused to buy it" in page.content())
+
+        # a Bangla original is readable in English too
+        page.goto(f"{BASE}/article/notun-sorok-puratan-khaler-opore-en", wait_until="networkidle")
+        check(
+            "the desk's English version of a Bangla original is live",
+            "A new road over an old canal" in page.content(),
+        )
+
         # --- 9. admin: roles, verified flag, payment settings ---------------
         sign_out(page)
         sign_in(page, "admin@thedocument.test", "demo1234")
         page.goto(f"{BASE}/admin", wait_until="networkidle")
         check("admin sees every account", NEW_EMAIL in page.content())
+        roster = page.request.get(f"{BASE}/api/admin/users").json()["users"]
+        NEW_USER_ID[0] = next(u["id"] for u in roster if u["email"] == NEW_EMAIL)
         row = page.locator(f'tr:has-text("{NEW_EMAIL}")')
         row.locator('button:has-text("flag as verified")').click()
         expect(row.locator('button:has-text("Verified")')).to_be_visible(timeout=20000)
@@ -231,6 +333,18 @@ def main():
         page.wait_for_selector("text=Saved", timeout=20000)
         check("payment settings save", "Saved" in page.content())
         shot(page, "11-admin.png")
+
+        # payment details: admin can see them, an editor never can
+        row = page.locator(f'tr:has-text("{NEW_EMAIL}")')
+        check("admin sees the payout method in the user table", "bKash" in row.inner_text())
+        row.locator('button:has-text("bKash")').click()
+        page.wait_for_timeout(800)
+        check(
+            "admin can reveal the full wallet number to actually pay someone",
+            "01819445203" in row.inner_text(),
+            row.inner_text()[:160],
+        )
+        shot(page, "20-admin-payout.png", scroll=f'tr:has-text("{NEW_EMAIL}")')
 
         # self-demotion guard
         resp = page.request.patch(
@@ -245,6 +359,13 @@ def main():
         check("GET /api/drafts without a session is 401", r.status == 401, f"got {r.status}")
         r = anon_page.request.get(f"{BASE}/api/editorial/queue")
         check("GET /api/editorial/queue without a session is 401", r.status == 401, f"got {r.status}")
+        editor_ctx = ctx.browser.new_context()
+        ep = editor_ctx.new_page()
+        sign_in(ep, "editor@thedocument.test", "demo1234")
+        r = ep.request.get(f"{BASE}/api/admin/users/{NEW_USER_ID[0]}/payout")
+        check("an editor cannot read anyone's payment details", r.status == 403, f"got {r.status}")
+        editor_ctx.close()
+
         r = anon_page.request.get(f"{BASE}/api/articles")
         check("GET /api/articles is public", r.status == 200)
         feed = r.json()
@@ -272,7 +393,17 @@ def main():
         check("dashboard works on a phone", "Total earnings" in mp.content())
         mob.close()
 
-        real_errors = [e for e in errors if "favicon" not in e.lower()]
+        # The run deliberately triggers two rejections (a malformed bKash number
+        # and publishing before translating), so those 422s are expected noise.
+        rejected = [e for e in errors if "422" in e]
+        real_errors = [
+            e for e in errors if "favicon" not in e.lower() and "Failed to load resource" not in e
+        ]
+        check(
+            "the two deliberate rejections really were rejected by the server",
+            len(rejected) == 2,
+            str(rejected),
+        )
         check("no uncaught JS errors anywhere in the run", not real_errors, str(real_errors[:3]))
 
         browser.close()

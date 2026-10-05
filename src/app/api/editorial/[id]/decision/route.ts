@@ -1,6 +1,8 @@
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { errorResponse, HttpError, requireRole } from "@/lib/rbac";
+import { paymentSettings } from "@/lib/settings";
+import { other } from "@/lib/i18n";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -40,6 +42,24 @@ export async function POST(req: Request, { params }: Ctx) {
     }
     if (decision === "APPROVE" && payoutCents === undefined) {
       throw new HttpError(422, "Set the estimated payout before approving");
+    }
+
+    // The site runs in two languages, so a piece is only publishable once the
+    // editor's translation exists. An Admin can relax this in settings.
+    if (decision === "APPROVE") {
+      const settings = await paymentSettings();
+      if (settings.requireTranslation) {
+        const needed = other(existing.language);
+        const translation = await prisma.articleTranslation.findUnique({
+          where: { articleId_locale: { articleId: id, locale: needed } },
+        });
+        if (!translation) {
+          throw new HttpError(
+            422,
+            `Add the ${needed === "BN" ? "Bangla" : "English"} version before publishing - readers on the other half of the site would see nothing`,
+          );
+        }
+      }
     }
 
     const toStatus = decision === "APPROVE" ? "APPROVED" : "REJECTED";
