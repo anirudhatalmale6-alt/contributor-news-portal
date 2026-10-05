@@ -164,7 +164,7 @@ export default async function ArticlePage({ params }: Props) {
           <aside className="mt-10 rounded-xl border border-line bg-paper-soft p-5">
             <p className="text-sm font-medium">About {article.author.name}</p>
             <p className="mt-1 text-sm text-ink-soft">
-              {article.author.bio ?? "Contributor at The Dispatch."}
+              {article.author.bio ?? "Contributor at The Document."}
             </p>
           </aside>
         </article>

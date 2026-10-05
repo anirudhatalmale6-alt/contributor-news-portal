@@ -56,7 +56,7 @@ export function SettingsForm({ settings }: { settings: Settings }) {
             value={form.currency}
             maxLength={3}
             onChange={(e) => setForm({ ...form, currency: e.target.value })}
-            className="rounded-lg border border-line px-3 py-2 uppercase outline-none focus:border-ink"
+            className="rounded-lg border border-line px-3 py-2 uppercase outline-none focus:border-navy"
           />
         </label>
         <label className="grid gap-1 text-sm">
@@ -65,7 +65,7 @@ export function SettingsForm({ settings }: { settings: Settings }) {
             value={form.defaultPayout}
             inputMode="decimal"
             onChange={(e) => setForm({ ...form, defaultPayout: e.target.value })}
-            className="rounded-lg border border-line px-3 py-2 tabular-nums outline-none focus:border-ink"
+            className="rounded-lg border border-line px-3 py-2 tabular-nums outline-none focus:border-navy"
           />
           <span className="text-xs text-ink-soft">Pre-fills the editor&rsquo;s payout box.</span>
         </label>
@@ -75,7 +75,7 @@ export function SettingsForm({ settings }: { settings: Settings }) {
             value={form.verifiedBonusPct}
             inputMode="numeric"
             onChange={(e) => setForm({ ...form, verifiedBonusPct: e.target.value })}
-            className="rounded-lg border border-line px-3 py-2 tabular-nums outline-none focus:border-ink"
+            className="rounded-lg border border-line px-3 py-2 tabular-nums outline-none focus:border-navy"
           />
           <span className="text-xs text-ink-soft">Suggested uplift for Verified writers.</span>
         </label>
@@ -86,14 +86,14 @@ export function SettingsForm({ settings }: { settings: Settings }) {
         <input
           value={form.payoutNote}
           onChange={(e) => setForm({ ...form, payoutNote: e.target.value })}
-          className="rounded-lg border border-line px-3 py-2 outline-none focus:border-ink"
+          className="rounded-lg border border-line px-3 py-2 outline-none focus:border-navy"
         />
       </label>
 
       <button
         type="submit"
         disabled={busy}
-        className="justify-self-start rounded-full bg-ink px-4 py-2 text-sm font-medium text-white hover:bg-black disabled:opacity-60"
+        className="justify-self-start rounded-full bg-navy px-4 py-2 text-sm font-medium text-white hover:bg-navy-dark disabled:opacity-60"
       >
         {busy ? "Saving..." : "Save settings"}
       </button>

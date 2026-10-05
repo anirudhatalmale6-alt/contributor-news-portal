@@ -94,7 +94,7 @@ export default async function EditorialPage({
               href={`/editorial?status=${t.key}`}
               className={`rounded-full border px-3 py-1 text-xs font-medium ${
                 t.key === status
-                  ? "border-ink bg-ink text-white"
+                  ? "border-navy bg-navy text-white"
                   : "border-line text-ink-soft hover:text-ink"
               }`}
             >
@@ -140,7 +140,7 @@ export default async function EditorialPage({
                     ) : null}
                     <Link
                       href={`/editorial/${a.id}`}
-                      className="rounded-full bg-ink px-4 py-2 text-xs font-medium text-white hover:bg-black"
+                      className="rounded-full bg-navy px-4 py-2 text-xs font-medium text-white hover:bg-navy-dark"
                     >
                       {a.status === "SUBMITTED" ? "Review" : "Open"}
                     </Link>

@@ -20,7 +20,7 @@ DESKTOP = {"width": 1280, "height": 720}
 PHONE = {"width": 390, "height": 780}
 
 STAMP = str(int(time.time()))
-NEW_EMAIL = f"rosa.{STAMP}@dispatch.test"
+NEW_EMAIL = f"rosa.{STAMP}@thedocument.test"
 NEW_PASS = "demo1234"
 NEW_NAME = "Rosa Delgado"
 HEADLINE = "The allotment that became a flood defence"
@@ -179,7 +179,7 @@ def main():
 
         # --- 6. editor reviews ---------------------------------------------
         sign_out(page)
-        sign_in(page, "editor@dispatch.test", "demo1234")
+        sign_in(page, "editor@thedocument.test", "demo1234")
         page.goto(f"{BASE}/editorial", wait_until="networkidle")
         check("editor sees the queue with the new submission", HEADLINE in page.content())
         shot(page, "06-editorial-queue.png")
@@ -218,7 +218,7 @@ def main():
 
         # --- 9. admin: roles, verified flag, payment settings ---------------
         sign_out(page)
-        sign_in(page, "admin@dispatch.test", "demo1234")
+        sign_in(page, "admin@thedocument.test", "demo1234")
         page.goto(f"{BASE}/admin", wait_until="networkidle")
         check("admin sees every account", NEW_EMAIL in page.content())
         row = page.locator(f'tr:has-text("{NEW_EMAIL}")')
@@ -264,7 +264,7 @@ def main():
         mp.goto(f"{BASE}/article/the-night-bus-that-never-came", wait_until="networkidle")
         mp.screenshot(path=os.path.join(SHOTS, "13-article-mobile.png"))
         mp.goto(f"{BASE}/login", wait_until="networkidle")
-        mp.fill('input[type="email"]', "maya@dispatch.test")
+        mp.fill('input[type="email"]', "maya@thedocument.test")
         mp.fill('input[type="password"]', "demo1234")
         mp.click('button[type="submit"]')
         mp.wait_for_url("**/dashboard", timeout=20000)

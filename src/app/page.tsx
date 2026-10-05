@@ -49,7 +49,7 @@ export default async function HomePage({
               href={c === "All" ? "/" : `/?category=${c}`}
               className={`rounded-full border px-3 py-1 text-xs font-medium ${
                 c === category
-                  ? "border-ink bg-ink text-white"
+                  ? "border-navy bg-navy text-white"
                   : "border-line text-ink-soft hover:text-ink"
               }`}
             >
@@ -120,7 +120,7 @@ export default async function HomePage({
         )}
 
         <section className="mt-14 rounded-2xl border border-line bg-paper-soft p-6 sm:p-8">
-          <h2 className="font-serif text-xl font-bold sm:text-2xl">Write for The Dispatch</h2>
+          <h2 className="font-serif text-xl font-bold sm:text-2xl">Write for The Document</h2>
           <p className="mt-2 max-w-xl text-sm text-ink-soft">
             Open an account, draft your piece with photos or video, and submit it. An editor reads
             every submission before it is published - and sets the payout you earn for it.

@@ -16,8 +16,19 @@ export async function SiteHeader() {
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-paper/95 backdrop-blur">
       <div className="mx-auto flex max-w-5xl items-center gap-3 px-4 py-3">
-        <Link href="/" className="font-serif text-xl font-bold tracking-tight sm:text-2xl">
-          The <span className="text-brand">Dispatch</span>
+        <Link href="/" aria-label="The Document - home" className="shrink-0">
+          {/* Width and height are fixed so the masthead never shifts the layout
+              while it decodes. eslint-disable: a plain <img> keeps the public
+              pages free of the image optimiser round-trip. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/brand/the-document-masthead.png"
+            alt="The Document"
+            width={1000}
+            height={259}
+            fetchPriority="high"
+            className="h-9 w-auto sm:h-12"
+          />
         </Link>
 
         <nav className="ml-auto hidden items-center gap-5 text-sm text-ink-soft md:flex">
@@ -33,7 +44,7 @@ export async function SiteHeader() {
             <>
               <Link
                 href={user.role === "CONTRIBUTOR" ? "/dashboard" : "/editorial"}
-                className="rounded-full bg-ink px-3 py-1.5 text-sm font-medium text-white hover:bg-black"
+                className="rounded-full bg-navy px-3 py-1.5 text-sm font-medium text-white hover:bg-navy-dark"
               >
                 {user.role === "CONTRIBUTOR" ? "My desk" : "Newsroom"}
               </Link>

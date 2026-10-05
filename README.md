@@ -1,4 +1,4 @@
-# The Dispatch - contributor news portal (working prototype)
+# The Document - contributor news portal (working prototype)
 
 A fast, mobile-first news site with a full writing and moderation workflow behind it.
 
@@ -25,16 +25,17 @@ Demo logins (password `demo1234` for all of them):
 
 | Email | Role |
 | --- | --- |
-| admin@dispatch.test | Admin |
-| editor@dispatch.test | Editor |
-| maya@dispatch.test | Contributor (Verified) |
-| sam@dispatch.test | Contributor (General) |
-| leo@dispatch.test | Contributor (General) |
+| admin@thedocument.test | Admin |
+| editor@thedocument.test | Editor |
+| maya@thedocument.test | Contributor (Verified) |
+| sam@thedocument.test | Contributor (General) |
+| leo@thedocument.test | Contributor (General) |
 
 ## Social login
 
 Google and Facebook are wired through the same auth layer and register themselves only when
-their keys are present, so a fresh clone boots without them:
+their keys are present, so a fresh clone boots without them. Step-by-step console walkthrough:
+[SETUP-OAUTH.md](SETUP-OAUTH.md).
 
 ```
 AUTH_GOOGLE_ID=...
@@ -43,9 +44,11 @@ AUTH_FACEBOOK_ID=...
 AUTH_FACEBOOK_SECRET=...
 ```
 
-Callback URL to register with the provider: `https://your-domain/api/auth/callback/google`.
-Adding a provider is three lines in `src/auth.ts` - Apple, X, LinkedIn and GitHub all follow the
-same shape.
+Callback URL to register with the provider: `https://your-domain/api/auth/callback/google`
+(and `.../facebook`). `AUTH_URL` must be set to the public origin in production - it is what the
+callback URL is built from. Both providers run with PKCE, `state` and (for Google) `nonce`.
+Someone who signed up by email and later uses Google keeps the same account. Adding Apple, X,
+LinkedIn or GitHub later is a three-line block in `src/auth.ts`.
 
 ## Roles
 
@@ -102,9 +105,21 @@ npm run build && npm run start      # terminal 1
 python3 e2e_flow.py                 # terminal 2
 ```
 
+`verify_social_login.py` proves the Google and Facebook wiring without needing a real provider
+app: it boots a second copy of the build with placeholder keys and asserts that each button hands
+off to the right provider with the right `client_id`, the right `/api/auth/callback/...` URL and
+PKCE + state + nonce. The outbound request is intercepted, so nothing leaves the machine. 11
+checks.
+
 ## API
 
 See [API.md](API.md) - every endpoint with its method, auth requirement, body and responses.
+
+## Branding
+
+The masthead supplied by the client lives in `public/brand/` (full lockup and the D mark), and
+`src/app/icon.png` is the browser tab icon cut from it. The palette in `src/app/globals.css` is
+sampled off the artwork: navy `#062a52`, red `#b4050e`.
 
 ## Layout
 

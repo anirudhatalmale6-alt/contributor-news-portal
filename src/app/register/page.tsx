@@ -15,7 +15,7 @@ export default async function RegisterPage() {
     <>
       <SiteHeader />
       <main className="mx-auto max-w-md px-4 py-10">
-        <h1 className="font-serif text-2xl font-bold sm:text-3xl">Write for The Dispatch</h1>
+        <h1 className="font-serif text-2xl font-bold sm:text-3xl">Write for The Document</h1>
         <p className="mt-1 text-sm text-ink-soft">
           New accounts start as General Contributors. Publish well and an editor can flag you as a
           Verified Contributor.

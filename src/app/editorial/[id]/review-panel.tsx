@@ -152,20 +152,20 @@ export function ReviewPanel({
         <input
           value={form.title}
           onChange={(e) => update("title", e.target.value)}
-          className="w-full border-b border-line pb-2 font-serif text-xl font-bold outline-none focus:border-ink"
+          className="w-full border-b border-line pb-2 font-serif text-xl font-bold outline-none focus:border-navy"
         />
         <input
           value={form.dek}
           onChange={(e) => update("dek", e.target.value)}
           placeholder="Standfirst"
-          className="w-full rounded-lg border border-line px-3 py-2 text-sm outline-none focus:border-ink"
+          className="w-full rounded-lg border border-line px-3 py-2 text-sm outline-none focus:border-navy"
         />
         <label className="flex items-center gap-2 text-sm">
           <span className="font-medium">Section</span>
           <select
             value={form.category}
             onChange={(e) => update("category", e.target.value)}
-            className="rounded-lg border border-line px-3 py-1.5 outline-none focus:border-ink"
+            className="rounded-lg border border-line px-3 py-1.5 outline-none focus:border-navy"
           >
             {CATEGORIES.map((c) => (
               <option key={c} value={c}>
@@ -178,7 +178,7 @@ export function ReviewPanel({
           value={form.body}
           onChange={(e) => update("body", e.target.value)}
           rows={16}
-          className="prose-article w-full rounded-xl border border-line p-4 outline-none focus:border-ink"
+          className="prose-article w-full rounded-xl border border-line p-4 outline-none focus:border-navy"
         />
 
         {media.length > 0 ? (
@@ -198,7 +198,7 @@ export function ReviewPanel({
                   <button
                     type="button"
                     onClick={() => void removeMedia(m.id)}
-                    className="absolute right-1 top-1 rounded bg-black/70 px-1.5 py-0.5 text-[10px] font-medium text-white hover:bg-black"
+                    className="absolute right-1 top-1 rounded bg-black/70 px-1.5 py-0.5 text-[10px] font-medium text-white hover:bg-navy-dark"
                   >
                     Remove
                   </button>
@@ -227,7 +227,7 @@ export function ReviewPanel({
             value={payout}
             onChange={(e) => setPayout(e.target.value)}
             inputMode="decimal"
-            className="w-40 rounded-lg border border-line px-3 py-2 tabular-nums outline-none focus:border-ink"
+            className="w-40 rounded-lg border border-line px-3 py-2 tabular-nums outline-none focus:border-navy"
           />
           <span className="text-xs text-ink-soft">
             Suggested from payment settings
@@ -243,7 +243,7 @@ export function ReviewPanel({
             onChange={(e) => setNote(e.target.value)}
             rows={3}
             placeholder="Required when sending a piece back."
-            className="w-full rounded-lg border border-line px-3 py-2 outline-none focus:border-ink"
+            className="w-full rounded-lg border border-line px-3 py-2 outline-none focus:border-navy"
           />
         </label>
 

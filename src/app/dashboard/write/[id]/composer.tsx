@@ -197,7 +197,7 @@ export function Composer({
         onChange={(e) => update("title", e.target.value)}
         disabled={locked}
         placeholder="Headline"
-        className="w-full border-b border-line pb-2 font-serif text-2xl font-bold outline-none placeholder:text-ink-soft/50 focus:border-ink disabled:bg-transparent sm:text-3xl"
+        className="w-full border-b border-line pb-2 font-serif text-2xl font-bold outline-none placeholder:text-ink-soft/50 focus:border-navy disabled:bg-transparent sm:text-3xl"
       />
 
       <input
@@ -205,7 +205,7 @@ export function Composer({
         onChange={(e) => update("dek", e.target.value)}
         disabled={locked}
         placeholder="One-line summary shown in the feed"
-        className="w-full rounded-lg border border-line px-3 py-2.5 text-sm outline-none focus:border-ink"
+        className="w-full rounded-lg border border-line px-3 py-2.5 text-sm outline-none focus:border-navy"
       />
 
       <label className="flex flex-wrap items-center gap-2 text-sm">
@@ -214,7 +214,7 @@ export function Composer({
           value={form.category}
           onChange={(e) => update("category", e.target.value)}
           disabled={locked}
-          className="rounded-lg border border-line px-3 py-2 outline-none focus:border-ink"
+          className="rounded-lg border border-line px-3 py-2 outline-none focus:border-navy"
         >
           {CATEGORIES.map((c) => (
             <option key={c} value={c}>
@@ -230,7 +230,7 @@ export function Composer({
         disabled={locked}
         rows={18}
         placeholder={"Write your piece here.\n\nBlank line starts a new paragraph. Use ## for a subheading, > for a pull quote and - for a bullet."}
-        className="prose-article w-full rounded-xl border border-line p-4 outline-none focus:border-ink"
+        className="prose-article w-full rounded-xl border border-line p-4 outline-none focus:border-navy"
       />
 
       <section className="rounded-xl border border-line p-4">
@@ -281,7 +281,7 @@ export function Composer({
                     type="button"
                     onClick={() => void removeMedia(m.id)}
                     aria-label="Remove attachment"
-                    className="absolute right-1.5 top-1.5 rounded bg-black/70 px-1.5 py-0.5 text-[10px] font-medium text-white hover:bg-black"
+                    className="absolute right-1.5 top-1.5 rounded bg-black/70 px-1.5 py-0.5 text-[10px] font-medium text-white hover:bg-navy-dark"
                   >
                     Remove
                   </button>

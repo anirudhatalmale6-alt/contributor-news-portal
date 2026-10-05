@@ -136,7 +136,7 @@ export default async function DashboardPage() {
                             href={`/dashboard/write/${a.id}`}
                             className={`rounded-full px-3 py-1.5 text-xs font-medium ${
                               editable
-                                ? "bg-ink text-white hover:bg-black"
+                                ? "bg-ink text-white hover:bg-navy-dark"
                                 : "border border-line hover:bg-paper-soft"
                             }`}
                           >

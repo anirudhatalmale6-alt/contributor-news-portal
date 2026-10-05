@@ -88,7 +88,7 @@ export function UserTable({
                     value={u.role}
                     disabled={busy === u.id}
                     onChange={(e) => void patch(u.id, { role: e.target.value })}
-                    className="rounded-lg border border-line px-2 py-1.5 text-xs outline-none focus:border-ink"
+                    className="rounded-lg border border-line px-2 py-1.5 text-xs outline-none focus:border-navy"
                   >
                     {ROLES.map((r) => (
                       <option key={r} value={r}>

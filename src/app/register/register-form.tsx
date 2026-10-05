@@ -60,7 +60,7 @@ export function RegisterForm() {
           autoComplete="name"
           value={form.name}
           onChange={set("name")}
-          className="rounded-lg border border-line px-3 py-2.5 outline-none focus:border-ink"
+          className="rounded-lg border border-line px-3 py-2.5 outline-none focus:border-navy"
         />
       </label>
 
@@ -72,7 +72,7 @@ export function RegisterForm() {
           autoComplete="email"
           value={form.email}
           onChange={set("email")}
-          className="rounded-lg border border-line px-3 py-2.5 outline-none focus:border-ink"
+          className="rounded-lg border border-line px-3 py-2.5 outline-none focus:border-navy"
         />
       </label>
 
@@ -85,7 +85,7 @@ export function RegisterForm() {
           autoComplete="new-password"
           value={form.password}
           onChange={set("password")}
-          className="rounded-lg border border-line px-3 py-2.5 outline-none focus:border-ink"
+          className="rounded-lg border border-line px-3 py-2.5 outline-none focus:border-navy"
         />
         <span className="text-xs text-ink-soft">At least 8 characters.</span>
       </label>

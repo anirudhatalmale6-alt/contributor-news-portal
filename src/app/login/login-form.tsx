@@ -44,7 +44,7 @@ export function LoginForm() {
           autoComplete="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className="rounded-lg border border-line px-3 py-2.5 outline-none focus:border-ink"
+          className="rounded-lg border border-line px-3 py-2.5 outline-none focus:border-navy"
         />
       </label>
 
@@ -56,14 +56,14 @@ export function LoginForm() {
           autoComplete="current-password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          className="rounded-lg border border-line px-3 py-2.5 outline-none focus:border-ink"
+          className="rounded-lg border border-line px-3 py-2.5 outline-none focus:border-navy"
         />
       </label>
 
       <button
         type="submit"
         disabled={busy}
-        className="mt-1 rounded-lg bg-ink px-4 py-2.5 text-sm font-medium text-white hover:bg-black disabled:opacity-60"
+        className="mt-1 rounded-lg bg-navy px-4 py-2.5 text-sm font-medium text-white hover:bg-navy-dark disabled:opacity-60"
       >
         {busy ? "Signing in..." : "Sign in"}
       </button>

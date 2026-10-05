@@ -14,7 +14,12 @@ if (process.env.AUTH_GOOGLE_ID) {
     Google({
       clientId: process.env.AUTH_GOOGLE_ID,
       clientSecret: process.env.AUTH_GOOGLE_SECRET,
+      // Same person, one account: a reader who signed up with a password and
+      // later uses Google keeps the account instead of getting a duplicate.
       allowDangerousEmailAccountLinking: true,
+      // PKCE alone is the library default; state and nonce are cheap and close
+      // the CSRF / replay window on the callback.
+      checks: ["pkce", "state", "nonce"],
     }),
   );
 }
@@ -24,6 +29,7 @@ if (process.env.AUTH_FACEBOOK_ID) {
       clientId: process.env.AUTH_FACEBOOK_ID,
       clientSecret: process.env.AUTH_FACEBOOK_SECRET,
       allowDangerousEmailAccountLinking: true,
+      checks: ["pkce", "state"],
     }),
   );
 }

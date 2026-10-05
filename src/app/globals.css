@@ -10,13 +10,16 @@
     sans-serif;
   --font-serif: ui-serif, Georgia, Cambria, "Times New Roman", serif;
 
-  --color-ink: #11161d;
+  /* Taken off the masthead: the navy of "Document" and the red of the D swoosh. */
+  --color-ink: #0d1726;
   --color-ink-soft: #4a5566;
-  --color-line: #e4e7ec;
+  --color-line: #e2e6ed;
   --color-paper: #ffffff;
-  --color-paper-soft: #f7f8fa;
-  --color-brand: #b3261e;
-  --color-brand-dark: #8c1d17;
+  --color-paper-soft: #f6f8fb;
+  --color-brand: #b4050e;
+  --color-brand-dark: #8a040b;
+  --color-navy: #062a52;
+  --color-navy-dark: #041b36;
 }
 
 :root {
