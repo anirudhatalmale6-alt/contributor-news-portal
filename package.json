@@ -12,7 +12,9 @@
     "db:seed": "tsx prisma/seed.ts",
     "db:studio": "prisma studio",
     "postinstall": "prisma generate",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "admin:create": "tsx prisma/create-admin.ts",
+    "demo:clear": "tsx prisma/clear-demo.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",

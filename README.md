@@ -23,6 +23,13 @@ npm run db:seed               # demo users + articles in every workflow state
 npm run dev                   # http://localhost:3300
 ```
 
+Running it for real rather than as a demo:
+
+```bash
+npm run admin:create -- "you@example.com" "Your Name" "a-good-password"
+npm run demo:clear -- --yes   # removes the seeded @thedocument.test accounts and their articles
+```
+
 Demo logins (password `demo1234` for all of them):
 
 | Email | Role |

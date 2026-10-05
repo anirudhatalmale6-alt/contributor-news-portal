@@ -77,6 +77,11 @@ Send me:
 2. an SSH user with sudo (root is fine) and either its password or my public key installed,
 3. the domain you want it on, with an A record already pointing at that IP.
 
+**No domain yet?** That is fine - a free wildcard DNS name works for the certificate, so you still
+get HTTPS on day one. For a server at `203.0.113.7` the hostname is `203-0-113-7.sslip.io`
+(verified: that name resolves straight back to the IP). Run the script with it, and switch to your
+real domain later by re-running the script with the new name.
+
 Then I run:
 
 ```bash
@@ -131,11 +136,28 @@ A five-minute walk through everything:
    contributor as Verified, reveal a contributor's full payment details, change the currency or
    the default payout, or turn off "require a translation before publishing".
 
+## Handing it over
+
+Once it is up, two commands turn the demo into your site:
+
+```bash
+# your own Admin account (also works as a password reset)
+npm run admin:create -- "you@example.com" "Your Name" "a-good-password"
+
+# see what the demo data is, then remove it
+npm run demo:clear
+npm run demo:clear -- --yes
+```
+
+`demo:clear` only touches the seeded `@thedocument.test` accounts and what they wrote. Real
+accounts, real articles and your settings are left alone, and it prints what it is about to do
+before you confirm.
+
 ## Going live for real
 
 Before you open it to the public:
 
-- Delete the demo users and demo articles (or run against a fresh database and skip the seed).
+- Create your Admin account and clear the demo content with the two commands above.
 - Set `AUTH_SECRET` to a fresh random value, and `AUTH_URL` / `SITE_URL` to your real domain.
 - Add your Google and Facebook keys - see [SETUP-OAUTH.md](SETUP-OAUTH.md).
 - Point your own domain at it and add the TLS certificate (Option B does this for you).
