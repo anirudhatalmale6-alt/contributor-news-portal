@@ -71,6 +71,33 @@ Postgres instead. On a normal server leave it as `disk`. Nothing else changes - 
 
 ## Option B - your own server (I do it)
 
+### Creating the droplet on DigitalOcean
+
+- **Image:** Ubuntu 24.04 (LTS).
+- **Region:** Bangalore or Singapore - closest to Bangladesh.
+- **Plan:** Basic, Regular SSD. The $6 plan (1 vCPU, 1 GB RAM, 25 GB) is enough: the setup script
+  adds 2 GB of swap and caps the build's memory so a 1 GB box does not get its build killed. The
+  $12 plan (2 GB RAM) builds faster and leaves more headroom; either works.
+- **Authentication:** switch to the **Password** tab and set a root password, which is what you
+  send me. (An SSH key works too if you prefer.)
+- **Backups:** optional, about 20% of the droplet price. Worth turning on once the site is real.
+- **Volumes / extra storage:** not needed, uploads live on the droplet disk.
+- **IPv6:** fine either way, harmless to enable.
+
+### DNS
+
+At whoever you bought the domain from, add two records pointing at the droplet IP:
+
+| Type | Host | Value | TTL |
+| --- | --- | --- | --- |
+| A | `@` | the droplet IP | 300 |
+| A | `www` | the droplet IP | 300 |
+
+Nothing else - no CNAME, no nameserver change needed. The certificate is issued only after these
+resolve, so add them before I run the script (or I will wait for them and re-run certbot).
+
+### What to send me
+
 Send me:
 
 1. the server IP address,

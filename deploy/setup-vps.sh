@@ -27,6 +27,27 @@ if [[ $EUID -ne 0 ]]; then
   exit 1
 fi
 
+echo "==> Swap"
+# A 1 GB droplet (DigitalOcean's $6 plan) runs out of memory during the Next.js
+# build and the install gets killed with no useful message. Swap makes that
+# plan perfectly usable; it costs disk, not money.
+TOTAL_MB=$(awk '/MemTotal/ {print int($2/1024)}' /proc/meminfo)
+CURRENT_SWAP_MB=$(awk '/SwapTotal/ {print int($2/1024)}' /proc/meminfo)
+if [[ "$TOTAL_MB" -lt 2048 && "$CURRENT_SWAP_MB" -lt 1024 ]]; then
+  if [[ ! -f /swapfile ]]; then
+    fallocate -l 2G /swapfile || dd if=/dev/zero of=/swapfile bs=1M count=2048
+    chmod 600 /swapfile
+    mkswap /swapfile >/dev/null
+  fi
+  swapon /swapfile 2>/dev/null || true
+  grep -q '^/swapfile' /etc/fstab || echo '/swapfile none swap sw 0 0' >> /etc/fstab
+  sysctl -q vm.swappiness=10
+  grep -q '^vm.swappiness' /etc/sysctl.conf || echo 'vm.swappiness=10' >> /etc/sysctl.conf
+  echo "    ${TOTAL_MB} MB RAM detected, 2 GB swap added"
+else
+  echo "    ${TOTAL_MB} MB RAM, ${CURRENT_SWAP_MB} MB swap - nothing to do"
+fi
+
 echo "==> Packages"
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -qq
@@ -83,7 +104,10 @@ mkdir -p "$APP_DIR/storage/uploads"
 chown -R "$APP_USER":"$APP_USER" "$APP_DIR/storage"
 
 echo "==> Build"
-sudo -u "$APP_USER" bash -lc "cd '$APP_DIR' && npm ci && npx prisma migrate deploy && npm run build"
+# Cap the build heap so a small droplet degrades into swap instead of being
+# killed outright by the OOM reaper.
+BUILD_HEAP=$(( TOTAL_MB < 2048 ? 1024 : 2048 ))
+sudo -u "$APP_USER" bash -lc "cd '$APP_DIR' && npm ci && npx prisma migrate deploy && NODE_OPTIONS=--max-old-space-size=${BUILD_HEAP} npm run build"
 
 echo "==> Service"
 cat > /etc/systemd/system/the-document.service <<EOF
