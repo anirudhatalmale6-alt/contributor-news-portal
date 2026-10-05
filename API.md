@@ -64,6 +64,18 @@ Save (the composer autosaves two seconds after typing stops). Any subset of
 ### `DELETE /api/drafts/:id`
 Deletes an unpublished piece. `409` once it is published.
 
+### `PUT /api/drafts/:id/translation`
+The contributor writing the **other** language themselves, so the piece is submitted for both
+sections at once.
+
+```json
+{ "title": "...", "dek": "...", "body": "..." }
+```
+
+The locale is always the opposite of `article.language` - a writer cannot overwrite their own
+original by accident. `409` once the piece is SUBMITTED or APPROVED. `DELETE` the same path drops
+that version again and hands the job back to an editor.
+
 ### `POST /api/drafts/:id/submit`
 Sends it to the editorial queue. Requires a title and at least 50 characters of body (`422`).
 Records `SUBMITTED` or, for a piece that had been sent back, `RESUBMITTED`.

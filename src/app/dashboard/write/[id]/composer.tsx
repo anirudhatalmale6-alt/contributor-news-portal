@@ -25,9 +25,12 @@ const CATEGORIES = ["General", "Politics", "Technology", "Culture", "Business"];
 export function Composer({
   article,
   lastNote,
+  secondVersion,
 }: {
   article: ArticleState;
   lastNote: { action: string; note: string; editor: string } | null;
+  /** The other-language version, if one already exists for this piece. */
+  secondVersion: { title: string; dek: string; body: string; byEditor: boolean } | null;
 }) {
   const router = useRouter();
   const [form, setForm] = useState({
@@ -132,6 +135,7 @@ export function Composer({
   }
 
   const words = form.body.trim().split(/\s+/).filter(Boolean).length;
+  const otherName = form.language === "EN" ? "বাংলা (Bangla)" : "English";
 
   return (
     <div className="grid gap-5">
@@ -318,6 +322,14 @@ export function Composer({
         )}
       </section>
 
+      <SecondVersion
+        articleId={article.id}
+        otherName={otherName}
+        otherLang={form.language === "EN" ? "bn" : "en"}
+        locked={locked}
+        initial={secondVersion}
+      />
+
       {status === "APPROVED" ? (
         <Link
           href={`/article/${article.slug}`}
@@ -327,5 +339,154 @@ export function Composer({
         </Link>
       ) : null}
     </div>
+  );
+}
+
+/**
+ * Optional second language, written by the contributor. Filling this in means
+ * the piece is submitted for both sections at once; leaving it empty means an
+ * editor writes it. Either way nothing is published until an editor approves.
+ */
+function SecondVersion({
+  articleId,
+  otherName,
+  otherLang,
+  locked,
+  initial,
+}: {
+  articleId: string;
+  otherName: string;
+  otherLang: string;
+  locked: boolean;
+  initial: { title: string; dek: string; body: string; byEditor: boolean } | null;
+}) {
+  const router = useRouter();
+  const [open, setOpen] = useState(Boolean(initial));
+  const [form, setForm] = useState({
+    title: initial?.title ?? "",
+    dek: initial?.dek ?? "",
+    body: initial?.body ?? "",
+  });
+  const [saved, setSaved] = useState(Boolean(initial));
+  const [busy, setBusy] = useState(false);
+  const [note, setNote] = useState<string | null>(null);
+
+  async function save() {
+    setBusy(true);
+    setNote(null);
+    const res = await fetch(`/api/drafts/${articleId}/translation`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(form),
+    });
+    const data = await res.json().catch(() => ({}));
+    setBusy(false);
+    if (!res.ok) {
+      setNote(data.error ?? "Could not save that version.");
+      return;
+    }
+    setSaved(true);
+    setNote(`${otherName} version saved. This piece now goes to both sections.`);
+    router.refresh();
+  }
+
+  async function drop() {
+    setBusy(true);
+    await fetch(`/api/drafts/${articleId}/translation`, { method: "DELETE" });
+    setBusy(false);
+    setSaved(false);
+    setForm({ title: "", dek: "", body: "" });
+    setNote("Removed. An editor will write that version instead.");
+    router.refresh();
+  }
+
+  return (
+    <section className="rounded-xl border border-line p-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="text-sm font-medium">Also submit in {otherName}</h2>
+          <p className="text-xs text-ink-soft">
+            Optional. Write it yourself and your piece goes to both sections, or leave it and an
+            editor translates it.
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <span
+            className={`rounded-full border px-2.5 py-0.5 text-xs font-medium ${
+              saved
+                ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                : "border-line bg-paper-soft text-ink-soft"
+            }`}
+          >
+            {saved ? (initial?.byEditor ? "Editor's version" : "Both sections") : "One section"}
+          </span>
+          {!locked ? (
+            <button
+              type="button"
+              onClick={() => setOpen((o) => !o)}
+              className="rounded-full border border-line px-3 py-1.5 text-xs font-medium hover:bg-paper-soft"
+            >
+              {open ? "Hide" : saved ? "Edit" : "Add it"}
+            </button>
+          ) : null}
+        </div>
+      </div>
+
+      {note ? (
+        <p className="mt-3 rounded-lg border border-line bg-paper-soft px-3 py-2 text-sm">{note}</p>
+      ) : null}
+
+      {open ? (
+        <div className="mt-4 grid gap-2">
+          <input
+            value={form.title}
+            lang={otherLang}
+            disabled={locked}
+            onChange={(e) => setForm({ ...form, title: e.target.value })}
+            placeholder={otherLang === "bn" ? "শিরোনাম" : "Headline"}
+            className="w-full rounded-lg border border-line px-3 py-2 font-serif text-base font-bold outline-none focus:border-navy"
+          />
+          <input
+            value={form.dek}
+            lang={otherLang}
+            disabled={locked}
+            onChange={(e) => setForm({ ...form, dek: e.target.value })}
+            placeholder={otherLang === "bn" ? "সংক্ষিপ্ত বিবরণ" : "Standfirst"}
+            className="w-full rounded-lg border border-line px-3 py-2 text-sm outline-none focus:border-navy"
+          />
+          <textarea
+            value={form.body}
+            lang={otherLang}
+            disabled={locked}
+            rows={10}
+            onChange={(e) => setForm({ ...form, body: e.target.value })}
+            placeholder={otherLang === "bn" ? "এখানে বাংলা সংস্করণ লিখুন" : "Write the English version here"}
+            className="prose-article w-full rounded-lg border border-line p-3 outline-none focus:border-navy"
+          />
+          {!locked ? (
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => void save()}
+                disabled={busy || !form.title.trim() || !form.body.trim()}
+                className="rounded-full bg-navy px-4 py-2 text-sm font-medium text-white hover:bg-navy-dark disabled:opacity-50"
+              >
+                {busy ? "Saving..." : saved ? `Update ${otherName} version` : `Save ${otherName} version`}
+              </button>
+              {saved ? (
+                <button
+                  type="button"
+                  onClick={() => void drop()}
+                  disabled={busy}
+                  className="rounded-full border border-line px-4 py-2 text-sm font-medium hover:bg-paper-soft disabled:opacity-50"
+                >
+                  Remove it
+                </button>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+    </section>
   );
 }

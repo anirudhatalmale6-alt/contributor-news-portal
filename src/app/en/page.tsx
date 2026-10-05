@@ -4,15 +4,15 @@ import { Feed } from "@/components/public/feed";
 export const revalidate = 60;
 
 export const metadata: Metadata = {
-  title: "দ্য ডকুমেন্ট - পাঠকদের লেখা সংবাদ",
-  alternates: { canonical: "/bn", languages: { en: "/", bn: "/bn" } },
+  title: "The Document - contributor-powered news",
+  alternates: { canonical: "/en", languages: { bn: "/", en: "/en" } },
 };
 
-export default async function BanglaHomePage({
+export default async function EnglishHomePage({
   searchParams,
 }: {
   searchParams: Promise<{ category?: string }>;
 }) {
   const { category = "All" } = await searchParams;
-  return <Feed locale="BN" category={category} />;
+  return <Feed locale="EN" category={category} />;
 }

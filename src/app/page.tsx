@@ -5,14 +5,16 @@ import { Feed } from "@/components/public/feed";
 export const revalidate = 60;
 
 export const metadata: Metadata = {
-  alternates: { canonical: "/", languages: { en: "/", bn: "/bn" } },
+  title: "দ্য ডকুমেন্ট - পাঠকদের লেখা সংবাদ",
+  alternates: { canonical: "/", languages: { bn: "/", en: "/en" } },
 };
 
+/** The default site is Bangla. English lives at /en. */
 export default async function HomePage({
   searchParams,
 }: {
   searchParams: Promise<{ category?: string }>;
 }) {
   const { category = "All" } = await searchParams;
-  return <Feed locale="EN" category={category} />;
+  return <Feed locale="BN" category={category} />;
 }

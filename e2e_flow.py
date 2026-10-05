@@ -35,6 +35,8 @@ BN_BODY = (
     "২০২৩ সালের বন্যায় প্লটগুলো নয়শো ঘনমিটার পানি দুই দিনের বেশি ধরে রেখেছিল। পরে জমা দেওয়া প্রকৌশল নোটে জায়গাটিকে বলা হয়েছে "
     "অনানুষ্ঠানিক জলাধার, যার সহজ অর্থ: কাউন্সিল যে কাজের জন্য কখনো টাকা দেয়নি, জমিটি সেটিই করেছে।"
 )
+BOTH_EN_TITLE = "The ferry contract nobody costed"
+BOTH_BN_TITLE = "যে ফেরি চুক্তির খরচ কেউ হিসাব করেনি"
 # filled in once the test account exists, so the admin check can hit its API
 NEW_USER_ID = [""]
 
@@ -68,7 +70,8 @@ def sign_in(page, email, password):
 
 
 def sign_out(page):
-    page.goto(f"{BASE}/", wait_until="networkidle")
+    # the root is the Bangla site now, where the button reads সাইন আউট
+    page.goto(f"{BASE}/en", wait_until="networkidle")
     page.click('button:has-text("Sign out")')
     page.wait_for_timeout(1500)
 
@@ -104,6 +107,17 @@ def main():
 
         # --- 1. public feed -------------------------------------------------
         page.goto(BASE, wait_until="networkidle")
+        check(
+            "the default home page is the Bangla feed",
+            "সর্বশেষ" in page.content() and "আজকের আরও খবর" in page.content(),
+        )
+        check(
+            "the English switch is a visible button, not a hidden link",
+            page.locator("header a:has-text('English')").first.is_visible(),
+        )
+        page.click("header a:has-text('English')")
+        page.wait_for_url("**/en", timeout=20000)
+        check("the switch lands on the English site at /en", page.url.rstrip("/").endswith("/en"))
         check("home serves the published lead story", "night bus" in page.content())
         check(
             "an unpublished draft never leaks onto the public feed",
@@ -115,10 +129,16 @@ def main():
         )
         shot(page, "01-home-desktop.png")
 
+        # the old /bn addresses still resolve rather than 404
+        page.goto(f"{BASE}/bn", wait_until="networkidle")
+        check("the old /bn address redirects to the new Bangla root", page.url.rstrip("/") == BASE)
+        shot(page, "21-home-bangla-default.png")
+        page.goto(f"{BASE}/en", wait_until="networkidle")
+
         # --- 2. article page ------------------------------------------------
         # .first: the headline is a link in both the lead card and the rail
         page.locator("a:has-text('The night bus that never came')").first.click()
-        page.wait_for_url("**/article/**", timeout=20000)
+        page.wait_for_url("**/en/article/**", timeout=20000)
         page.wait_for_load_state("networkidle")
         check("the headline link reaches the article", "/article/" in page.url, page.url)
         check("article page renders the body copy", "00:41" in page.content())
@@ -278,12 +298,12 @@ def main():
         shot(page, "09-dashboard-earnings.png")
 
         # --- 8. live on the public site -------------------------------------
-        page.goto(f"{BASE}/?category=Culture", wait_until="networkidle")
+        page.goto(f"{BASE}/en?category=Culture", wait_until="networkidle")
         check("approved piece is live on the public feed", "refused to buy it" in page.content())
         shot(page, "10-public-feed-culture.png")
 
         # --- 8b. the same piece on the Bangla side of the site ---------------
-        page.goto(f"{BASE}/bn", wait_until="networkidle")
+        page.goto(BASE, wait_until="networkidle")
         bn_home = page.content()
         check("the Bangla front page is in Bangla", "সর্বশেষ" in bn_home and "আজকের আরও খবর" in bn_home)
         check("the editor's Bangla headline is live", BN_HEADLINE in bn_home)
@@ -294,7 +314,7 @@ def main():
         shot(page, "18-bangla-feed.png")
 
         page.locator(f"a:has-text('{BN_HEADLINE}')").first.click()
-        page.wait_for_url("**/bn/article/**", timeout=20000)
+        page.wait_for_url("**/article/**", timeout=20000)
         page.wait_for_load_state("networkidle")
         check("the Bangla article renders the translated body", BN_BODY[:24] in page.content())
         check("the page is marked as Bangla for screen readers", 'lang="bn"' in page.content())
@@ -306,15 +326,80 @@ def main():
 
         # the language switch returns to the English version of the same story
         page.click("text=Read in English")
-        page.wait_for_url(lambda u: "/bn/" not in u, timeout=20000)
+        page.wait_for_url("**/en/article/**", timeout=20000)
         check("the language switch lands on the English version", "refused to buy it" in page.content())
 
         # a Bangla original is readable in English too
-        page.goto(f"{BASE}/article/notun-sorok-puratan-khaler-opore-en", wait_until="networkidle")
+        page.goto(f"{BASE}/en/article/notun-sorok-puratan-khaler-opore-en", wait_until="networkidle")
         check(
             "the desk's English version of a Bangla original is live",
             "A new road over an old canal" in page.content(),
         )
+
+        # --- 8c. a contributor writing BOTH versions themselves --------------
+        sign_out(page)
+        sign_in(page, NEW_EMAIL, NEW_PASS)
+        page.goto(f"{BASE}/dashboard", wait_until="networkidle")
+        page.click('button:has-text("Start a new piece")')
+        page.wait_for_url("**/dashboard/write/**", timeout=20000)
+        page.fill('input[placeholder="Headline"]', BOTH_EN_TITLE)
+        page.fill(
+            'input[placeholder="One-line summary shown in the feed"]',
+            "Two years of minutes, and not one of them mentions the cost.",
+        )
+        page.fill(
+            "textarea >> nth=0",
+            "The committee met eleven times before anyone asked what the ferry would cost to run.\n\n"
+            "## What the minutes show\nEvery meeting records the same three items and none of them is the operating subsidy. "
+            "The figure appears for the first time in a footnote eighteen months after the contract was signed.\n\n"
+            "> \"Nobody asked, so nobody answered.\"\n\n"
+            "The subsidy is now the second largest line in the transport budget.",
+        )
+        page.click('button:has-text("Add it")')
+        page.fill('input[placeholder="শিরোনাম"]', BOTH_BN_TITLE)
+        page.fill('input[placeholder="সংক্ষিপ্ত বিবরণ"]', "দুই বছরের কার্যবিবরণী, একবারও খরচের উল্লেখ নেই।")
+        page.fill(
+            'textarea[placeholder="এখানে বাংলা সংস্করণ লিখুন"]',
+            "ফেরি চালাতে কত খরচ হবে, কমিটির এগারোটি সভার আগে কেউ সে প্রশ্ন করেনি।\n\n"
+            "## কার্যবিবরণী যা বলছে\nপ্রতিটি সভায় একই তিনটি বিষয় লেখা আছে, তার একটিও পরিচালন ভর্তুকি নয়। "
+            "চুক্তি সইয়ের আঠারো মাস পর একটি পাদটীকায় প্রথমবার সংখ্যাটি আসে।\n\n"
+            "> \"কেউ প্রশ্ন করেনি, তাই কেউ উত্তরও দেয়নি।\"\n\n"
+            "এই ভর্তুকি এখন পরিবহন বাজেটের দ্বিতীয় বৃহত্তম খাত।",
+        )
+        page.click('button:has-text("Save বাংলা (Bangla) version")')
+        page.wait_for_selector("text=now goes to both sections", timeout=20000)
+        check(
+            "a contributor can write the second language themselves",
+            "Both sections" in page.content(),
+        )
+        shot(page, "22-contributor-both-languages.png", scroll="section:has-text('Also submit in')")
+        page.click('button:has-text("Submit for review")')
+        page.wait_for_selector("text=An editor will review it", timeout=20000)
+
+        sign_out(page)
+        sign_in(page, "editor@thedocument.test", "demo1234")
+        page.goto(f"{BASE}/editorial", wait_until="networkidle")
+        queue_row = page.locator(f'li:has-text("{BOTH_EN_TITLE}")')
+        check(
+            "the queue shows that both languages arrived together",
+            "both languages" in queue_row.inner_text(),
+        )
+        queue_row.locator('a:has-text("Review")').click()
+        page.wait_for_url("**/editorial/**", timeout=20000)
+        page.wait_for_load_state("networkidle")
+        check(
+            "the editor sees the contributor's own second version, not an empty box",
+            "Supplied by the contributor" in page.content() and BOTH_BN_TITLE in page.content(),
+        )
+        page.fill('input[inputmode="decimal"]', "90.00")
+        page.click('button:has-text("Approve and publish")')
+        page.wait_for_selector("text=Published.", timeout=20000)
+        check("a piece that arrived in both languages publishes straight away", "90.00" in page.content())
+
+        page.goto(BASE, wait_until="networkidle")
+        check("it is live on the Bangla site", BOTH_BN_TITLE in page.content())
+        page.goto(f"{BASE}/en", wait_until="networkidle")
+        check("and on the English site", BOTH_EN_TITLE in page.content())
 
         # --- 9. admin: roles, verified flag, payment settings ---------------
         sign_out(page)
@@ -382,7 +467,7 @@ def main():
         overflow = mp.evaluate("document.documentElement.scrollWidth > window.innerWidth + 1")
         check("no sideways scroll on a 390px phone", not overflow)
         mp.screenshot(path=os.path.join(SHOTS, "12-home-mobile.png"))
-        mp.goto(f"{BASE}/article/the-night-bus-that-never-came", wait_until="networkidle")
+        mp.goto(f"{BASE}/article/the-night-bus-that-never-came-bn", wait_until="networkidle")
         mp.screenshot(path=os.path.join(SHOTS, "13-article-mobile.png"))
         mp.goto(f"{BASE}/login", wait_until="networkidle")
         mp.fill('input[type="email"]', "maya@thedocument.test")

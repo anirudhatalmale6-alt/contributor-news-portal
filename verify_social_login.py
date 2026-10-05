@@ -37,7 +37,21 @@ def check(name, ok, detail=""):
         raise AssertionError(name + " " + detail)
 
 
+def wait_for_free_port():
+    """A leftover server from a previous run would answer instead of ours."""
+    import socket
+
+    for _ in range(40):
+        with socket.socket() as sock:
+            sock.settimeout(0.5)
+            if sock.connect_ex(("127.0.0.1", PORT)) != 0:
+                return
+        time.sleep(0.5)
+    raise RuntimeError(f"port {PORT} is still in use by something else")
+
+
 def start_server():
+    wait_for_free_port()
     env = dict(os.environ)
     env.update(
         {
@@ -63,7 +77,9 @@ def start_server():
         try:
             import urllib.request
 
-            if urllib.request.urlopen(BASE, timeout=2).status == 200:
+            html = urllib.request.urlopen(f"{BASE}/login", timeout=3).read().decode()
+            # and it really is this build answering, not a stale one
+            if "Continue with Google" in html:
                 return proc
         except Exception:
             continue

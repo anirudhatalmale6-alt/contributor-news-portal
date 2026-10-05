@@ -23,7 +23,7 @@ export default async function ReviewPage({ params }: { params: Promise<{ id: str
       include: {
         author: { select: { name: true, email: true, tier: true } },
         media: { orderBy: { createdAt: "asc" } },
-        translations: { include: { translator: { select: { name: true } } } },
+        translations: { include: { translator: { select: { id: true, name: true } } } },
         reviews: {
           orderBy: { createdAt: "desc" },
           include: { editor: { select: { name: true, role: true } } },
@@ -144,6 +144,7 @@ export default async function ReviewPage({ params }: { params: Promise<{ id: str
                       dek: translation.dek ?? "",
                       body: translation.body,
                       translator: translation.translator?.name ?? null,
+                      byAuthor: translation.translatorId === article.authorId,
                     }
                   : null
               }

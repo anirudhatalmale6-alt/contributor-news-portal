@@ -16,6 +16,7 @@ export default async function WritePage({ params }: { params: Promise<{ id: stri
     where: { id },
     include: {
       media: { orderBy: { createdAt: "asc" } },
+      translations: { include: { translator: { select: { id: true, role: true } } } },
       reviews: {
         where: { action: { in: ["APPROVED", "REJECTED"] } },
         orderBy: { createdAt: "desc" },
@@ -55,6 +56,18 @@ export default async function WritePage({ params }: { params: Promise<{ id: stri
               caption: m.caption,
             })),
           }}
+          secondVersion={(() => {
+            const other = article.language === "EN" ? "BN" : "EN";
+            const tr = article.translations.find((t) => t.locale === other);
+            return tr
+              ? {
+                  title: tr.title,
+                  dek: tr.dek ?? "",
+                  body: tr.body,
+                  byEditor: tr.translator ? tr.translator.id !== user.id : false,
+                }
+              : null;
+          })()}
           lastNote={
             article.reviews[0]
               ? {

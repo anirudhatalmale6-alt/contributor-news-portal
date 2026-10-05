@@ -8,16 +8,16 @@ type Props = { params: Promise<{ slug: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
-  const article = await articleForLocale("EN", slug);
-  if (!article) return { title: "Article not found" };
+  const article = await articleForLocale("BN", slug);
+  if (!article) return { title: "লেখাটি পাওয়া যায়নি" };
   return {
     title: article.title,
     description: article.dek ?? undefined,
     alternates: {
       canonical: `/article/${slug}`,
       languages: {
-        en: `/article/${slug}`,
-        ...(article.counterpartHref ? { bn: article.counterpartHref } : {}),
+        bn: `/article/${slug}`,
+        ...(article.counterpartHref ? { en: article.counterpartHref } : {}),
       },
     },
     openGraph: {
@@ -25,16 +25,16 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       description: article.dek ?? undefined,
       images: article.coverImage ? [article.coverImage] : undefined,
       type: "article",
-      locale: "en",
+      locale: "bn",
     },
   };
 }
 
 export async function generateStaticParams() {
-  return (await publishedSlugs("EN")).map((slug) => ({ slug }));
+  return (await publishedSlugs("BN")).map((slug) => ({ slug }));
 }
 
-export default async function ArticlePage({ params }: Props) {
+export default async function BanglaArticlePage({ params }: Props) {
   const { slug } = await params;
-  return <ArticleView locale="EN" slug={slug} />;
+  return <ArticleView locale="BN" slug={slug} />;
 }

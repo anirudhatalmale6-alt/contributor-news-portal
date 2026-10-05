@@ -38,6 +38,7 @@ export default async function EditorialPage({
       include: {
         author: { select: { name: true, tier: true, role: true } },
         media: { select: { id: true, kind: true } },
+        translations: { select: { locale: true } },
       },
     }),
     paymentSettings(),
@@ -129,6 +130,19 @@ export default async function EditorialPage({
                       <TierBadge tier={a.author.tier} />
                       <span>
                         {a.media.length} attachment{a.media.length === 1 ? "" : "s"}
+                      </span>
+                      <span
+                        className={`rounded-full border px-2 py-0.5 font-medium ${
+                          a.translations.some(
+                            (t) => t.locale !== a.language,
+                          )
+                            ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                            : "border-amber-200 bg-amber-50 text-amber-800"
+                        }`}
+                      >
+                        {a.translations.some((t) => t.locale !== a.language)
+                          ? "both languages"
+                          : `${a.language === "EN" ? "Bangla" : "English"} version missing`}
                       </span>
                     </div>
                   </div>

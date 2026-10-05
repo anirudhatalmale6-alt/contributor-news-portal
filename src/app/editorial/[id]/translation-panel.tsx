@@ -21,7 +21,13 @@ export function TranslationPanel({
   articleId: string;
   sourceLocale: Locale;
   source: { title: string; dek: string; body: string };
-  existing: { title: string; dek: string; body: string; translator: string | null } | null;
+  existing: {
+    title: string;
+    dek: string;
+    body: string;
+    translator: string | null;
+    byAuthor: boolean;
+  } | null;
 }) {
   const router = useRouter();
   const target: Locale = sourceLocale === "EN" ? "BN" : "EN";
@@ -68,15 +74,23 @@ export function TranslationPanel({
               : "border-amber-200 bg-amber-50 text-amber-800"
           }`}
         >
-          {saved ? "Translation ready" : "Not translated yet"}
+          {saved
+            ? existing?.byAuthor
+              ? "Supplied by the contributor"
+              : "Translation ready"
+            : "Not translated yet"}
         </span>
       </div>
 
       <p className="text-xs text-ink-soft">
         The contributor wrote this in {NAME[sourceLocale]}. Readers on the{" "}
-        {target === "BN" ? "/bn" : "English"} side of the site see what you write here, and a piece
-        cannot be published until this exists.
-        {existing?.translator ? ` Last saved by ${existing.translator}.` : ""}
+        {target === "BN" ? "Bangla" : "English"} side of the site see what you write here, and a
+        piece cannot be published until this exists.
+        {existing?.translator
+          ? existing.byAuthor
+            ? ` The contributor wrote this version themselves - check it before publishing.`
+            : ` Last saved by ${existing.translator}.`
+          : ""}
       </p>
 
       {message ? (

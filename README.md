@@ -2,7 +2,7 @@
 
 A fast, mobile-first news site with a full writing and moderation workflow behind it.
 
-- Two languages, English at `/` and Bangla at `/bn`, every piece carrying an editor's translation.
+- Two languages. **Bangla is the default site at `/`**, English at `/en`, with an obvious switch button in the header.
 - Public pages are server-rendered and cached, with no third-party requests at all.
 - Contributors draft, attach images or video, save, come back, and submit.
 - Every submission - verified or not - sits in an editorial queue until an editor approves it.
@@ -54,14 +54,20 @@ LinkedIn or GitHub later is a three-line block in `src/auth.ts`.
 
 ## Two languages
 
-| | English | Bangla |
+| | Bangla (default) | English |
 | --- | --- | --- |
-| Front page | `/` | `/bn` |
-| Article | `/article/<slug>` | `/bn/article/<slug>` |
+| Front page | `/` | `/en` |
+| Article | `/article/<slug>` | `/en/article/<slug>` |
 
-A contributor chooses the language they are writing in. The editor writes the other version on the
-review screen, side by side with the original, and the piece cannot be published until that exists
-(Admin can switch the requirement off under payment settings). Both versions share one article
+The old `/bn` addresses 301 to the new roots, so anything already shared keeps working.
+The language switch is a bordered button with a globe, not a small text link - most readers land
+on the Bangla site and should not have to hunt for English.
+
+A contributor chooses the language they are writing in, and may write the second version
+themselves - the composer has an "Also submit in ..." panel, and filling it in sends the piece to
+both sections at once. If they leave it, the editor writes it on the review screen, side by side
+with the original. Either way the piece cannot be published until both versions exist (Admin can
+switch the requirement off under payment settings), and the editor can rewrite either version. Both versions share one article
 record, so they share media, payout, author and audit trail - and the language switch on an
 article links straight to its counterpart, with `hreflang` set for search engines.
 
@@ -131,7 +137,7 @@ attached becomes the cover shot.
 ## Tests
 
 `e2e_flow.py` (repo root, Playwright) walks the entire workflow against a running build and
-asserts 53 things: signup, draft, upload, save-survives-reload, payment details with a rejected
+asserts 63 things: signup, draft, upload, save-survives-reload, payment details with a rejected
 bad wallet number, submit, queue, editor edit, the publish-blocked-without-translation rule, the
 Bangla version going live, the language switch, Bengali font resolution, approve with payout,
 earnings total, role guards, admin payout reveal, API 401/403s, mobile layout, and a

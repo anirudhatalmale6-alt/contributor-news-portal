@@ -1,25 +1,28 @@
 /**
  * Two languages, one newsroom.
  *
- * English lives at `/`, Bangla at `/bn`. The UI strings below cover the public
- * chrome; the articles themselves come from the database (an original written
- * by the contributor plus the editor's translation).
+ * Bangla is the default site and lives at `/`; English sits under `/en`. The UI
+ * strings below cover the public chrome; the articles themselves come from the
+ * database (an original plus the other-language version).
  */
 
 export type Locale = "EN" | "BN";
 
-export const LOCALES: Locale[] = ["EN", "BN"];
+export const LOCALES: Locale[] = ["BN", "EN"];
+
+/** The language a reader gets if they just type the domain. */
+export const DEFAULT_LOCALE: Locale = "BN";
 
 export const localeMeta: Record<Locale, { htmlLang: string; label: string; short: string }> = {
-  EN: { htmlLang: "en", label: "English", short: "EN" },
+  EN: { htmlLang: "en", label: "English", short: "English" },
   BN: { htmlLang: "bn", label: "বাংলা", short: "বাংলা" },
 };
 
 export const other = (locale: Locale): Locale => (locale === "EN" ? "BN" : "EN");
 
-/** `/bn` prefix for Bangla, nothing for English. */
+/** Bangla is the root site; English is prefixed with `/en`. */
 export const localePath = (locale: Locale, path = "") =>
-  locale === "BN" ? `/bn${path}` : path || "/";
+  locale === "EN" ? `/en${path}` : path || "/";
 
 type Dict = {
   latest: string;
