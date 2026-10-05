@@ -1,0 +1,125 @@
+// Contributor News Portal - data model
+// Database: PostgreSQL (swap `provider` for mysql/sqlite if you prefer)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  EDITOR
+  CONTRIBUTOR
+}
+
+enum ContributorTier {
+  GENERAL
+  VERIFIED
+}
+
+enum ArticleStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  REJECTED
+}
+
+enum MediaKind {
+  IMAGE
+  VIDEO
+}
+
+model User {
+  id              String          @id @default(cuid())
+  email           String          @unique
+  name            String
+  passwordHash    String? // null when the account came from Google / a social provider
+  image           String?
+  role            Role            @default(CONTRIBUTOR)
+  tier            ContributorTier @default(GENERAL)
+  bio             String?
+  createdAt       DateTime        @default(now())
+  articles        Article[]       @relation("author")
+  reviewed        Article[]       @relation("reviewer")
+  accounts        OAuthAccount[]
+  reviews         Review[]
+}
+
+// One row per linked social identity (google, facebook, ...)
+model OAuthAccount {
+  id                String @id @default(cuid())
+  userId            String
+  provider          String
+  providerAccountId String
+  user              User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Article {
+  id          String        @id @default(cuid())
+  slug        String        @unique
+  title       String
+  dek         String? // standfirst / summary shown in the feed
+  body        String // markdown-ish rich text
+  coverImage  String?
+  category    String        @default("General")
+  status      ArticleStatus @default(DRAFT)
+  authorId    String
+  author      User          @relation("author", fields: [authorId], references: [id], onDelete: Cascade)
+  reviewerId  String?
+  reviewer    User?         @relation("reviewer", fields: [reviewerId], references: [id])
+
+  // payout, in minor units (cents) so money never touches a float
+  payoutCents Int           @default(0)
+
+  submittedAt DateTime?
+  publishedAt DateTime?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  media       Media[]
+  reviews     Review[]
+
+  @@index([status, publishedAt])
+  @@index([authorId, status])
+}
+
+model Media {
+  id        String    @id @default(cuid())
+  articleId String
+  article   Article   @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  kind      MediaKind
+  url       String
+  caption   String?
+  createdAt DateTime  @default(now())
+}
+
+// Audit trail: every approve / reject / resubmit, with the editor's note
+model Review {
+  id         String        @id @default(cuid())
+  articleId  String
+  article    Article       @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  editorId   String?
+  editor     User?         @relation(fields: [editorId], references: [id])
+  action     String // SUBMITTED | APPROVED | REJECTED | RESUBMITTED | PAYOUT_UPDATED
+  note       String?
+  fromStatus ArticleStatus?
+  toStatus   ArticleStatus?
+  createdAt  DateTime      @default(now())
+
+  @@index([articleId, createdAt])
+}
+
+// Single-row table the Admin edits under Payment settings
+model PaymentSettings {
+  id               Int    @id @default(1)
+  currency         String @default("USD")
+  defaultPayout    Int    @default(2500) // cents, pre-filled in the editor's payout box
+  verifiedBonusPct Int    @default(20) // Verified Contributors get +20% suggested
+  payoutNote       String @default("Payouts are estimates and are settled on the 1st of each month.")
+}
