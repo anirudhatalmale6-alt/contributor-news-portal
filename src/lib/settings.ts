@@ -3,18 +3,14 @@ import { slugify } from "@/lib/format";
 
 /** The single SiteSettings row (masthead, wording, ad slots). Server-only. */
 export async function siteSettings() {
-  return (
-    (await prisma.siteSettings.findUnique({ where: { id: 1 } })) ??
-    prisma.siteSettings.create({ data: { id: 1 } })
-  );
+  // upsert, not find-then-create: two requests arriving together on a cold
+  // database would both find nothing and both try to insert id = 1.
+  return prisma.siteSettings.upsert({ where: { id: 1 }, create: { id: 1 }, update: {} });
 }
 
 /** The single PaymentSettings row, created on first read. Server-only. */
 export async function paymentSettings() {
-  return (
-    (await prisma.paymentSettings.findUnique({ where: { id: 1 } })) ??
-    prisma.paymentSettings.create({ data: { id: 1 } })
-  );
+  return prisma.paymentSettings.upsert({ where: { id: 1 }, create: { id: 1 }, update: {} });
 }
 
 /** Appends -2, -3 ... until the slug is free. `ignoreId` lets a row keep its own slug. */

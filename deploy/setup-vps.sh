@@ -113,7 +113,7 @@ BUILD_HEAP=$(( TOTAL_MB < 2048 ? 1024 : 2048 ))
 # npm ci is the strict path, but a lockfile written by a slightly different npm
 # can be rejected here; falling back to npm install keeps a deploy from dying on
 # a transitive version nobody chose.
-sudo -u "$APP_USER" bash -lc "cd '$APP_DIR' && (npm ci --no-audit --no-fund || npm install --no-audit --no-fund) && npx prisma migrate deploy && NODE_OPTIONS=--max-old-space-size=${BUILD_HEAP} npm run build"
+sudo -u "$APP_USER" bash -lc "cd '$APP_DIR' && (npm ci --no-audit --no-fund || npm install --no-audit --no-fund) && npx prisma generate && npx prisma migrate deploy && NODE_OPTIONS=--max-old-space-size=${BUILD_HEAP} npm run build"
 
 echo "==> Service"
 cat > /etc/systemd/system/the-document.service <<EOF
