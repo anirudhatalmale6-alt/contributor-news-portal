@@ -109,11 +109,15 @@ get HTTPS on day one. For a server at `203.0.113.7` the hostname is `203-0-113-7
 (verified: that name resolves straight back to the IP). Run the script with it, and switch to your
 real domain later by re-running the script with the new name.
 
-Then I run:
+Then I run, on the server:
 
 ```bash
-sudo bash deploy/setup-vps.sh thedocument.example.com you@example.com
+git clone https://github.com/anirudhatalmale6-alt/contributor-news-portal.git /srv/the-document
+sudo bash /srv/the-document/deploy/setup-vps.sh thedocument.example.com you@example.com
 ```
+
+Run it from the clone, not from a `curl` of raw.githubusercontent.com - that URL is CDN-cached for
+a few minutes and will happily hand you the previous version of the script.
 
 That one script installs Node 22, PostgreSQL, nginx and a Let's Encrypt certificate, creates the
 database with a generated password, builds the app, and runs it as a systemd service behind nginx
