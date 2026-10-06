@@ -58,17 +58,26 @@ def check(name, ok, detail=""):
         raise AssertionError(name + " " + detail)
 
 
+# Clicking before React has hydrated does nothing at all, and over the internet
+# hydration takes noticeably longer than it does against localhost.
+SETTLE_MS = 250 if ("127.0.0.1" in BASE or "localhost" in BASE) else 1500
+
+
 def go(page, url, timeout=45000):
     """
     Navigate and settle.
 
     `networkidle` is unreliable against a real server over TLS - one slow or
-    kept-alive connection and it never fires. Waiting for the document plus the
-    body is enough here, because every assertion reads server-rendered HTML.
+    kept-alive connection and it never fires. Waiting for the document, then
+    for the page scripts, is both faster and steadier.
     """
     page.goto(url, wait_until="domcontentloaded", timeout=timeout)
     page.wait_for_selector("body", timeout=timeout)
-    page.wait_for_timeout(250)
+    try:
+        page.wait_for_load_state("load", timeout=timeout)
+    except Exception:
+        pass
+    page.wait_for_timeout(SETTLE_MS)
 
 
 def norm(text):
@@ -89,6 +98,11 @@ def shot(page, name, scroll="top"):
 
 def sign_in(page, email, password):
     go(page, f"{BASE}/login")
+    # /login sends a signed-in visitor to their dashboard, so a leftover session
+    # from an earlier step would leave no form to fill.
+    if page.locator('input[type="email"]').count() == 0:
+        sign_out(page)
+        go(page, f"{BASE}/login")
     page.fill('input[type="email"]', email)
     page.fill('input[type="password"]', password)
     page.click('button[type="submit"]')
@@ -98,8 +112,10 @@ def sign_in(page, email, password):
 def sign_out(page):
     # the root is the Bangla site now, where the button reads সাইন আউট
     go(page, f"{BASE}/en")
-    page.click('button:has-text("Sign out")')
-    page.wait_for_timeout(1500)
+    button = page.locator('button:has-text("Sign out")')
+    if button.count():
+        button.first.click()
+        page.wait_for_timeout(1500)
 
 
 def make_photo(path):
@@ -169,7 +185,7 @@ def main():
         # .first: the headline is a link in both the lead card and the rail
         page.locator("a:has-text('The night bus that never came')").first.click()
         page.wait_for_url("**/en/article/**", timeout=20000)
-        page.wait_for_timeout(300)
+        page.wait_for_timeout(SETTLE_MS)
         check("the headline link reaches the article", "/article/" in page.url, page.url)
         check("article page renders the body copy", "00:41" in page.content())
         check("verified badge shows on the byline", page.locator("svg[aria-label], span:has-text('Verified contributor')").count() > 0)
@@ -227,7 +243,7 @@ def main():
 
         # reload proves the copy really persisted, not just sat in React state
         page.reload(wait_until="domcontentloaded")
-        page.wait_for_timeout(300)
+        page.wait_for_timeout(SETTLE_MS)
         check(
             "draft survives a reload (saved server-side, not in the browser)",
             HEADLINE in page.content() and "attenuation basin" in page.content(),
@@ -288,7 +304,7 @@ def main():
 
         page.locator(f'li:has-text("{HEADLINE}")').last.locator('a:has-text("Review")').click()
         page.wait_for_url("**/editorial/**", timeout=20000)
-        page.wait_for_timeout(300)
+        page.wait_for_timeout(SETTLE_MS)
         check("review screen loads the submitted copy", "attenuation basin" in page.content())
 
         check(
@@ -361,7 +377,7 @@ def main():
 
         page.locator(f"a:has-text('{BN_HEADLINE}')").first.click()
         page.wait_for_url("**/article/**", timeout=20000)
-        page.wait_for_timeout(300)
+        page.wait_for_timeout(SETTLE_MS)
         check("the Bangla article renders the translated body", BN_BODY[:24] in page.content())
         check("the page is marked as Bangla for screen readers", 'lang="bn"' in page.content())
         font = page.evaluate(
@@ -470,7 +486,7 @@ def main():
         )
         queue_row.locator('a:has-text("Review")').click()
         page.wait_for_url("**/editorial/**", timeout=20000)
-        page.wait_for_timeout(300)
+        page.wait_for_timeout(SETTLE_MS)
         check(
             "the editor sees the contributor's own second version, not an empty box",
             "Supplied by the contributor" in page.content() and BOTH_BN_TITLE in page.content(),
@@ -534,20 +550,20 @@ def main():
 
         # search: the whole point of the screen
         page.fill('input[placeholder="Search by name or email"]', NEW_EMAIL.split("@")[0])
-        page.wait_for_timeout(300)
+        page.wait_for_timeout(SETTLE_MS)
         check(
             "searching by email narrows the list to one person",
             page.locator("tbody tr").count() == 1,
             str(page.locator("tbody tr").count()),
         )
         page.fill('input[placeholder="Search by name or email"]', "Maya")
-        page.wait_for_timeout(400)
+        page.wait_for_timeout(SETTLE_MS)
         # read the table, not page.content(): the server payload in the HTML
         # carries every row regardless of what the client is filtering to.
         check("searching by name works too", "maya@thedocument.test" in page.inner_text("tbody"))
         page.fill('input[placeholder="Search by name or email"]', "")
         page.click('button:has-text("Editor")')
-        page.wait_for_timeout(400)
+        page.wait_for_timeout(SETTLE_MS)
         table = page.inner_text("tbody")
         check(
             "the role filter shows only editors",
