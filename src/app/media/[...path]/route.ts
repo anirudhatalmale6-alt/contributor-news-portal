@@ -1,3 +1,4 @@
+import { prisma } from "@/lib/prisma";
 import { readUpload } from "@/lib/storage";
 
 type Ctx = { params: Promise<{ path: string[] }> };
@@ -20,9 +21,24 @@ export async function GET(req: Request, { params }: Ctx) {
     return new Response(null, { status: 304, headers: { ETag: file.etag } });
   }
 
+  // ?download=1 hands the original file over with the name the contributor gave
+  // it, so an editor can open it in an image editor and re-attach it.
+  const download = new URL(req.url).searchParams.has("download");
+  let filename = parts[0];
+  if (download) {
+    const media = await prisma.media.findFirst({
+      where: { url: `/media/${parts[0]}` },
+      select: { originalName: true },
+    });
+    if (media?.originalName) filename = media.originalName.replace(/["\\]/g, "");
+  }
+
   return new Response(new Uint8Array(file.body), {
     headers: {
       "Content-Type": file.contentType,
+      ...(download
+        ? { "Content-Disposition": `attachment; filename="${filename}"` }
+        : {}),
       "Content-Length": String(file.size),
       ETag: file.etag,
       // Immutable: the filename is a UUID, so the bytes behind it never change.

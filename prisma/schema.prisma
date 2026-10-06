@@ -170,13 +170,22 @@ model MediaBlob {
 }
 
 model Media {
-  id        String    @id @default(cuid())
-  articleId String
-  article   Article   @relation(fields: [articleId], references: [id], onDelete: Cascade)
-  kind      MediaKind
-  url       String
-  caption   String?
-  createdAt DateTime  @default(now())
+  id           String    @id @default(cuid())
+  articleId    String
+  article      Article   @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  kind         MediaKind
+  url          String
+  caption      String?
+  /// The name the contributor's file had, so an editor downloading it to work
+  /// on gets something recognisable rather than a UUID.
+  originalName String?
+  /// Readers only see what an editor has put in the Evidence gallery. The rest
+  /// of a contributor's upload stays inside the newsroom.
+  isEvidence   Boolean   @default(false)
+  sortOrder    Int       @default(0)
+  createdAt    DateTime  @default(now())
+
+  @@index([articleId, isEvidence, sortOrder])
 }
 
 // Audit trail: every approve / reject / resubmit, with the editor's note
@@ -213,6 +222,8 @@ model SiteSettings {
   adHomeHtml    String  @default("")
   adArticleHtml String  @default("")
   adSectionHtml String  @default("")
+  /// Which Bengali face readers get for article text.
+  banglaFont    String  @default("hind-siliguri")
 }
 
 // Single-row table the Admin edits under Payment settings

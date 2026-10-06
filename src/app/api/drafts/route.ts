@@ -9,7 +9,7 @@ const createSchema = z.object({
   body: z.string().max(200_000).default(""),
   category: z.string().trim().max(60).default("General"),
   coverImage: z.string().trim().max(500).optional(),
-  language: z.enum(["EN", "BN"]).default("EN"),
+  language: z.enum(["EN", "BN"]).default("BN"),
 });
 
 /** GET /api/drafts - every article belonging to the signed-in contributor. */

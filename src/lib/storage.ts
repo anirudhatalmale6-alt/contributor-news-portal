@@ -63,7 +63,7 @@ export async function saveUpload(file: File) {
     await writeFile(path.join(dir, name), buffer);
   }
 
-  return { name, url: `/media/${name}` };
+  return { name, url: `/media/${name}`, originalName: file.name || name };
 }
 
 export type StoredFile = {

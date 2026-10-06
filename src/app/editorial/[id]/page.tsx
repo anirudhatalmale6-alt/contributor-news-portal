@@ -8,6 +8,7 @@ import { SiteHeader } from "@/components/site-header";
 import { StatusPill, TierBadge } from "@/components/ui";
 import { ReviewPanel } from "./review-panel";
 import { TranslationPanel } from "./translation-panel";
+import { MediaDesk } from "./media-desk";
 
 export const metadata = { title: "Review" };
 
@@ -127,6 +128,21 @@ export default async function ReviewPage({ params }: { params: Promise<{ id: str
               ))}
             </ol>
           </aside>
+
+          <div className="lg:col-span-2">
+            <MediaDesk
+              articleId={article.id}
+              cover={article.coverImage}
+              initial={article.media.map((m) => ({
+                id: m.id,
+                kind: m.kind,
+                url: m.url,
+                caption: m.caption,
+                originalName: m.originalName,
+                isEvidence: m.isEvidence,
+              }))}
+            />
+          </div>
 
           <div className="lg:col-span-2">
             <TranslationPanel

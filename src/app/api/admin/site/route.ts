@@ -15,6 +15,7 @@ const schema = z.object({
   adHomeHtml: z.string().max(4000).optional(),
   adArticleHtml: z.string().max(4000).optional(),
   adSectionHtml: z.string().max(4000).optional(),
+  banglaFont: z.enum(["hind-siliguri", "anek-bangla", "tiro-bangla", "noto-serif-bengali"]).optional(),
 });
 
 /** GET /api/admin/site - the wording, masthead and ad slots (ADMIN, EDITOR). */

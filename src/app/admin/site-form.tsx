@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { BANGLA_FONTS } from "@/lib/fonts";
 
 type Site = {
   siteNameEn: string;
@@ -15,6 +16,7 @@ type Site = {
   adHomeHtml: string;
   adArticleHtml: string;
   adSectionHtml: string;
+  banglaFont: string;
 };
 
 /**
@@ -150,6 +152,44 @@ export function SiteForm({ settings }: { settings: Site }) {
             <input name="footerBn" value={form.footerBn} onChange={set("footerBn")} lang="bn" className={field} />
           </label>
         </div>
+      </section>
+
+      <section className="grid gap-3 border-t border-line pt-4">
+        <p className="text-sm font-medium">Bangla reading font</p>
+        <div className="grid gap-2 sm:grid-cols-2">
+          {BANGLA_FONTS.map((f) => (
+            <label
+              key={f.value}
+              className={`flex cursor-pointer items-start gap-3 rounded-lg border p-3 ${
+                form.banglaFont === f.value ? "border-navy bg-paper-soft" : "border-line"
+              }`}
+            >
+              <input
+                type="radio"
+                name="banglaFont"
+                value={f.value}
+                checked={form.banglaFont === f.value}
+                onChange={() => setForm({ ...form, banglaFont: f.value })}
+                className="mt-1 size-4"
+              />
+              <span>
+                <span className="block text-sm font-medium">{f.label}</span>
+                <span
+                  lang="bn"
+                  style={{ fontFamily: f.css }}
+                  className="mt-1 block text-lg leading-relaxed"
+                >
+                  সংবাদপত্রের পাতায় আজকের খবর
+                </span>
+                <span className="mt-1 block text-xs text-ink-soft">{f.note}</span>
+              </span>
+            </label>
+          ))}
+        </div>
+        <p className="text-xs text-ink-soft">
+          Prothom Alo reads in Shurjo, which is their own licensed typeface and cannot be copied
+          onto another site. These are the closest freely licensed faces, hosted with the site.
+        </p>
       </section>
 
       <section className="grid gap-3 border-t border-line pt-4">

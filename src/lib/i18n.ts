@@ -54,6 +54,8 @@ type Dict = {
   about: (name: string) => string;
   defaultBio: string;
   moreMedia: string;
+  evidenceTitle: string;
+  evidenceNote: string;
   ctaTitle: string;
   ctaBody: string;
   ctaButton: string;
@@ -92,6 +94,9 @@ const EN_DICT: Dict = {
   about: (name) => `About ${name}`,
   defaultBio: "Contributor at The Document.",
   moreMedia: "More media",
+  evidenceTitle: "Evidence",
+  evidenceNote:
+    "Photographs and video filed with this report, checked and chosen by the desk.",
   ctaTitle: "Write for The Document",
   ctaBody:
     "Open an account, draft your piece with photos or video, and submit it. An editor reads every submission before it is published - and sets the payout you earn for it.",
@@ -131,6 +136,8 @@ const BN_DICT: Dict = {
   about: (name) => `${name} সম্পর্কে`,
   defaultBio: "দ্য ডকুমেন্ট-এর লেখক।",
   moreMedia: "আরও ছবি ও ভিডিও",
+  evidenceTitle: "প্রমাণ",
+  evidenceNote: "এই প্রতিবেদনের সঙ্গে জমা দেওয়া ছবি ও ভিডিও, সম্পাদকের যাচাই ও নির্বাচন করা।",
   ctaTitle: "দ্য ডকুমেন্ট-এ লিখুন",
   ctaBody:
     "অ্যাকাউন্ট খুলুন, ছবি বা ভিডিও সহ আপনার লেখা তৈরি করুন এবং জমা দিন। প্রকাশের আগে একজন সম্পাদক প্রতিটি লেখা পড়েন এবং আপনার সম্মানী নির্ধারণ করেন।",

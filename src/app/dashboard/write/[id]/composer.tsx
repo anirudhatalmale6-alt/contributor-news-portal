@@ -45,6 +45,7 @@ export function Composer({
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [message, setMessage] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
+  const [secondKey, setSecondKey] = useState(0);
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const dirty = useRef(false);
@@ -93,6 +94,14 @@ export function Composer({
     dirty.current = true;
     setSaveState("idle");
     setForm((f) => ({ ...f, [key]: value }));
+
+    // The second version is written in the opposite language, so switching the
+    // language of the original makes whatever is there meaningless. Drop it
+    // rather than silently filing it under the wrong language.
+    if (key === "language" && value !== article.language && secondVersion) {
+      void fetch(`/api/drafts/${article.id}/translation`, { method: "DELETE" });
+      setSecondKey((n) => n + 1);
+    }
   }
 
   async function upload(files: FileList | null) {
@@ -277,8 +286,8 @@ export function Composer({
             disabled={locked}
             className="rounded-lg border border-line px-3 py-2 outline-none focus:border-navy"
           >
-            <option value="EN">English</option>
             <option value="BN">বাংলা</option>
+            <option value="EN">English</option>
           </select>
           <span className="text-xs text-ink-soft">
             An editor writes the {form.language === "EN" ? "Bangla" : "English"} version.
@@ -360,11 +369,13 @@ export function Composer({
       </section>
 
       <SecondVersion
+        key={secondKey}
         articleId={article.id}
         otherName={otherName}
         otherLang={form.language === "EN" ? "bn" : "en"}
         locked={locked}
-        initial={secondVersion}
+        initial={secondKey === 0 ? secondVersion : null}
+        beforeSave={() => save(true)}
       />
 
       {status === "APPROVED" ? (
@@ -390,12 +401,16 @@ function SecondVersion({
   otherLang,
   locked,
   initial,
+  beforeSave,
 }: {
   articleId: string;
   otherName: string;
   otherLang: string;
   locked: boolean;
   initial: { title: string; dek: string; body: string; byEditor: boolean } | null;
+  /** Persists the main form first - the server decides the second language from
+   *  what is stored, so an unsaved language change would file it wrongly. */
+  beforeSave: () => Promise<void>;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(Boolean(initial));
@@ -411,6 +426,7 @@ function SecondVersion({
   async function save() {
     setBusy(true);
     setNote(null);
+    await beforeSave();
     const res = await fetch(`/api/drafts/${articleId}/translation`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },

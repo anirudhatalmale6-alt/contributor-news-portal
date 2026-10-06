@@ -12,7 +12,7 @@ export function NewDraftButton() {
     const res = await fetch("/api/drafts", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title: "Untitled draft" }),
+      body: JSON.stringify({ title: "Untitled draft", language: "BN" }),
     });
     if (!res.ok) {
       setBusy(false);

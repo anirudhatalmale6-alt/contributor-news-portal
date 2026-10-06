@@ -38,10 +38,19 @@ export async function POST(req: Request) {
     if (isImage && file.size > MAX_IMAGE) throw new HttpError(413, "Images must be under 8 MB");
     if (isVideo && file.size > MAX_VIDEO) throw new HttpError(413, "Videos must be under 128 MB");
 
-    const { url } = await saveUpload(file);
+    const { url, originalName } = await saveUpload(file);
 
     const media = await prisma.media.create({
-      data: { articleId, kind: isImage ? "IMAGE" : "VIDEO", url, caption },
+      data: {
+        articleId,
+        kind: isImage ? "IMAGE" : "VIDEO",
+        url,
+        caption,
+        originalName,
+        // An image a contributor sends is evidence by default; an editor can
+        // take anything out of the public gallery while reviewing.
+        isEvidence: true,
+      },
     });
 
     // First image uploaded doubles as the cover shot unless one is already set.

@@ -36,7 +36,6 @@ export function ReviewPanel({
     body: article.body,
     category: article.category,
   });
-  const [media, setMedia] = useState(article.media);
   const [payout, setPayout] = useState((settings.suggestedCents / 100).toFixed(2));
   const [note, setNote] = useState("");
   const [status, setStatus] = useState(article.status);
@@ -121,14 +120,6 @@ export function ReviewPanel({
     router.refresh();
   }
 
-  async function removeMedia(id: string) {
-    const res = await fetch(`/api/uploads/${id}`, { method: "DELETE" });
-    if (res.ok) {
-      setMedia((m) => m.filter((x) => x.id !== id));
-      router.refresh();
-    }
-  }
-
   return (
     <div className="grid gap-4">
       {message ? (
@@ -180,33 +171,6 @@ export function ReviewPanel({
           rows={16}
           className="prose-article w-full rounded-xl border border-line p-4 outline-none focus:border-navy"
         />
-
-        {media.length > 0 ? (
-          <div>
-            <p className="mb-2 text-xs font-medium text-ink-soft">
-              Attached media - drop anything that should not run
-            </p>
-            <ul className="grid grid-cols-3 gap-2">
-              {media.map((m) => (
-                <li key={m.id} className="relative overflow-hidden rounded-lg bg-paper-soft">
-                  {m.kind === "VIDEO" ? (
-                    <video src={m.url} className="aspect-4/3 w-full object-cover" muted />
-                  ) : (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={m.url} alt="" className="aspect-4/3 w-full object-cover" />
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => void removeMedia(m.id)}
-                    className="absolute right-1 top-1 rounded bg-black/70 px-1.5 py-0.5 text-[10px] font-medium text-white hover:bg-navy-dark"
-                  >
-                    Remove
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </div>
-        ) : null}
 
         <button
           type="button"

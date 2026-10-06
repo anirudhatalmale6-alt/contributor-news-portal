@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import { articleForLocale, relatedArticles } from "@/lib/articles";
 import { AdSlot } from "@/components/ad-slot";
 import { SiteHeader } from "@/components/site-header";
+import { siteSettings } from "@/lib/settings";
+import { banglaFontCss } from "@/lib/fonts";
 import { SiteFooter } from "@/components/site-footer";
 import { TierBadge } from "@/components/ui";
 import { readingTime } from "@/lib/format";
@@ -47,13 +49,20 @@ export async function ArticleView({ locale, slug }: { locale: Locale; slug: stri
   const article = await articleForLocale(locale, slug);
   if (!article) notFound();
 
+  const site = await siteSettings();
   const copy = t(locale);
   const alt = other(locale);
-  const gallery = article.media.filter((m) => m.url !== article.coverImage);
+  // Readers see only what an editor put in the Evidence gallery.
+  const evidence = article.media
+    .filter((m) => m.isEvidence)
+    .sort((a, b) => a.sortOrder - b.sortOrder);
   const related = await relatedArticles(locale, article.id, article.category, 4);
 
   return (
-    <div lang={localeMeta[locale].htmlLang}>
+    <div
+      lang={localeMeta[locale].htmlLang}
+      style={{ "--bn-reading-font": banglaFontCss(site.banglaFont) } as React.CSSProperties}
+    >
       <SiteHeader
         locale={locale}
         switchHref={article.counterpartHref ?? localePath(alt)}
@@ -126,13 +135,12 @@ export async function ArticleView({ locale, slug }: { locale: Locale; slug: stri
 
           <div className="prose-article mt-6">{renderBody(article.body)}</div>
 
-          {gallery.length > 0 ? (
-            <section className="mt-10 border-t border-line pt-6">
-              <h2 className="mb-3 text-xs font-bold uppercase tracking-widest text-ink-soft">
-                {copy.moreMedia}
-              </h2>
+          {evidence.length > 0 ? (
+            <section className="mt-10 rounded-xl border border-line bg-paper-soft p-4 sm:p-5">
+              <h2 className="text-sm font-bold">{copy.evidenceTitle}</h2>
+              <p className="mb-4 mt-1 text-xs text-ink-soft">{copy.evidenceNote}</p>
               <div className="grid gap-4 sm:grid-cols-2">
-                {gallery.map((m) => (
+                {evidence.map((m) => (
                   <figure key={m.id}>
                     {m.kind === "VIDEO" ? (
                       <video src={m.url} controls preload="none" className="w-full rounded-lg bg-black" />

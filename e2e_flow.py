@@ -173,6 +173,12 @@ def main():
         page.click('button:has-text("Start a new piece")')
         page.wait_for_url("**/dashboard/write/**", timeout=20000)
         article_url = page.url
+        check(
+            "a new piece opens in Bangla, not English",
+            page.locator("select").nth(1).input_value() == "BN",
+            page.locator("select").nth(1).input_value(),
+        )
+        page.select_option("select >> nth=1", "EN")
         page.fill('input[placeholder="Headline"]', HEADLINE)
         page.fill(
             'input[placeholder="One-line summary shown in the feed"]',
@@ -340,8 +346,15 @@ def main():
         font = page.evaluate(
             "getComputedStyle(document.querySelector('.prose-article')).fontFamily"
         )
-        check("Bangla copy is set in a Bengali face, not a fallback box", "Bengali" in font, font)
+        check(
+            "Bangla copy is set in a Bengali reading face, not a fallback box",
+            any(name in font for name in ("Hind Siliguri", "Anek Bangla", "Tiro Bangla", "Bengali")),
+            font,
+        )
         shot(page, "19-bangla-article.png")
+
+        check("readers get an Evidence gallery", "প্রমাণ" in page.content())
+        shot(page, "28-evidence.png", scroll="section:has-text('প্রমাণ')")
 
         # the language switch returns to the English version of the same story
         page.click("text=Read in English")
@@ -390,6 +403,8 @@ def main():
         page.goto(f"{BASE}/dashboard", wait_until="networkidle")
         page.click('button:has-text("Start a new piece")')
         page.wait_for_url("**/dashboard/write/**", timeout=20000)
+        # written in English here, so the second version the writer adds is Bangla
+        page.select_option("select >> nth=1", "EN")
         page.fill('input[placeholder="Headline"]', BOTH_EN_TITLE)
         page.fill(
             'input[placeholder="One-line summary shown in the feed"]',

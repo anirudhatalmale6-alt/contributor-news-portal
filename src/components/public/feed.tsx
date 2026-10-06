@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { featuredArticles, feedArticles, type LocalisedArticle } from "@/lib/articles";
 import { SiteHeader } from "@/components/site-header";
+import { siteSettings } from "@/lib/settings";
+import { banglaFontCss } from "@/lib/fonts";
 import { SiteFooter } from "@/components/site-footer";
 import { AdSlot } from "@/components/ad-slot";
 import { ArticleCard } from "@/components/ui";
@@ -17,6 +19,7 @@ const SECTIONS = ["Politics", "Technology", "Culture", "Business", "General"];
  */
 export async function Feed({ locale, category }: { locale: Locale; category: string }) {
   const copy = t(locale);
+  const site = await siteSettings();
   const [featured, latest] = await Promise.all([
     category === "All" ? featuredArticles(locale, 5) : Promise.resolve([] as LocalisedArticle[]),
     feedArticles(locale, category, 16),
@@ -30,7 +33,10 @@ export async function Feed({ locale, category }: { locale: Locale; category: str
   const rail = secondary.length ? secondary : rest.splice(0, 3);
 
   return (
-    <div lang={localeMeta[locale].htmlLang}>
+    <div
+      lang={localeMeta[locale].htmlLang}
+      style={{ "--bn-reading-font": banglaFontCss(site.banglaFont) } as React.CSSProperties}
+    >
       <SiteHeader locale={locale} />
       <main className="mx-auto max-w-5xl px-4 pb-16">
         <div className="flex flex-wrap items-center gap-2 border-b border-line py-4">

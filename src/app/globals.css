@@ -14,6 +14,48 @@
   unicode-range: U+0951-0952, U+0964-0965, U+0980-09FE, U+200C-200D, U+20B9, U+25CC;
 }
 
+/* Reader-font options. Prothom Alo's own face (Shurjo) is licensed to them, so
+   these are the closest free equivalents, self-hosted like everything else. */
+@font-face {
+  font-family: "Anek Bangla";
+  src: url("/fonts/anek-bangla.woff2") format("woff2");
+  font-weight: 100 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Hind Siliguri";
+  src: url("/fonts/hind-siliguri-400.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Hind Siliguri";
+  src: url("/fonts/hind-siliguri-600.woff2") format("woff2");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Hind Siliguri";
+  src: url("/fonts/hind-siliguri-700.woff2") format("woff2");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Tiro Bangla";
+  src: url("/fonts/tiro-bangla.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
 @font-face {
   font-family: "Noto Serif Bengali";
   src: url("/fonts/noto-serif-bengali.woff2") format("woff2");
@@ -107,15 +149,21 @@ body {
 }
 
 /* Bangla pages: Bengali faces first, and a little more line height - conjuncts
-   and the matra line need the room. */
+   and the matra line need the room. The reading face is chosen in Admin and
+   arrives as --bn-reading-font on the page wrapper. */
 :lang(bn),
 [lang="bn"] {
-  font-family: "Noto Sans Bengali", var(--font-sans);
+  font-family: var(--bn-reading-font, "Hind Siliguri"), "Noto Sans Bengali", var(--font-sans);
 }
 
 [lang="bn"] .font-serif,
 [lang="bn"] .prose-article {
-  font-family: "Noto Serif Bengali", var(--font-serif);
+  font-family: var(--bn-reading-font, "Hind Siliguri"), "Noto Serif Bengali", var(--font-serif);
+}
+
+[lang="bn"] .prose-article {
+  font-size: 1.19rem;
+  letter-spacing: 0.002em;
 }
 
 [lang="bn"] .prose-article {
