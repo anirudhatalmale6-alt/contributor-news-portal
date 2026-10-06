@@ -40,8 +40,8 @@ export default async function LoginPage() {
         <div className="mt-8 rounded-xl border border-line bg-paper-soft p-4 text-xs text-ink-soft">
           <p className="font-medium text-ink">Demo logins (password: demo1234)</p>
           <ul className="mt-2 grid gap-1">
-            <li>admin@thedocument.test - Admin</li>
-            <li>editor@thedocument.test - Editor</li>
+            <li>admin@thedocument.test - Owner (site settings)</li>
+            <li>editor@thedocument.test - Editor (newsroom only)</li>
             <li>maya@thedocument.test - Verified contributor</li>
             <li>sam@thedocument.test - General contributor</li>
           </ul>

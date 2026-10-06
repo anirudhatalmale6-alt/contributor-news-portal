@@ -1,10 +1,10 @@
 import { prisma } from "@/lib/prisma";
-import { errorResponse, requireRole } from "@/lib/rbac";
+import { errorResponse, requireStaff } from "@/lib/rbac";
 
 /** GET /api/editorial/queue?status=SUBMITTED - the moderation queue (Editor / Admin). */
 export async function GET(req: Request) {
   try {
-    await requireRole("EDITOR", "ADMIN");
+    await requireStaff();
     const status = new URL(req.url).searchParams.get("status") ?? "SUBMITTED";
     const valid = ["SUBMITTED", "APPROVED", "REJECTED", "DRAFT"] as const;
     const where =

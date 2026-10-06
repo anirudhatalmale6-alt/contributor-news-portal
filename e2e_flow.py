@@ -502,15 +502,51 @@ def main():
         # --- 9. admin: roles, verified flag, payment settings ---------------
         sign_out(page)
         sign_in(page, "admin@thedocument.test", "demo1234")
-        page.goto(f"{BASE}/admin", wait_until="networkidle")
-        check("admin sees every account", NEW_EMAIL in page.content())
+        page.goto(f"{BASE}/people", wait_until="networkidle")
+        check("the owner sees every account", NEW_EMAIL in page.content())
         roster = page.request.get(f"{BASE}/api/admin/users").json()["users"]
         NEW_USER_ID[0] = next(u["id"] for u in roster if u["email"] == NEW_EMAIL)
+
+        # search: the whole point of the screen
+        page.fill('input[placeholder="Search by name or email"]', NEW_EMAIL.split("@")[0])
+        page.wait_for_timeout(300)
+        check(
+            "searching by email narrows the list to one person",
+            page.locator("tbody tr").count() == 1,
+            str(page.locator("tbody tr").count()),
+        )
+        page.fill('input[placeholder="Search by name or email"]', "Maya")
+        page.wait_for_timeout(400)
+        # read the table, not page.content(): the server payload in the HTML
+        # carries every row regardless of what the client is filtering to.
+        check("searching by name works too", "maya@thedocument.test" in page.inner_text("tbody"))
+        page.fill('input[placeholder="Search by name or email"]', "")
+        page.click('button:has-text("Editor")')
+        page.wait_for_timeout(400)
+        table = page.inner_text("tbody")
+        check(
+            "the role filter shows only editors",
+            "editor@thedocument.test" in table and "sam@thedocument.test" not in table,
+            table.replace("\n", " | ")[:160],
+        )
+        page.click('button:has-text("Everyone")')
+        shot(page, "29-people-search.png")
+
         row = page.locator(f'tr:has-text("{NEW_EMAIL}")')
         row.locator('button:has-text("flag as verified")').click()
         expect(row.locator('button:has-text("Verified")')).to_be_visible(timeout=20000)
-        check("admin can flag a contributor as Verified", True)
+        check("the owner can flag a contributor as Verified", True)
 
+        # the owner can hand out any role
+        page.select_option(f'tr:has-text("{NEW_EMAIL}") select', "EDITOR")
+        page.wait_for_timeout(800)
+        roster = page.request.get(f"{BASE}/api/admin/users").json()["users"]
+        made_editor = next(u for u in roster if u["email"] == NEW_EMAIL)
+        check("the owner can promote someone to editor", made_editor["role"] == "EDITOR")
+
+        # settings live on their own screen now, and only the owner gets there
+        page.goto(f"{BASE}/admin", wait_until="networkidle")
+        check("the owner reaches Settings", "/admin" in page.url)
         page.fill('input[inputmode="decimal"] >> nth=0', "45.00")
         page.click('button:has-text("Save settings")')
         page.wait_for_selector("text=Saved", timeout=20000)
@@ -536,13 +572,14 @@ def main():
         page.click('button:has-text("Save site settings")')
         page.wait_for_selector("text=Refresh the public site", timeout=20000)
 
-        # payment details: admin can see them, an editor never can
+        # payment details: the owner can see them, an editor never can
+        page.goto(f"{BASE}/people", wait_until="networkidle")
         row = page.locator(f'tr:has-text("{NEW_EMAIL}")')
-        check("admin sees the payout method in the user table", "bKash" in row.inner_text())
+        check("the owner sees the payout method on the people list", "bKash" in row.inner_text())
         row.locator('button:has-text("bKash")').click()
         page.wait_for_timeout(800)
         check(
-            "admin can reveal the full wallet number to actually pay someone",
+            "the owner can reveal the full wallet number to actually pay someone",
             "01819445203" in row.inner_text(),
             row.inner_text()[:160],
         )
@@ -553,6 +590,63 @@ def main():
             f"{BASE}/api/admin/users/{page.evaluate('1')}", data={"role": "EDITOR"}
         )
         check("a bogus user id is rejected, not silently applied", resp.status >= 400)
+
+        # --- 9b. an editor's limits ------------------------------------------
+        editor_only = ctx.browser.new_context(http_credentials=GATE)
+        ep2 = editor_only.new_page()
+        sign_in(ep2, "editor@thedocument.test", "demo1234")
+
+        ep2.goto(f"{BASE}/people", wait_until="networkidle")
+        check("an editor can open the people list", "People" in ep2.content())
+        check(
+            "an editor sees no Settings link in the navigation",
+            ep2.locator('nav a:has-text("Settings")').count() == 0,
+        )
+
+        r = ep2.request.patch(f"{BASE}/api/admin/site", data={"siteNameEn": "Hijacked"})
+        check("an editor cannot change the site design", r.status == 403, f"got {r.status}")
+        r = ep2.request.patch(f"{BASE}/api/admin/settings", data={"defaultPayout": 1})
+        check("an editor cannot change payment settings", r.status == 403, f"got {r.status}")
+        ep2.goto(f"{BASE}/admin", wait_until="networkidle")
+        check("an editor opening Settings is sent to People", ep2.url.endswith("/people"))
+
+        # but they can make a contributor an editor, which is the point
+        roster = ep2.request.get(f"{BASE}/api/admin/users").json()["users"]
+        a_contributor = next(u for u in roster if u["role"] == "CONTRIBUTOR")
+        r = ep2.request.patch(
+            f"{BASE}/api/admin/users/{a_contributor['id']}", data={"role": "EDITOR"}
+        )
+        check("an editor can promote a contributor to editor", r.status == 200, f"got {r.status}")
+
+        # promoting is not the same as being able to demote a colleague
+        r = ep2.request.patch(
+            f"{BASE}/api/admin/users/{a_contributor['id']}", data={"role": "CONTRIBUTOR"}
+        )
+        check(
+            "an editor cannot demote a fellow editor - only the owner can",
+            r.status == 403,
+            f"got {r.status}",
+        )
+
+        owner_row = next(u for u in roster if u["role"] == "SUPERADMIN")
+        r = ep2.request.patch(f"{BASE}/api/admin/users/{owner_row['id']}", data={"role": "EDITOR"})
+        check("an editor cannot demote the owner", r.status == 403, f"got {r.status}")
+        another_contributor = next(
+            (u for u in roster if u["role"] == "CONTRIBUTOR" and u["id"] != a_contributor["id"]),
+            None,
+        )
+        if another_contributor:
+            r = ep2.request.patch(
+                f"{BASE}/api/admin/users/{another_contributor['id']}", data={"role": "ADMIN"}
+            )
+            check("an editor cannot create an admin", r.status == 403, f"got {r.status}")
+        editor_only.close()
+
+        # put the promoted contributor back, as the owner
+        r = page.request.patch(
+            f"{BASE}/api/admin/users/{a_contributor['id']}", data={"role": "CONTRIBUTOR"}
+        )
+        check("the owner can undo that promotion", r.status == 200, f"got {r.status}")
 
         # --- 10. API spot checks -------------------------------------------
         anon = ctx.browser.new_context(http_credentials=GATE)
@@ -566,6 +660,8 @@ def main():
         sign_in(ep, "editor@thedocument.test", "demo1234")
         r = ep.request.get(f"{BASE}/api/admin/users/{NEW_USER_ID[0]}/payout")
         check("an editor cannot read anyone's payment details", r.status == 403, f"got {r.status}")
+        r = ep.request.get(f"{BASE}/api/admin/users")
+        check("but an editor can read the people list", r.status == 200, f"got {r.status}")
         editor_ctx.close()
 
         r = anon_page.request.get(f"{BASE}/api/articles")
@@ -596,8 +692,11 @@ def main():
         mob.close()
 
         # The run deliberately triggers rejections the server must refuse: a
-        # malformed bKash number, publishing before translating (422s), and a
-        # password change with the wrong current password (403).
+        # malformed bKash number, publishing before translating, a password
+        # change with the wrong current password, and an editor reaching for
+        # settings and senior accounts. Those are API calls made with
+        # request.*, which the browser does not log, so only the in-page ones
+        # show up here.
         rejected = [e for e in errors if "422" in e or "403" in e]
         real_errors = [
             e for e in errors if "favicon" not in e.lower() and "Failed to load resource" not in e

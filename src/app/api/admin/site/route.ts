@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { errorResponse, requireRole } from "@/lib/rbac";
+import { errorResponse, requireOwner, requireStaff } from "@/lib/rbac";
 import { siteSettings } from "@/lib/settings";
 
 const schema = z.object({
@@ -21,7 +21,7 @@ const schema = z.object({
 /** GET /api/admin/site - the wording, masthead and ad slots (ADMIN, EDITOR). */
 export async function GET() {
   try {
-    await requireRole("ADMIN", "EDITOR");
+    await requireStaff();
     return Response.json({ settings: await siteSettings() });
   } catch (err) {
     return errorResponse(err);
@@ -31,7 +31,7 @@ export async function GET() {
 /** PATCH /api/admin/site - ADMIN only. */
 export async function PATCH(req: Request) {
   try {
-    await requireRole("ADMIN");
+    await requireOwner();
     const parsed = schema.safeParse(await req.json());
     if (!parsed.success) {
       return Response.json(

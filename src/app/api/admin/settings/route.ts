@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { errorResponse, requireRole } from "@/lib/rbac";
+import { errorResponse, requireOwner, requireStaff } from "@/lib/rbac";
 import { paymentSettings } from "@/lib/settings";
 
 const schema = z.object({
@@ -14,7 +14,7 @@ const schema = z.object({
 /** GET /api/admin/settings - payment settings (Editors read, Admin writes). */
 export async function GET() {
   try {
-    await requireRole("ADMIN", "EDITOR");
+    await requireStaff();
     return Response.json({ settings: await paymentSettings() });
   } catch (err) {
     return errorResponse(err);
@@ -24,7 +24,7 @@ export async function GET() {
 /** PATCH /api/admin/settings */
 export async function PATCH(req: Request) {
   try {
-    await requireRole("ADMIN");
+    await requireOwner();
     const parsed = schema.safeParse(await req.json());
     if (!parsed.success) {
       return Response.json(

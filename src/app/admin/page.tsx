@@ -1,13 +1,12 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { currentUser } from "@/lib/rbac";
+import { currentUser, isOwner, isStaff } from "@/lib/rbac";
 import { money } from "@/lib/format";
 import { paymentSettings, siteSettings } from "@/lib/settings";
 import { SiteHeader } from "@/components/site-header";
 import { StatCard } from "@/components/ui";
-import { maskedDestination } from "@/lib/payout";
-import { UserTable } from "./user-table";
+import { StaffNav } from "@/components/staff-nav";
 import { SettingsForm } from "./settings-form";
 import { SiteForm } from "./site-form";
 
@@ -16,7 +15,9 @@ export const metadata = { title: "Admin" };
 export default async function AdminPage() {
   const user = await currentUser();
   if (!user) redirect("/login");
-  if (user.role !== "ADMIN") redirect("/dashboard");
+  // Settings belong to the owner. Other staff land on the people list instead of
+  // a dead end.
+  if (!isOwner(user.role)) redirect(isStaff(user.role) ? "/people" : "/dashboard");
 
   const [users, settings, site, totals] = await Promise.all([
     prisma.user.findMany({
@@ -43,17 +44,14 @@ export default async function AdminPage() {
 
   const waiting = await prisma.article.count({ where: { status: "SUBMITTED" } });
 
-  const sums = await prisma.article.groupBy({
-    by: ["authorId"],
-    where: { status: "APPROVED" },
-    _sum: { payoutCents: true },
-  });
-  const earned = new Map(sums.map((s) => [s.authorId, s._sum.payoutCents ?? 0]));
-
   return (
     <>
       <SiteHeader />
       <main className="mx-auto max-w-5xl px-4 pb-20">
+        <div className="pt-4">
+          <StaffNav user={user} current="settings" />
+        </div>
+
         <div className="flex flex-wrap items-end justify-between gap-3 border-b border-line py-6">
           <div>
             <h1 className="font-serif text-2xl font-bold sm:text-3xl">Admin</h1>
@@ -112,23 +110,6 @@ export default async function AdminPage() {
           }}
         />
 
-        <UserTable
-          currency={settings.currency}
-          meId={user.id}
-          users={users.map((u) => ({
-            id: u.id,
-            name: u.name,
-            email: u.email,
-            role: u.role,
-            tier: u.tier,
-            providers: u.accounts.map((a) => a.provider),
-            payout: u.payout
-              ? { method: u.payout.method, masked: maskedDestination(u.payout) }
-              : null,
-            articles: u._count.articles,
-            earnedCents: earned.get(u.id) ?? 0,
-          }))}
-        />
       </main>
     </>
   );

@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { errorResponse, HttpError, requireRole } from "@/lib/rbac";
+import { errorResponse, HttpError, requireStaff } from "@/lib/rbac";
 import { paymentSettings } from "@/lib/settings";
 import { other } from "@/lib/i18n";
 
@@ -20,7 +20,7 @@ const schema = z.object({
  */
 export async function POST(req: Request, { params }: Ctx) {
   try {
-    const staff = await requireRole("EDITOR", "ADMIN");
+    const staff = await requireStaff();
     const { id } = await params;
 
     const parsed = schema.safeParse(await req.json());

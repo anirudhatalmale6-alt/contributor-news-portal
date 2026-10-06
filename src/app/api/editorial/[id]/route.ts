@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { errorResponse, HttpError, requireRole } from "@/lib/rbac";
+import { errorResponse, HttpError, requireStaff } from "@/lib/rbac";
 import { uniqueSlug } from "@/lib/settings";
 
 type Ctx = { params: Promise<{ id: string }> };
@@ -16,7 +16,7 @@ const patchSchema = z.object({
 /** GET /api/editorial/:id - full article + audit trail, for the review screen. */
 export async function GET(_req: Request, { params }: Ctx) {
   try {
-    await requireRole("EDITOR", "ADMIN");
+    await requireStaff();
     const { id } = await params;
     const article = await prisma.article.findUnique({
       where: { id },
@@ -39,7 +39,7 @@ export async function GET(_req: Request, { params }: Ctx) {
 /** PATCH /api/editorial/:id - an editor fine-tuning wording or media, any status. */
 export async function PATCH(req: Request, { params }: Ctx) {
   try {
-    const staff = await requireRole("EDITOR", "ADMIN");
+    const staff = await requireStaff();
     const { id } = await params;
     const existing = await prisma.article.findUnique({ where: { id } });
     if (!existing) throw new HttpError(404, "Article not found");

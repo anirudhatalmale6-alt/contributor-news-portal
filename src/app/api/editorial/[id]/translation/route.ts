@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { errorResponse, HttpError, requireRole } from "@/lib/rbac";
+import { errorResponse, HttpError, requireStaff } from "@/lib/rbac";
 import { translationSlug } from "@/lib/articles";
 
 type Ctx = { params: Promise<{ id: string }> };
@@ -15,7 +15,7 @@ const schema = z.object({
 /** GET /api/editorial/:id/translation - both language versions of a piece. */
 export async function GET(_req: Request, { params }: Ctx) {
   try {
-    await requireRole("EDITOR", "ADMIN");
+    await requireStaff();
     const { id } = await params;
     const article = await prisma.article.findUnique({
       where: { id },
@@ -44,7 +44,7 @@ export async function GET(_req: Request, { params }: Ctx) {
  */
 export async function PUT(req: Request, { params }: Ctx) {
   try {
-    const staff = await requireRole("EDITOR", "ADMIN");
+    const staff = await requireStaff();
     const { id } = await params;
 
     const parsed = schema.safeParse(await req.json());
@@ -104,7 +104,7 @@ export async function PUT(req: Request, { params }: Ctx) {
 /** DELETE /api/editorial/:id/translation?locale=BN */
 export async function DELETE(req: Request, { params }: Ctx) {
   try {
-    await requireRole("EDITOR", "ADMIN");
+    await requireStaff();
     const { id } = await params;
     const locale = new URL(req.url).searchParams.get("locale");
     if (locale !== "EN" && locale !== "BN") {

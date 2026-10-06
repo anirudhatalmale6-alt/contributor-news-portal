@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { currentUser, isStaff } from "@/lib/rbac";
+import { currentUser } from "@/lib/rbac";
 import { longDate, money, timeAgo } from "@/lib/format";
 import { paymentSettings } from "@/lib/settings";
 import { SiteHeader } from "@/components/site-header";
+import { StaffNav } from "@/components/staff-nav";
 import { StatCard, StatusPill, TierBadge } from "@/components/ui";
 import { maskedDestination, methodLabel } from "@/lib/payout";
 import { NewDraftButton } from "./new-draft-button";
@@ -42,6 +43,10 @@ export default async function DashboardPage() {
     <>
       <SiteHeader />
       <main className="mx-auto max-w-5xl px-4 pb-16">
+        <div className="pt-4">
+          <StaffNav user={user} current="desk" />
+        </div>
+
         <div className="flex flex-wrap items-end justify-between gap-3 border-b border-line py-6">
           <div>
             <h1 className="font-serif text-2xl font-bold sm:text-3xl">
@@ -52,17 +57,7 @@ export default async function DashboardPage() {
               <span className="text-xs text-ink-soft">{user.email}</span>
             </div>
           </div>
-          <div className="flex flex-wrap gap-2">
-            {isStaff(user.role) ? (
-              <Link
-                href="/editorial"
-                className="rounded-full border border-line px-4 py-2 text-sm font-medium hover:bg-paper-soft"
-              >
-                Editorial queue
-              </Link>
-            ) : null}
-            <NewDraftButton />
-          </div>
+          <NewDraftButton />
         </div>
 
         <section className="grid gap-3 py-6 sm:grid-cols-2 lg:grid-cols-4">

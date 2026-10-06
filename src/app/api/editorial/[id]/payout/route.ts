@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { errorResponse, HttpError, requireRole } from "@/lib/rbac";
+import { errorResponse, HttpError, requireStaff } from "@/lib/rbac";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -12,7 +12,7 @@ const schema = z.object({
 /** PATCH /api/editorial/:id/payout - revise the estimated payout after publication. */
 export async function PATCH(req: Request, { params }: Ctx) {
   try {
-    const staff = await requireRole("EDITOR", "ADMIN");
+    const staff = await requireStaff();
     const { id } = await params;
 
     const parsed = schema.safeParse(await req.json());

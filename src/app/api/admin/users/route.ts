@@ -1,11 +1,32 @@
 import { prisma } from "@/lib/prisma";
-import { errorResponse, requireRole } from "@/lib/rbac";
+import { errorResponse, requireStaff } from "@/lib/rbac";
 
-/** GET /api/admin/users - user management table (Admin only). */
-export async function GET() {
+/**
+ * GET /api/admin/users?q=&role=
+ * The people list, for any staff member. `q` matches an email or a name, in
+ * either script, so a contributor can be found by whatever the editor knows.
+ */
+export async function GET(req: Request) {
   try {
-    await requireRole("ADMIN");
+    await requireStaff();
+    const url = new URL(req.url);
+    const q = url.searchParams.get("q")?.trim();
+    const role = url.searchParams.get("role")?.trim().toUpperCase();
+
     const users = await prisma.user.findMany({
+      where: {
+        ...(q
+          ? {
+              OR: [
+                { email: { contains: q, mode: "insensitive" as const } },
+                { name: { contains: q, mode: "insensitive" as const } },
+              ],
+            }
+          : {}),
+        ...(role && ["SUPERADMIN", "ADMIN", "EDITOR", "CONTRIBUTOR"].includes(role)
+          ? { role: role as "EDITOR" }
+          : {}),
+      },
       orderBy: { createdAt: "asc" },
       select: {
         id: true,

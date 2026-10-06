@@ -5,6 +5,7 @@ import { currentUser, isStaff } from "@/lib/rbac";
 import { money, timeAgo } from "@/lib/format";
 import { paymentSettings } from "@/lib/settings";
 import { SiteHeader } from "@/components/site-header";
+import { StaffNav } from "@/components/staff-nav";
 import { StatCard, StatusPill, TierBadge } from "@/components/ui";
 import { FeatureToggle } from "./feature-toggle";
 
@@ -56,29 +57,18 @@ export default async function EditorialPage({
     <>
       <SiteHeader />
       <main className="mx-auto max-w-5xl px-4 pb-16">
+        <div className="pt-4">
+          <StaffNav user={user} current="newsroom" />
+        </div>
+
         <div className="flex flex-wrap items-end justify-between gap-3 border-b border-line py-6">
           <div>
             <h1 className="font-serif text-2xl font-bold sm:text-3xl">Editorial queue</h1>
             <p className="mt-1 text-sm text-ink-soft">
-              Signed in as {user.name} · {user.role === "ADMIN" ? "Admin" : "Editor"}
+              Oldest submissions first, so nothing waits behind newer work.
             </p>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <Link
-              href="/dashboard"
-              className="rounded-full border border-line px-4 py-2 text-sm font-medium hover:bg-paper-soft"
-            >
-              My writing desk
-            </Link>
-            {user.role === "ADMIN" ? (
-              <Link
-                href="/admin"
-                className="rounded-full border border-line px-4 py-2 text-sm font-medium hover:bg-paper-soft"
-              >
-                Admin settings
-              </Link>
-            ) : null}
-          </div>
+
         </div>
 
         <section className="grid gap-3 py-6 sm:grid-cols-2 lg:grid-cols-4">

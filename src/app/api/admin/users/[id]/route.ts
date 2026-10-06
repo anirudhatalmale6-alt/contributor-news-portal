@@ -1,18 +1,24 @@
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { errorResponse, HttpError, requireRole } from "@/lib/rbac";
+import { canChangeRole, errorResponse, HttpError, isOwner, requireStaff } from "@/lib/rbac";
 
 type Ctx = { params: Promise<{ id: string }> };
 
 const schema = z.object({
-  role: z.enum(["ADMIN", "EDITOR", "CONTRIBUTOR"]).optional(),
+  role: z.enum(["SUPERADMIN", "ADMIN", "EDITOR", "CONTRIBUTOR"]).optional(),
   tier: z.enum(["GENERAL", "VERIFIED"]).optional(),
 });
 
-/** PATCH /api/admin/users/:id - promote to Editor, flag as Verified Contributor, etc. */
+/**
+ * PATCH /api/admin/users/:id - change someone's role or contributor tier.
+ *
+ * An editor may promote a contributor to editor and put them back; only the
+ * owner can create admins, hand over the owner's seat, or touch another
+ * senior account.
+ */
 export async function PATCH(req: Request, { params }: Ctx) {
   try {
-    const admin = await requireRole("ADMIN");
+    const actor = await requireStaff();
     const { id } = await params;
 
     const parsed = schema.safeParse(await req.json());
@@ -20,9 +26,30 @@ export async function PATCH(req: Request, { params }: Ctx) {
       return Response.json({ error: "Nothing to change" }, { status: 422 });
     }
 
-    // Guard rail: an admin must not demote themselves out of the admin seat.
-    if (id === admin.id && parsed.data.role && parsed.data.role !== "ADMIN") {
-      throw new HttpError(409, "You cannot remove your own Admin role");
+    const target = await prisma.user.findUnique({
+      where: { id },
+      select: { id: true, role: true },
+    });
+    if (!target) throw new HttpError(404, "No such account");
+
+    if (parsed.data.role) {
+      if (id === actor.id) {
+        throw new HttpError(409, "You cannot change your own role");
+      }
+      if (!canChangeRole(actor.role, target.role, parsed.data.role)) {
+        throw new HttpError(
+          403,
+          isOwner(actor.role)
+            ? "That change is not allowed"
+            : "Only the site owner can change admin or owner accounts",
+        );
+      }
+    }
+
+    // Flagging someone Verified is an editorial judgement, but it should not be
+    // a way to edit a senior colleague's record.
+    if (parsed.data.tier && !canChangeRole(actor.role, target.role, target.role)) {
+      throw new HttpError(403, "Only the site owner can change that account");
     }
 
     const user = await prisma.user.update({

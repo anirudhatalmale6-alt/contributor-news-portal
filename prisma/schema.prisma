@@ -11,6 +11,11 @@ datasource db {
 }
 
 enum Role {
+  /// The owner. The only role that can change how the site looks, what it pays,
+  /// and who else is staff.
+  SUPERADMIN
+  /// Runs the newsroom day to day: everything editorial, plus making
+  /// contributors into editors. No access to design or money settings.
   ADMIN
   EDITOR
   CONTRIBUTOR

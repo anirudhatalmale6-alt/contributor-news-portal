@@ -43,7 +43,14 @@ async function main() {
   const hash = await bcrypt.hash(PASSWORD, 11);
 
   const [admin, editor, maya, sam, leo] = await Promise.all([
-    upsertUser("admin@thedocument.test", "Nadia Okoro", "ADMIN", "GENERAL", hash, "Runs the desk."),
+    upsertUser(
+      "admin@thedocument.test",
+      "Nadia Okoro",
+      "SUPERADMIN",
+      "GENERAL",
+      hash,
+      "Owns the paper.",
+    ),
     upsertUser(
       "editor@thedocument.test",
       "Tom Beckett",
@@ -395,7 +402,7 @@ The council advanced a loan of sixty thousand in the spring. The accounts filed 
 function upsertUser(
   email: string,
   name: string,
-  role: "ADMIN" | "EDITOR" | "CONTRIBUTOR",
+  role: "SUPERADMIN" | "ADMIN" | "EDITOR" | "CONTRIBUTOR",
   tier: "GENERAL" | "VERIFIED",
   passwordHash: string,
   bio: string,

@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { errorResponse, requireRole } from "@/lib/rbac";
+import { errorResponse, requireOwner } from "@/lib/rbac";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -10,7 +10,7 @@ type Ctx = { params: Promise<{ id: string }> };
  */
 export async function GET(_req: Request, { params }: Ctx) {
   try {
-    await requireRole("ADMIN");
+    await requireOwner();
     const { id } = await params;
     const payout = await prisma.payoutProfile.findUnique({ where: { userId: id } });
     const user = await prisma.user.findUnique({

@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { errorResponse, HttpError, requireRole } from "@/lib/rbac";
+import { HttpError, errorResponse, requireOwner } from "@/lib/rbac";
 import { saveUpload } from "@/lib/storage";
 
 const TYPES = ["image/png", "image/svg+xml", "image/jpeg", "image/webp"];
@@ -10,7 +10,7 @@ const TYPES = ["image/png", "image/svg+xml", "image/jpeg", "image/webp"];
  */
 export async function POST(req: Request) {
   try {
-    await requireRole("ADMIN");
+    await requireOwner();
 
     const form = await req.formData();
     const file = form.get("file");
