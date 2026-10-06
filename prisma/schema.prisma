@@ -112,8 +112,13 @@ model Article {
   reviewerId String?
   reviewer   User?         @relation("reviewer", fields: [reviewerId], references: [id])
 
-  // payout, in minor units (cents) so money never touches a float
+  // payout, in minor units (poisha for BDT) so money never touches a float
   payoutCents Int @default(0)
+
+  /// Approving a piece publishes it; featuring is a separate, deliberate act,
+  /// so the front page is edited rather than just filled by whatever is newest.
+  featured   Boolean   @default(false)
+  featuredAt DateTime?
 
   // The language the contributor wrote in; the other one comes from the editor.
   language Locale @default(EN)
@@ -128,6 +133,7 @@ model Article {
   translations ArticleTranslation[]
 
   @@index([status, publishedAt])
+  @@index([status, featured, featuredAt])
   @@index([authorId, status])
 }
 
@@ -187,6 +193,26 @@ model Review {
   createdAt  DateTime       @default(now())
 
   @@index([articleId, createdAt])
+}
+
+/// Everything the owner can change without touching code: the masthead, the
+/// wording around the site, and the advertising slots. One row, id = 1.
+model SiteSettings {
+  id            Int     @id @default(1)
+  siteNameEn    String  @default("The Document")
+  siteNameBn    String  @default("দ্য ডকুমেন্ট")
+  taglineEn     String  @default("news written by its readers, checked by its editors.")
+  taglineBn     String  @default("পাঠকদের লেখা, সম্পাদকদের যাচাই করা সংবাদ।")
+  footerEn      String  @default("© The Document. All rights reserved.")
+  footerBn      String  @default("© দ্য ডকুমেন্ট। সর্বস্বত্ব সংরক্ষিত।")
+  /// Uploaded masthead; falls back to the bundled artwork when empty.
+  logoUrl       String?
+  /// Ad slots. The HTML is pasted by an Admin and rendered as-is, which is what
+  /// an ad network requires; nobody else can reach these fields.
+  adsEnabled    Boolean @default(false)
+  adHomeHtml    String  @default("")
+  adArticleHtml String  @default("")
+  adSectionHtml String  @default("")
 }
 
 // Single-row table the Admin edits under Payment settings

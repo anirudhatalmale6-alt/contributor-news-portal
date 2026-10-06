@@ -1,28 +1,53 @@
 import Link from "next/link";
-import { feedArticles } from "@/lib/articles";
+import { featuredArticles, feedArticles, type LocalisedArticle } from "@/lib/articles";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
+import { AdSlot } from "@/components/ad-slot";
 import { ArticleCard } from "@/components/ui";
-import { type Locale, localeMeta, localePath, t } from "@/lib/i18n";
+import { type Locale, localeMeta, localePath, sectionPath, t } from "@/lib/i18n";
 
-const CATEGORIES = ["All", "Politics", "Technology", "Culture", "Business", "General"];
+const SECTIONS = ["Politics", "Technology", "Culture", "Business", "General"];
 
-/** The public front page, in one language. */
+/**
+ * The front page.
+ *
+ * An editor decides what leads by featuring it. Only if nothing is featured
+ * does the page fall back to the newest piece, so a fresh install still looks
+ * like a newspaper rather than an empty shelf.
+ */
 export async function Feed({ locale, category }: { locale: Locale; category: string }) {
   const copy = t(locale);
-  const articles = await feedArticles(locale, category);
-  const [lead, ...rest] = articles;
-  const base = localePath(locale);
+  const [featured, latest] = await Promise.all([
+    category === "All" ? featuredArticles(locale, 5) : Promise.resolve([] as LocalisedArticle[]),
+    feedArticles(locale, category, 16),
+  ]);
+
+  const featuredHrefs = new Set(featured.map((a) => a.href));
+  const rest = latest.filter((a) => !featuredHrefs.has(a.href));
+
+  const lead = featured[0] ?? rest.shift() ?? null;
+  const secondary = featured.slice(1, 4);
+  const rail = secondary.length ? secondary : rest.splice(0, 3);
 
   return (
     <div lang={localeMeta[locale].htmlLang}>
       <SiteHeader locale={locale} />
       <main className="mx-auto max-w-5xl px-4 pb-16">
         <div className="flex flex-wrap items-center gap-2 border-b border-line py-4">
-          {CATEGORIES.map((c) => (
+          <Link
+            href={localePath(locale)}
+            className={`rounded-full border px-3 py-1 text-xs font-medium ${
+              category === "All"
+                ? "border-navy bg-navy text-white"
+                : "border-line text-ink-soft hover:text-ink"
+            }`}
+          >
+            {copy.sections.All}
+          </Link>
+          {SECTIONS.map((c) => (
             <Link
               key={c}
-              href={c === "All" ? base : `${base}?category=${c}`}
+              href={sectionPath(locale, c)}
               className={`rounded-full border px-3 py-1 text-xs font-medium ${
                 c === category
                   ? "border-navy bg-navy text-white"
@@ -34,19 +59,21 @@ export async function Feed({ locale, category }: { locale: Locale; category: str
           ))}
         </div>
 
-        {articles.length === 0 ? (
+        {!lead ? (
           <p className="py-16 text-center text-ink-soft">{copy.nothingHere}</p>
         ) : (
           <div className="pt-6">
             <div className="grid gap-8 lg:grid-cols-[1.4fr_1fr]">
-              <div>{lead ? <ArticleCard article={lead} locale={locale} lead /> : null}</div>
+              <div>
+                <ArticleCard article={lead} locale={locale} lead />
+              </div>
 
               <aside className="lg:border-l lg:border-line lg:pl-8">
                 <h2 className="mb-3 text-xs font-bold uppercase tracking-widest text-ink-soft">
-                  {copy.alsoToday}
+                  {featured.length > 1 ? copy.featured : copy.alsoToday}
                 </h2>
                 <div className="grid gap-4">
-                  {rest.slice(0, 3).map((a) => (
+                  {rail.map((a) => (
                     <Link
                       key={a.href}
                       href={a.href}
@@ -76,13 +103,15 @@ export async function Feed({ locale, category }: { locale: Locale; category: str
               </aside>
             </div>
 
-            {rest.length > 3 ? (
+            <AdSlot slot="home" />
+
+            {rest.length > 0 ? (
               <section className="mt-10">
                 <h2 className="mb-4 text-xs font-bold uppercase tracking-widest text-ink-soft">
                   {copy.moreFromContributors}
                 </h2>
                 <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                  {rest.slice(3).map((a) => (
+                  {rest.map((a) => (
                     <ArticleCard key={a.href} article={a} locale={locale} />
                   ))}
                 </div>

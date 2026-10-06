@@ -1,6 +1,14 @@
 import { prisma } from "@/lib/prisma";
 import { slugify } from "@/lib/format";
 
+/** The single SiteSettings row (masthead, wording, ad slots). Server-only. */
+export async function siteSettings() {
+  return (
+    (await prisma.siteSettings.findUnique({ where: { id: 1 } })) ??
+    prisma.siteSettings.create({ data: { id: 1 } })
+  );
+}
+
 /** The single PaymentSettings row, created on first read. Server-only. */
 export async function paymentSettings() {
   return (

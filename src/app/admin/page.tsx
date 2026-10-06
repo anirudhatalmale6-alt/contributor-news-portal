@@ -3,12 +3,13 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { currentUser } from "@/lib/rbac";
 import { money } from "@/lib/format";
-import { paymentSettings } from "@/lib/settings";
+import { paymentSettings, siteSettings } from "@/lib/settings";
 import { SiteHeader } from "@/components/site-header";
 import { StatCard } from "@/components/ui";
 import { maskedDestination } from "@/lib/payout";
 import { UserTable } from "./user-table";
 import { SettingsForm } from "./settings-form";
+import { SiteForm } from "./site-form";
 
 export const metadata = { title: "Admin" };
 
@@ -17,7 +18,7 @@ export default async function AdminPage() {
   if (!user) redirect("/login");
   if (user.role !== "ADMIN") redirect("/dashboard");
 
-  const [users, settings, totals] = await Promise.all([
+  const [users, settings, site, totals] = await Promise.all([
     prisma.user.findMany({
       orderBy: { createdAt: "asc" },
       select: {
@@ -32,6 +33,7 @@ export default async function AdminPage() {
       },
     }),
     paymentSettings(),
+    siteSettings(),
     prisma.article.aggregate({
       where: { status: "APPROVED" },
       _sum: { payoutCents: true },
@@ -90,6 +92,22 @@ export default async function AdminPage() {
             verifiedBonusPct: settings.verifiedBonusPct,
             payoutNote: settings.payoutNote,
             requireTranslation: settings.requireTranslation,
+          }}
+        />
+
+        <SiteForm
+          settings={{
+            siteNameEn: site.siteNameEn,
+            siteNameBn: site.siteNameBn,
+            taglineEn: site.taglineEn,
+            taglineBn: site.taglineBn,
+            footerEn: site.footerEn,
+            footerBn: site.footerBn,
+            logoUrl: site.logoUrl,
+            adsEnabled: site.adsEnabled,
+            adHomeHtml: site.adHomeHtml,
+            adArticleHtml: site.adArticleHtml,
+            adSectionHtml: site.adSectionHtml,
           }}
         />
 

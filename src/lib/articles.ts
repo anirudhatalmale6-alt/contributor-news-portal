@@ -105,6 +105,69 @@ export async function feedArticles(locale: Locale, category: string, take = 13) 
   return rows.map((r) => pick(r, locale)).filter((a): a is LocalisedArticle => a !== null);
 }
 
+/** Pieces an editor has put on the front page, newest first. */
+export async function featuredArticles(locale: Locale, take = 5) {
+  const rows = await prisma.article.findMany({
+    where: {
+      status: "APPROVED",
+      featured: true,
+      OR: [{ language: locale }, { translations: { some: { locale } } }],
+    },
+    orderBy: { featuredAt: "desc" },
+    take,
+    include: {
+      author: AUTHOR,
+      translations: { include: { translator: { select: { name: true } } } },
+    },
+  });
+  return rows.map((r) => pick(r, locale)).filter((a): a is LocalisedArticle => a !== null);
+}
+
+/** More from the same section, for the foot of an article. */
+export async function relatedArticles(
+  locale: Locale,
+  articleId: string,
+  category: string,
+  take = 4,
+) {
+  const rows = await prisma.article.findMany({
+    where: {
+      status: "APPROVED",
+      id: { not: articleId },
+      category,
+      OR: [{ language: locale }, { translations: { some: { locale } } }],
+    },
+    orderBy: { publishedAt: "desc" },
+    take: take + 2,
+    include: {
+      author: AUTHOR,
+      translations: { include: { translator: { select: { name: true } } } },
+    },
+  });
+  const related = rows.map((r) => pick(r, locale)).filter((a): a is LocalisedArticle => a !== null);
+
+  // Fall back to the latest from anywhere rather than showing an empty rail.
+  if (related.length >= take) return related.slice(0, take);
+  const filler = await prisma.article.findMany({
+    where: {
+      status: "APPROVED",
+      id: { not: articleId },
+      category: { not: category },
+      OR: [{ language: locale }, { translations: { some: { locale } } }],
+    },
+    orderBy: { publishedAt: "desc" },
+    take,
+    include: {
+      author: AUTHOR,
+      translations: { include: { translator: { select: { name: true } } } },
+    },
+  });
+  return [...related, ...filler.map((r) => pick(r, locale)).filter((a): a is LocalisedArticle => a !== null)].slice(
+    0,
+    take,
+  );
+}
+
 /** A single published piece addressed by its slug in this language. */
 export async function articleForLocale(locale: Locale, slug: string) {
   const article = await prisma.article.findFirst({

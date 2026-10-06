@@ -20,6 +20,15 @@ export const localeMeta: Record<Locale, { htmlLang: string; label: string; short
 
 export const other = (locale: Locale): Locale => (locale === "EN" ? "BN" : "EN");
 
+/** Section pages: /section/politics, /en/section/politics. */
+export const sectionPath = (locale: Locale, category: string) =>
+  localePath(locale, `/section/${category.toLowerCase()}`);
+
+/** The category behind a section slug, or null if nobody publishes under it. */
+export const CATEGORIES = ["Politics", "Technology", "Culture", "Business", "General"] as const;
+export const categoryFromSlug = (slug: string) =>
+  CATEGORIES.find((c) => c.toLowerCase() === slug.toLowerCase()) ?? null;
+
 /** Bangla is the root site; English is prefixed with `/en`. */
 export const localePath = (locale: Locale, path = "") =>
   locale === "EN" ? `/en${path}` : path || "/";
@@ -28,6 +37,9 @@ type Dict = {
   latest: string;
   sections: Record<string, string>;
   alsoToday: string;
+  featured: string;
+  relatedTitle: string;
+  inSection: (name: string) => string;
   moreFromContributors: string;
   nothingHere: string;
   signIn: string;
@@ -63,6 +75,9 @@ const EN_DICT: Dict = {
     General: "General",
   },
   alsoToday: "Also today",
+  featured: "Featured",
+  relatedTitle: "More on this",
+  inSection: (name) => `${name} news`,
   moreFromContributors: "More from our contributors",
   nothingHere: "Nothing published in this section yet.",
   signIn: "Sign in",
@@ -99,6 +114,9 @@ const BN_DICT: Dict = {
     General: "সাধারণ",
   },
   alsoToday: "আজকের আরও খবর",
+  featured: "নির্বাচিত",
+  relatedTitle: "আরও পড়ুন",
+  inSection: (name) => `${name} সংবাদ`,
   moreFromContributors: "আমাদের লেখকদের আরও লেখা",
   nothingHere: "এই বিভাগে এখনও কিছু প্রকাশিত হয়নি।",
   signIn: "সাইন ইন",

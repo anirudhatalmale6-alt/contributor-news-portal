@@ -1,11 +1,21 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { articleForLocale } from "@/lib/articles";
+import { articleForLocale, relatedArticles } from "@/lib/articles";
+import { AdSlot } from "@/components/ad-slot";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { TierBadge } from "@/components/ui";
 import { readingTime } from "@/lib/format";
-import { type Locale, localeDate, localeNumber, localePath, other, localeMeta, t } from "@/lib/i18n";
+import {
+  type Locale,
+  localeDate,
+  localeNumber,
+  localePath,
+  other,
+  localeMeta,
+  sectionPath,
+  t,
+} from "@/lib/i18n";
 
 /** Paragraphs, H2/H3, pull quotes and bullets - the same subset in both languages. */
 function renderBody(body: string) {
@@ -40,6 +50,7 @@ export async function ArticleView({ locale, slug }: { locale: Locale; slug: stri
   const copy = t(locale);
   const alt = other(locale);
   const gallery = article.media.filter((m) => m.url !== article.coverImage);
+  const related = await relatedArticles(locale, article.id, article.category, 4);
 
   return (
     <div lang={localeMeta[locale].htmlLang}>
@@ -55,7 +66,7 @@ export async function ArticleView({ locale, slug }: { locale: Locale; slug: stri
           <span className="px-1.5" aria-hidden>
             /
           </span>
-          <Link href={`${localePath(locale)}?category=${article.category}`} className="hover:text-ink">
+          <Link href={sectionPath(locale, article.category)} className="hover:text-ink">
             {copy.sections[article.category] ?? article.category}
           </Link>
         </nav>
@@ -147,6 +158,42 @@ export async function ArticleView({ locale, slug }: { locale: Locale; slug: stri
             <p className="text-sm font-medium">{copy.about(article.author.name)}</p>
             <p className="mt-1 text-sm text-ink-soft">{article.author.bio ?? copy.defaultBio}</p>
           </aside>
+
+          <AdSlot slot="article" />
+
+          {related.length > 0 ? (
+            <section className="mt-10 border-t border-line pt-6">
+              <h2 className="mb-4 text-xs font-bold uppercase tracking-widest text-ink-soft">
+                {copy.relatedTitle}
+              </h2>
+              <ul className="grid gap-5 sm:grid-cols-2">
+                {related.map((r) => (
+                  <li key={r.href}>
+                    <Link href={r.href} className="group flex gap-3">
+                      {r.coverImage ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={r.coverImage}
+                          alt=""
+                          loading="lazy"
+                          className="size-20 shrink-0 rounded-lg object-cover"
+                        />
+                      ) : null}
+                      <span>
+                        <span className="block text-xs font-semibold uppercase tracking-wide text-brand">
+                          {copy.sections[r.category] ?? r.category}
+                        </span>
+                        <span className="mt-0.5 block font-serif text-sm font-bold leading-snug group-hover:underline">
+                          {r.title}
+                        </span>
+                        <span className="mt-0.5 block text-xs text-ink-soft">{r.author.name}</span>
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
         </article>
       </main>
       <SiteFooter locale={locale} />

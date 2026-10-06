@@ -1,0 +1,64 @@
+import Link from "next/link";
+import { feedArticles } from "@/lib/articles";
+import { SiteHeader } from "@/components/site-header";
+import { SiteFooter } from "@/components/site-footer";
+import { AdSlot } from "@/components/ad-slot";
+import { ArticleCard } from "@/components/ui";
+import { type Locale, localeMeta, localePath, sectionPath, t, CATEGORIES } from "@/lib/i18n";
+
+/** One section of the paper, in one language. */
+export async function SectionPage({ locale, category }: { locale: Locale; category: string }) {
+  const copy = t(locale);
+  const articles = await feedArticles(locale, category, 24);
+  const [lead, ...rest] = articles;
+  const name = copy.sections[category] ?? category;
+
+  return (
+    <div lang={localeMeta[locale].htmlLang}>
+      <SiteHeader locale={locale} switchHref={sectionPath(locale === "BN" ? "EN" : "BN", category)} />
+      <main className="mx-auto max-w-5xl px-4 pb-16">
+        <nav className="flex flex-wrap items-center gap-2 border-b border-line py-4">
+          <Link href={localePath(locale)} className="text-xs font-medium text-ink-soft hover:text-ink">
+            {copy.latest}
+          </Link>
+          {CATEGORIES.map((c) => (
+            <Link
+              key={c}
+              href={sectionPath(locale, c)}
+              className={`rounded-full border px-3 py-1 text-xs font-medium ${
+                c === category
+                  ? "border-navy bg-navy text-white"
+                  : "border-line text-ink-soft hover:text-ink"
+              }`}
+            >
+              {copy.sections[c] ?? c}
+            </Link>
+          ))}
+        </nav>
+
+        <h1 className="mt-6 font-serif text-3xl font-bold sm:text-4xl">{name}</h1>
+
+        {!lead ? (
+          <p className="py-16 text-center text-ink-soft">{copy.nothingHere}</p>
+        ) : (
+          <>
+            <div className="mt-6">
+              <ArticleCard article={lead} locale={locale} lead />
+            </div>
+
+            <AdSlot slot="section" />
+
+            {rest.length > 0 ? (
+              <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                {rest.map((a) => (
+                  <ArticleCard key={a.href} article={a} locale={locale} />
+                ))}
+              </div>
+            ) : null}
+          </>
+        )}
+      </main>
+      <SiteFooter locale={locale} />
+    </div>
+  );
+}

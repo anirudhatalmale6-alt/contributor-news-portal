@@ -6,6 +6,7 @@ import { money, timeAgo } from "@/lib/format";
 import { paymentSettings } from "@/lib/settings";
 import { SiteHeader } from "@/components/site-header";
 import { StatCard, StatusPill, TierBadge } from "@/components/ui";
+import { FeatureToggle } from "./feature-toggle";
 
 export const metadata = { title: "Editorial queue" };
 
@@ -154,7 +155,12 @@ export default async function EditorialPage({
                       </span>
                     </div>
                   </div>
-                  <div className="flex shrink-0 items-center gap-3">
+                  <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+                    <FeatureToggle
+                      articleId={a.id}
+                      initial={a.featured}
+                      disabled={a.status !== "APPROVED"}
+                    />
                     {a.status === "APPROVED" ? (
                       <span className="font-serif text-lg font-bold tabular-nums text-brand-dark">
                         {money(a.payoutCents, settings.currency)}

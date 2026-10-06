@@ -449,6 +449,41 @@ def main():
         page.goto(f"{BASE}/en", wait_until="networkidle")
         check("and on the English site", BOTH_EN_TITLE in page.content())
 
+        # --- 8d. featuring, sections and related articles --------------------
+        # (still signed in as the editor from the step above)
+        page.goto(f"{BASE}/editorial?status=APPROVED", wait_until="networkidle")
+        row = page.locator(f'li:has-text("{BOTH_EN_TITLE}")')
+        row.locator('button:has-text("Feature on front page")').click()
+        expect(row.locator('button:has-text("On the front page")')).to_be_visible(timeout=20000)
+        check("an editor can put a published piece on the front page", True)
+
+        page.goto(f"{BASE}/en", wait_until="networkidle")
+        lead = page.locator("main h2").first.inner_text()
+        check(
+            "the featured piece leads the front page, not just the newest",
+            BOTH_EN_TITLE in lead,
+            lead,
+        )
+        shot(page, "24-front-page-featured.png")
+
+        # sections
+        page.goto(f"{BASE}/en/section/politics", wait_until="networkidle")
+        body = page.content()
+        check("the Politics section page lists its own stories", "night bus" in body)
+        check("and nothing from another section", "corner shop" not in body)
+        shot(page, "25-section-page.png")
+        page.goto(f"{BASE}/section/politics", wait_until="networkidle")
+        check("the Bangla section page works too", "যে রাতের বাস কখনো আসেনি" in page.content())
+
+        r = page.request.get(f"{BASE}/en/section/not-a-section")
+        check("an invented section is a 404, not a blank page", r.status == 404, f"got {r.status}")
+
+        # related articles
+        page.goto(f"{BASE}/en/article/the-night-bus-that-never-came", wait_until="networkidle")
+        check("an article offers more to read", "More on this" in page.content())
+        related = page.locator("section:has-text('More on this') a").count()
+        check("related links are real links", related >= 1, str(related))
+
         # --- 9. admin: roles, verified flag, payment settings ---------------
         sign_out(page)
         sign_in(page, "admin@thedocument.test", "demo1234")
@@ -466,6 +501,25 @@ def main():
         page.wait_for_selector("text=Saved", timeout=20000)
         check("payment settings save", "Saved" in page.content())
         shot(page, "11-admin.png")
+
+        # site settings: wording and advertising, no developer needed
+        page.fill('#site-settings input[name="siteNameEn"]', "The Document Daily")
+        page.check('#site-settings input[name="adsEnabled"]')
+        page.fill('#site-settings textarea[name="adHomeHtml"]', '<div id="ad-home-test">HOUSE AD</div>')
+        page.click('button:has-text("Save site settings")')
+        page.wait_for_selector("text=Refresh the public site", timeout=20000)
+        check("site settings save", "Refresh the public site" in page.content())
+
+        page.goto(f"{BASE}/en", wait_until="networkidle")
+        check("the new site name reaches the public pages", "The Document Daily" in page.content())
+        check("the advertising slot renders what was pasted", "HOUSE AD" in page.content())
+        shot(page, "26-ads-and-name.png")
+
+        # put the name back so the screenshots after this look like the real site
+        page.goto(f"{BASE}/admin", wait_until="networkidle")
+        page.fill('#site-settings input[name="siteNameEn"]', "The Document")
+        page.click('button:has-text("Save site settings")')
+        page.wait_for_selector("text=Refresh the public site", timeout=20000)
 
         # payment details: admin can see them, an editor never can
         row = page.locator(f'tr:has-text("{NEW_EMAIL}")')

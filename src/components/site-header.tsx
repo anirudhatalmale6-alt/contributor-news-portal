@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { currentUser } from "@/lib/rbac";
 import { SignOutButton } from "@/components/auth-buttons";
-import { type Locale, localeMeta, localePath, other, t } from "@/lib/i18n";
+import { type Locale, localeMeta, localePath, other, sectionPath, t } from "@/lib/i18n";
+import { siteSettings } from "@/lib/settings";
 
 const SECTIONS = ["Politics", "Technology", "Culture", "Business"];
 
@@ -13,8 +14,9 @@ export async function SiteHeader({
   /** Where the language toggle goes; defaults to the same page in the other language. */
   switchHref?: string | null;
 }) {
-  const user = await currentUser();
+  const [user, site] = await Promise.all([currentUser(), siteSettings()]);
   const copy = t(locale);
+  const siteName = locale === "BN" ? site.siteNameBn : site.siteNameEn;
   const alt = other(locale);
   const altHref = switchHref ?? localePath(alt);
   const base = localePath(locale);
@@ -22,16 +24,16 @@ export async function SiteHeader({
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-paper/95 backdrop-blur">
       <div className="mx-auto flex max-w-5xl items-center gap-3 px-4 py-3">
-        <Link href={base} aria-label="The Document" className="shrink-0">
+        <Link href={base} aria-label={siteName} className="shrink-0">
           {/* Width and height are fixed so the masthead never shifts the layout
               while it decodes. A plain <img> keeps the public pages free of the
               image optimiser round-trip. */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src="/brand/the-document-masthead.png"
-            alt="The Document"
+            src={site.logoUrl || "/brand/the-document-masthead.png"}
+            alt={siteName}
             width={1000}
-            height={259}
+            height={294}
             fetchPriority="high"
             className="h-9 w-auto sm:h-12"
           />
@@ -42,7 +44,7 @@ export async function SiteHeader({
             {copy.latest}
           </Link>
           {SECTIONS.map((s) => (
-            <Link key={s} href={`${base}?category=${s}`} className="hover:text-ink">
+            <Link key={s} href={sectionPath(locale, s)} className="hover:text-ink">
               {copy.sections[s]}
             </Link>
           ))}
@@ -105,7 +107,7 @@ export async function SiteHeader({
           {copy.latest}
         </Link>
         {SECTIONS.map((s) => (
-          <Link key={s} href={`${base}?category=${s}`} className="whitespace-nowrap hover:text-ink">
+          <Link key={s} href={sectionPath(locale, s)} className="whitespace-nowrap hover:text-ink">
             {copy.sections[s]}
           </Link>
         ))}
