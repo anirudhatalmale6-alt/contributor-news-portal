@@ -22,6 +22,7 @@ PHONE = {"width": 390, "height": 780}
 STAMP = str(int(time.time()))
 NEW_EMAIL = f"rosa.{STAMP}@thedocument.test"
 NEW_PASS = "demo1234"
+NEW_PASS2 = "demo-changed-5678"
 NEW_NAME = "Rosa Delgado"
 HEADLINE = "The allotment that became a flood defence"
 BN_HEADLINE = "যে বরাদ্দ জমি বন্যা প্রতিরোধের বাঁধ হয়ে উঠল"
@@ -336,9 +337,38 @@ def main():
             "A new road over an old canal" in page.content(),
         )
 
-        # --- 8c. a contributor writing BOTH versions themselves --------------
+        # --- 8b2. changing your own password ---------------------------------
         sign_out(page)
         sign_in(page, NEW_EMAIL, NEW_PASS)
+        page.goto(f"{BASE}/dashboard/account", wait_until="networkidle")
+        page.fill('input[autocomplete="current-password"]', "wrong-password")
+        page.fill('input[autocomplete="new-password"] >> nth=0', NEW_PASS2)
+        page.fill('input[autocomplete="new-password"] >> nth=1', NEW_PASS2)
+        page.click('button:has-text("Change password")')
+        page.wait_for_selector("text=not your current password", timeout=20000)
+        check("the wrong current password is refused", "not your current password" in page.content())
+
+        page.fill('input[autocomplete="current-password"]', NEW_PASS)
+        page.fill('input[autocomplete="new-password"] >> nth=0', NEW_PASS2)
+        page.fill('input[autocomplete="new-password"] >> nth=1', NEW_PASS2)
+        page.click('button:has-text("Change password")')
+        page.wait_for_selector("text=Password changed", timeout=20000)
+        check("the password changes", "Password changed" in page.content())
+        shot(page, "23-account-password.png")
+
+        sign_out(page)
+        page.goto(f"{BASE}/login", wait_until="networkidle")
+        page.fill('input[type="email"]', NEW_EMAIL)
+        page.fill('input[type="password"]', NEW_PASS)
+        page.click('button[type="submit"]')
+        page.wait_for_selector("text=did not match", timeout=20000)
+        check("the old password no longer works", "did not match" in page.content())
+        sign_in(page, NEW_EMAIL, NEW_PASS2)
+        check("the new password works", "/login" not in page.url)
+
+        # --- 8c. a contributor writing BOTH versions themselves --------------
+        sign_out(page)
+        sign_in(page, NEW_EMAIL, NEW_PASS2)
         page.goto(f"{BASE}/dashboard", wait_until="networkidle")
         page.click('button:has-text("Start a new piece")')
         page.wait_for_url("**/dashboard/write/**", timeout=20000)
@@ -478,15 +508,16 @@ def main():
         check("dashboard works on a phone", "Total earnings" in mp.content())
         mob.close()
 
-        # The run deliberately triggers two rejections (a malformed bKash number
-        # and publishing before translating), so those 422s are expected noise.
-        rejected = [e for e in errors if "422" in e]
+        # The run deliberately triggers rejections the server must refuse: a
+        # malformed bKash number, publishing before translating (422s), and a
+        # password change with the wrong current password (403).
+        rejected = [e for e in errors if "422" in e or "403" in e]
         real_errors = [
             e for e in errors if "favicon" not in e.lower() and "Failed to load resource" not in e
         ]
         check(
-            "the two deliberate rejections really were rejected by the server",
-            len(rejected) == 2,
+            "every deliberate bad request really was rejected by the server",
+            len(rejected) == 3,
             str(rejected),
         )
         check("no uncaught JS errors anywhere in the run", not real_errors, str(real_errors[:3]))

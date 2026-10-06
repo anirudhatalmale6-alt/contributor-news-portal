@@ -73,6 +73,12 @@ export async function SiteHeader({
               >
                 {user.role === "CONTRIBUTOR" ? copy.myDesk : copy.newsroom}
               </Link>
+              <Link
+                href="/dashboard/account"
+                className="hidden px-2 py-1.5 text-sm text-ink-soft hover:text-ink sm:inline"
+              >
+                {copy.account}
+              </Link>
               <SignOutButton label={copy.signOut} />
             </>
           ) : (

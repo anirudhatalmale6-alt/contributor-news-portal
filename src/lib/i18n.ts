@@ -35,6 +35,7 @@ type Dict = {
   myDesk: string;
   newsroom: string;
   signOut: string;
+  account: string;
   minRead: (n: string) => string;
   verified: string;
   contributor: string;
@@ -69,6 +70,7 @@ const EN_DICT: Dict = {
   myDesk: "My desk",
   newsroom: "Newsroom",
   signOut: "Sign out",
+  account: "Account",
   minRead: (n) => `${n} min read`,
   verified: "Verified contributor",
   contributor: "Contributor",
@@ -104,6 +106,7 @@ const BN_DICT: Dict = {
   myDesk: "আমার ডেস্ক",
   newsroom: "নিউজরুম",
   signOut: "সাইন আউট",
+  account: "অ্যাকাউন্ট",
   minRead: (n) => `${n} মিনিটের পড়া`,
   verified: "যাচাইকৃত লেখক",
   contributor: "লেখক",
