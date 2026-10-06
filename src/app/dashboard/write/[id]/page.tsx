@@ -28,6 +28,13 @@ export default async function WritePage({ params }: { params: Promise<{ id: stri
   if (!article) notFound();
   if (article.authorId !== user.id) redirect("/dashboard");
 
+  // Pre-filled from the writer's profile so a regular contributor confirms a
+  // number rather than retyping it on every piece.
+  const onFile = await prisma.user.findUnique({
+    where: { id: user.id },
+    select: { phone: true, whatsapp: true },
+  });
+
   return (
     <>
       <SiteHeader />
@@ -49,8 +56,8 @@ export default async function WritePage({ params }: { params: Promise<{ id: stri
             status: article.status,
             coverImage: article.coverImage,
             slug: article.slug,
-            contactPhone: article.contactPhone ?? "",
-            contactWhatsapp: article.contactWhatsapp ?? "",
+            contactPhone: article.contactPhone ?? onFile?.phone ?? "",
+            contactWhatsapp: article.contactWhatsapp ?? onFile?.whatsapp ?? "",
             media: article.media.map((m) => ({
               id: m.id,
               kind: m.kind,

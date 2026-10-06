@@ -50,6 +50,8 @@ async function main() {
       "GENERAL",
       hash,
       "Owns the paper.",
+      "01711004200",
+      "01711004200",
     ),
     upsertUser(
       "editor@thedocument.test",
@@ -58,6 +60,8 @@ async function main() {
       "GENERAL",
       hash,
       "Night editor. Twelve years on the city beat.",
+      "01711004311",
+      undefined,
     ),
     upsertUser(
       "maya@thedocument.test",
@@ -66,6 +70,8 @@ async function main() {
       "VERIFIED",
       hash,
       "Transport and infrastructure. Verified contributor since 2024.",
+      "01812207744",
+      "01812207744",
     ),
     upsertUser(
       "sam@thedocument.test",
@@ -74,6 +80,8 @@ async function main() {
       "GENERAL",
       hash,
       "Writes about small business and local trade.",
+      "01915338620",
+      undefined,
     ),
     upsertUser(
       "leo@thedocument.test",
@@ -82,6 +90,8 @@ async function main() {
       "GENERAL",
       hash,
       "Culture, music and everything loud.",
+      "01611720954",
+      "01611720954",
     ),
   ]);
 
@@ -406,11 +416,15 @@ function upsertUser(
   tier: "GENERAL" | "VERIFIED",
   passwordHash: string,
   bio: string,
+  /// The newsroom keeps a number for everyone who files. It is never public
+  /// unless that person turns `phonePublic` on themselves.
+  phone?: string,
+  whatsapp?: string,
 ) {
   return prisma.user.upsert({
     where: { email },
-    create: { email, name, role, tier, passwordHash, bio },
-    update: { name, role, tier, passwordHash, bio },
+    create: { email, name, role, tier, passwordHash, bio, phone, whatsapp },
+    update: { name, role, tier, passwordHash, bio, phone, whatsapp },
   });
 }
 
