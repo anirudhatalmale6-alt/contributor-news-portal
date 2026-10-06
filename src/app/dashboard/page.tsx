@@ -52,9 +52,15 @@ export default async function DashboardPage() {
             <h1 className="font-serif text-2xl font-bold sm:text-3xl">
               {user.name.split(" ")[0]}&rsquo;s desk
             </h1>
-            <div className="mt-2 flex items-center gap-2">
+            <div className="mt-2 flex flex-wrap items-center gap-2">
               <TierBadge tier={user.tier} role={user.role} />
               <span className="text-xs text-ink-soft">{user.email}</span>
+              <Link
+                href="/dashboard/profile"
+                className="text-xs font-medium text-brand hover:underline"
+              >
+                Edit my profile
+              </Link>
             </div>
           </div>
           <NewDraftButton />

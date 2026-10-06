@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { money } from "@/lib/format";
 
 type Row = {
@@ -12,6 +13,7 @@ type Row = {
   tier: string;
   providers: string[];
   hasPayout: boolean;
+  suspended: boolean;
   payoutMethod: string | null;
   payoutMasked: string;
   articles: number;
@@ -170,14 +172,25 @@ export function PeopleTable({
               return (
                 <tr key={u.id} className="border-t border-line">
                   <td className="px-4 py-3">
-                    <p className="font-medium">
-                      {u.name}
-                      {u.id === meId ? " (you)" : ""}
+                    <p className="flex flex-wrap items-center gap-2 font-medium">
+                      <Link href={`/people/${u.id}`} className="hover:underline">
+                        {u.name}
+                      </Link>
+                      {u.id === meId ? <span className="text-ink-soft">(you)</span> : null}
+                      {u.suspended ? (
+                        <span className="rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-[11px] font-medium text-rose-800">
+                          Suspended
+                        </span>
+                      ) : null}
                     </p>
                     <p className="text-xs text-ink-soft">
                       {u.email}
                       {u.providers.length ? ` · via ${u.providers.join(", ")}` : ""}
                       {!isOwner && u.hasPayout ? " · payment details on file" : ""}
+                      {" · "}
+                      <Link href={`/people/${u.id}`} className="underline hover:text-ink">
+                        profile
+                      </Link>
                     </p>
                   </td>
 

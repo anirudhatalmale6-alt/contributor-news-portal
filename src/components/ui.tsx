@@ -148,7 +148,16 @@ export function ArticleCard({
       </Link>
 
       <p className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-ink-soft">
-        <span className="font-medium text-ink">{article.author.name}</span>
+        {article.author.id ? (
+          <Link
+            href={locale === "BN" ? `/author/${article.author.id}` : `/en/author/${article.author.id}`}
+            className="font-medium text-ink hover:underline"
+          >
+            {article.author.name}
+          </Link>
+        ) : (
+          <span className="font-medium text-ink">{article.author.name}</span>
+        )}
         {article.author.tier === "VERIFIED" ? (
           <svg viewBox="0 0 20 20" aria-label={copy.verified} className="size-3.5 fill-sky-600">
             <path d="M10 1.5l2.1 1.6 2.6-.2.9 2.5 2.2 1.4-.9 2.5.9 2.5-2.2 1.4-.9 2.5-2.6-.2L10 18.5l-2.1-1.6-2.6.2-.9-2.5L2.2 13.2l.9-2.5-.9-2.5 2.2-1.4.9-2.5 2.6.2L10 1.5zm-1 10.9l4.3-4.3-1.1-1.1L9 10.2 7.3 8.5 6.2 9.6 9 12.4z" />

@@ -23,10 +23,10 @@ export type LocalisedArticle = {
   publishedAt: Date | null;
   isTranslation: boolean;
   translatorName: string | null;
-  author: { name: string; tier: string; bio?: string | null };
+  author: { id?: string; name: string; tier: string; bio?: string | null };
 };
 
-const AUTHOR = { select: { name: true, tier: true, bio: true } } as const;
+const AUTHOR = { select: { id: true, name: true, tier: true, bio: true } } as const;
 
 function pick(
   article: {
@@ -39,7 +39,7 @@ function pick(
     coverImage: string | null;
     publishedAt: Date | null;
     language: Locale;
-    author: { name: string; tier: string; bio?: string | null };
+    author: { id?: string; name: string; tier: string; bio?: string | null };
     translations: {
       locale: Locale;
       slug: string;
@@ -166,6 +166,24 @@ export async function relatedArticles(
     0,
     take,
   );
+}
+
+/** Everything one contributor has had published, in this language. */
+export async function feedArticlesByAuthor(locale: Locale, authorId: string, take = 24) {
+  const rows = await prisma.article.findMany({
+    where: {
+      status: "APPROVED",
+      authorId,
+      OR: [{ language: locale }, { translations: { some: { locale } } }],
+    },
+    orderBy: { publishedAt: "desc" },
+    take,
+    include: {
+      author: AUTHOR,
+      translations: { include: { translator: { select: { name: true } } } },
+    },
+  });
+  return rows.map((r) => pick(r, locale)).filter((a): a is LocalisedArticle => a !== null);
 }
 
 /** A single published piece addressed by its slug in this language. */

@@ -143,6 +143,19 @@ body {
   text-decoration: underline;
 }
 
+/* The travelling bar shown while the next page is fetched. */
+@keyframes route {
+  0% {
+    transform: translateX(-100%);
+  }
+  60% {
+    transform: translateX(180%);
+  }
+  100% {
+    transform: translateX(340%);
+  }
+}
+
 /* Keeps a long headline from pushing the layout sideways on a 320px phone. */
 .balance {
   text-wrap: balance;

@@ -62,6 +62,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         const user = await prisma.user.findUnique({ where: { email } });
         if (!user?.passwordHash) return null;
         if (!(await bcrypt.compare(password, user.passwordHash))) return null;
+        // A suspended account is refused here, so the session never exists at
+        // all rather than being stopped at each screen.
+        if (user.suspendedAt) return null;
 
         return {
           id: user.id,
@@ -80,6 +83,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       if (!email) return false;
 
       const existing = await prisma.user.findUnique({ where: { email } });
+      if (existing?.suspendedAt) return false;
       const local =
         existing ??
         (await prisma.user.create({

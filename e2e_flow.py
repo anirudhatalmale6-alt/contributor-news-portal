@@ -80,6 +80,12 @@ def go(page, url, timeout=45000):
     page.wait_for_timeout(SETTLE_MS)
 
 
+def wait_article(page, timeout=30000):
+    """The loading skeleton now shows first, so wait for the real article."""
+    page.wait_for_selector(".prose-article", timeout=timeout)
+    page.wait_for_timeout(200)
+
+
 def norm(text):
     """Intl puts a non-breaking space between the currency code and the amount."""
     return text.replace("\u00a0", " ")
@@ -163,6 +169,8 @@ def main():
         )
         page.click("header a:has-text('English')")
         page.wait_for_url("**/en", timeout=20000)
+        page.wait_for_selector("main", timeout=20000)
+        page.wait_for_timeout(SETTLE_MS)
         check("the switch lands on the English site at /en", page.url.rstrip("/").endswith("/en"))
         check("home serves the published lead story", "night bus" in page.content())
         check(
@@ -185,7 +193,7 @@ def main():
         # .first: the headline is a link in both the lead card and the rail
         page.locator("a:has-text('The night bus that never came')").first.click()
         page.wait_for_url("**/en/article/**", timeout=20000)
-        page.wait_for_timeout(SETTLE_MS)
+        wait_article(page)
         check("the headline link reaches the article", "/article/" in page.url, page.url)
         check("article page renders the body copy", "00:41" in page.content())
         check("verified badge shows on the byline", page.locator("svg[aria-label], span:has-text('Verified contributor')").count() > 0)
@@ -377,7 +385,7 @@ def main():
 
         page.locator(f"a:has-text('{BN_HEADLINE}')").first.click()
         page.wait_for_url("**/article/**", timeout=20000)
-        page.wait_for_timeout(SETTLE_MS)
+        wait_article(page)
         check("the Bangla article renders the translated body", BN_BODY[:24] in page.content())
         check("the page is marked as Bangla for screen readers", 'lang="bn"' in page.content())
         font = page.evaluate(
@@ -396,14 +404,46 @@ def main():
         # the language switch returns to the English version of the same story
         page.click("text=Read in English")
         page.wait_for_url("**/en/article/**", timeout=20000)
+        wait_article(page)
         check("the language switch lands on the English version", "refused to buy it" in page.content())
 
         # a Bangla original is readable in English too
         go(page, f"{BASE}/en/article/notun-sorok-puratan-khaler-opore-en")
+        wait_article(page)
         check(
             "the desk's English version of a Bangla original is live",
             "A new road over an old canal" in page.content(),
         )
+
+        # --- 8b1. the contributor's own profile ------------------------------
+        go(page, f"{BASE}/dashboard/profile")
+        page.fill('input[name="name"]', NEW_NAME)
+        page.fill('textarea[name="bio"]', "Covers transport and public money in Rajshahi.")
+        page.fill('input[name="publicEmail"]', "rosa.public@example.com")
+        page.fill('input[name="phone"]', "01711 000 111")
+        page.fill('input[name="website"]', "not-a-url")
+        page.fill('input[name="location"]', "Rajshahi")
+        page.click('button:has-text("Save profile")')
+        page.wait_for_selector("text=Check the form", timeout=20000)
+        check(
+            "a malformed website is refused, and the field says so",
+            "Check the form" in page.content(),
+        )
+
+        page.fill('input[name="website"]', "https://example.com/rosa")
+        with page.expect_file_chooser() as fc:
+            page.click('button:has-text("Upload a photo")')
+        fc.value.set_files(photo)
+        page.wait_for_selector("text=Photo updated", timeout=20000)
+        check("a contributor can upload a profile photo", "Photo updated" in page.content())
+
+        page.click('button:has-text("Save profile")')
+        page.wait_for_selector("text=Profile saved", timeout=20000)
+        check("the profile saves", "Profile saved" in page.content())
+        shot(page, "30-my-profile.png")
+
+        # and readers can see it
+        go(page, f"{BASE}/en/author/{NEW_USER_ID[0] or ''}") if NEW_USER_ID[0] else None
 
         # --- 8b2. changing your own password ---------------------------------
         sign_out(page)
@@ -433,6 +473,21 @@ def main():
         check("the old password no longer works", "did not match" in page.content())
         sign_in(page, NEW_EMAIL, NEW_PASS2)
         check("the new password works", "/login" not in page.url)
+
+        # --- 8b3. the public contributor page --------------------------------
+        roster_for_profile = page.request.get(f"{BASE}/api/drafts")  # keeps the session warm
+        me = page.request.get(f"{BASE}/api/profile").json()["user"]
+        NEW_USER_ID[0] = me["id"]
+        go(page, f"{BASE}/en/author/{me['id']}")
+        body = page.content()
+        check("the contributor has a public page", NEW_NAME in body)
+        check("with their introduction", "transport and public money" in body)
+        check("and the contact details they chose", "rosa.public@example.com" in body)
+        check("but never their sign-in email", NEW_EMAIL not in body)
+        shot(page, "31-author-page.png")
+
+        go(page, f"{BASE}/author/{me['id']}")
+        check("the Bangla version of the page works too", NEW_NAME in page.content())
 
         # --- 8c. a contributor writing BOTH versions themselves --------------
         sign_out(page)
@@ -536,6 +591,7 @@ def main():
 
         # related articles
         go(page, f"{BASE}/en/article/the-night-bus-that-never-came")
+        wait_article(page)
         check("an article offers more to read", "More on this" in page.content())
         related = page.locator("section:has-text('More on this') a").count()
         check("related links are real links", related >= 1, str(related))
@@ -632,6 +688,51 @@ def main():
         )
         check("a bogus user id is rejected, not silently applied", resp.status >= 400)
 
+        # --- 9a2. staff editing a profile, and suspension ---------------------
+        go(page, f"{BASE}/people/{NEW_USER_ID[0]}")
+        check("staff can open one person's record", NEW_NAME in page.content())
+        page.fill('textarea[name="bio"]', "Edited by the desk: covers transport in Rajshahi.")
+        page.click('button:has-text("Save profile")')
+        page.wait_for_selector("text=Profile saved", timeout=20000)
+        check("an admin can edit a contributor's profile", "Profile saved" in page.content())
+
+        go(page, f"{BASE}/en/author/{NEW_USER_ID[0]}")
+        check("the desk's edit shows on the public page", "Edited by the desk" in page.content())
+
+        go(page, f"{BASE}/people/{NEW_USER_ID[0]}")
+        check(
+            "the suspend button stays disabled until a reason is given",
+            page.locator('button:has-text("Suspend")').last.is_disabled(),
+        )
+        page.fill(
+            'input[placeholder="Why this account is being suspended"]',
+            "Testing the suspension flow",
+        )
+        page.locator('button:has-text("Suspend")').last.click()
+        page.wait_for_selector("text=is suspended", timeout=20000)
+        check("an admin can suspend a contributor", "is suspended" in page.content())
+        shot(page, "32-suspended.png")
+
+        r = page.request.get(f"{BASE}/en/author/{NEW_USER_ID[0]}")
+        check("a suspended contributor's public page is withdrawn", r.status == 404, f"got {r.status}")
+
+        suspended_ctx = ctx.browser.new_context(http_credentials=GATE)
+        sp = suspended_ctx.new_page()
+        go(sp, f"{BASE}/login")
+        sp.fill('input[type="email"]', NEW_EMAIL)
+        sp.fill('input[type="password"]', NEW_PASS2)
+        sp.click('button[type="submit"]')
+        sp.wait_for_selector("text=did not match", timeout=20000)
+        check("a suspended contributor cannot sign in", "did not match" in sp.content())
+        suspended_ctx.close()
+
+        page.click('button:has-text("Lift the suspension")')
+        page.wait_for_selector("text=Suspend this account", timeout=20000)
+        check("and the suspension can be lifted again", "Suspend this account" in page.content())
+
+        r = page.request.get(f"{BASE}/en/author/{NEW_USER_ID[0]}")
+        check("the public page comes back", r.status == 200, f"got {r.status}")
+
         # --- 9b. an editor's limits ------------------------------------------
         editor_only = ctx.browser.new_context(http_credentials=GATE)
         ep2 = editor_only.new_page()
@@ -714,6 +815,35 @@ def main():
         )
         anon.close()
 
+        # --- 10b. the wait after clicking a headline --------------------------
+        go(page, f"{BASE}/en")
+        loading_seen = page.evaluate(
+            """() => new Promise((resolve) => {
+                 const link = [...document.querySelectorAll('main a[href*="/article/"]')][0];
+                 if (!link) return resolve('no link');
+                 const observer = new MutationObserver(() => {
+                   if (document.querySelector('[role="progressbar"][aria-busy="true"]')) {
+                     observer.disconnect();
+                     resolve('seen');
+                   }
+                 });
+                 observer.observe(document.body, { childList: true, subtree: true });
+                 link.click();
+                 setTimeout(() => { observer.disconnect(); resolve('not seen'); }, 5000);
+               })"""
+        )
+        check(
+            "clicking a headline shows a loading bar while the article arrives",
+            loading_seen == "seen",
+            loading_seen,
+        )
+        wait_article(page)
+
+        # the loading bar must not turn a missing page into a 200
+        for missing in ("/en/section/not-a-section", "/en/article/does-not-exist"):
+            r = page.request.get(f"{BASE}{missing}")
+            check(f"{missing} is still a real 404", r.status == 404, f"got {r.status}")
+
         # --- 11. mobile ------------------------------------------------------
         mob = ctx.browser.new_context(viewport=PHONE, device_scale_factor=2, http_credentials=GATE)
         mp = mob.new_page()
@@ -744,7 +874,9 @@ def main():
         ]
         check(
             "every deliberate bad request really was rejected by the server",
-            len(rejected) == 3,
+            # bad wallet number, publish-before-translating, malformed website
+            # (422s) and the wrong current password (403)
+            len(rejected) == 4,
             str(rejected),
         )
         check("no uncaught JS errors anywhere in the run", not real_errors, str(real_errors[:3]))

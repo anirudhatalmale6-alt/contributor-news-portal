@@ -4,7 +4,7 @@ import type { Role, User } from "@prisma/client";
 
 export type SessionUser = Pick<
   User,
-  "id" | "email" | "name" | "role" | "tier" | "image"
+  "id" | "email" | "name" | "role" | "tier" | "image" | "suspendedAt"
 >;
 
 export async function currentUser(): Promise<SessionUser | null> {
@@ -12,7 +12,15 @@ export async function currentUser(): Promise<SessionUser | null> {
   if (!session?.user?.id) return null;
   return prisma.user.findUnique({
     where: { id: session.user.id },
-    select: { id: true, email: true, name: true, role: true, tier: true, image: true },
+    select: {
+      id: true,
+      email: true,
+      name: true,
+      role: true,
+      tier: true,
+      image: true,
+      suspendedAt: true,
+    },
   });
 }
 
@@ -25,10 +33,14 @@ export class HttpError extends Error {
   }
 }
 
-/** Throws 401 when nobody is signed in. */
+/** Throws 401 when nobody is signed in, 403 if the account is suspended. */
 export async function requireUser(): Promise<SessionUser> {
   const user = await currentUser();
   if (!user) throw new HttpError(401, "Sign in required");
+  // A session that predates the suspension would otherwise keep working.
+  if (user.suspendedAt) {
+    throw new HttpError(403, "This account is suspended. Contact the newsroom.");
+  }
   return user;
 }
 

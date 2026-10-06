@@ -39,6 +39,7 @@ type Dict = {
   alsoToday: string;
   featured: string;
   relatedTitle: string;
+  byThisWriter: (n: string) => string;
   inSection: (name: string) => string;
   moreFromContributors: string;
   nothingHere: string;
@@ -79,6 +80,7 @@ const EN_DICT: Dict = {
   alsoToday: "Also today",
   featured: "Featured",
   relatedTitle: "More on this",
+  byThisWriter: (n) => `${n} published articles`,
   inSection: (name) => `${name} news`,
   moreFromContributors: "More from our contributors",
   nothingHere: "Nothing published in this section yet.",
@@ -121,6 +123,7 @@ const BN_DICT: Dict = {
   alsoToday: "আজকের আরও খবর",
   featured: "নির্বাচিত",
   relatedTitle: "আরও পড়ুন",
+  byThisWriter: (n) => `প্রকাশিত ${n}টি লেখা`,
   inSection: (name) => `${name} সংবাদ`,
   moreFromContributors: "আমাদের লেখকদের আরও লেখা",
   nothingHere: "এই বিভাগে এখনও কিছু প্রকাশিত হয়নি।",

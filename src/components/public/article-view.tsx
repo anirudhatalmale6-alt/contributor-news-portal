@@ -92,7 +92,20 @@ export async function ArticleView({ locale, slug }: { locale: Locale; slug: stri
           ) : null}
 
           <div className="mt-5 flex flex-wrap items-center gap-x-3 gap-y-2 border-y border-line py-3 text-sm">
-            <span className="font-medium">{article.author.name}</span>
+            {article.author.id ? (
+              <Link
+                href={
+                  locale === "BN"
+                    ? `/author/${article.author.id}`
+                    : `/en/author/${article.author.id}`
+                }
+                className="font-medium hover:underline"
+              >
+                {article.author.name}
+              </Link>
+            ) : (
+              <span className="font-medium">{article.author.name}</span>
+            )}
             <TierBadge
               tier={article.author.tier}
               label={copy.verified}
@@ -163,7 +176,22 @@ export async function ArticleView({ locale, slug }: { locale: Locale; slug: stri
           ) : null}
 
           <aside className="mt-10 rounded-xl border border-line bg-paper-soft p-5">
-            <p className="text-sm font-medium">{copy.about(article.author.name)}</p>
+            <p className="text-sm font-medium">
+              {article.author.id ? (
+                <Link
+                  href={
+                    locale === "BN"
+                      ? `/author/${article.author.id}`
+                      : `/en/author/${article.author.id}`
+                  }
+                  className="hover:underline"
+                >
+                  {copy.about(article.author.name)}
+                </Link>
+              ) : (
+                copy.about(article.author.name)
+              )}
+            </p>
             <p className="mt-1 text-sm text-ink-soft">{article.author.bio ?? copy.defaultBio}</p>
           </aside>
 

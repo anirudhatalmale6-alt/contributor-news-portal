@@ -28,6 +28,7 @@ export default async function PeoplePage() {
         role: true,
         tier: true,
         createdAt: true,
+        suspendedAt: true,
         accounts: { select: { provider: true } },
         payout: {
           select: { method: true, walletNumber: true, accountNumber: true, email: true },
@@ -71,6 +72,7 @@ export default async function PeoplePage() {
             tier: u.tier,
             providers: u.accounts.map((a) => a.provider),
             hasPayout: Boolean(u.payout),
+            suspended: Boolean(u.suspendedAt),
             payoutMethod: u.payout ? methodLabel(u.payout.method) : null,
             payoutMasked: u.payout ? maskedDestination(u.payout) : "",
             articles: u._count.articles,

@@ -55,14 +55,30 @@ enum PayoutMethod {
 }
 
 model User {
-  id           String               @id @default(cuid())
-  email        String               @unique
+  id           String          @id @default(cuid())
+  email        String          @unique
   name         String
   passwordHash String? // null when the account came from Google / a social provider
   image        String?
-  role         Role                 @default(CONTRIBUTOR)
-  tier         ContributorTier      @default(GENERAL)
+  role         Role            @default(CONTRIBUTOR)
+  tier         ContributorTier @default(GENERAL)
   bio          String?
+
+  /// What a contributor chooses to show on their public page. The account email
+  /// is never published - `publicEmail` is a separate field they opt into.
+  publicEmail String?
+  phone       String?
+  website     String?
+  location    String?
+
+  /// A suspended contributor cannot sign in or write. Their published work
+  /// stays published, because that was an editorial decision already made.
+  suspendedAt     DateTime?
+  suspendedReason String?
+  suspendedById   String?
+  suspendedBy     User?     @relation("suspender", fields: [suspendedById], references: [id])
+  suspended       User[]    @relation("suspender")
+
   createdAt    DateTime             @default(now())
   articles     Article[]            @relation("author")
   reviewed     Article[]            @relation("reviewer")
