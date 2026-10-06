@@ -67,7 +67,11 @@ model User {
   /// What a contributor chooses to show on their public page. The account email
   /// is never published - `publicEmail` is a separate field they opt into.
   publicEmail String?
+  /// Required of every contributor, and visible to the newsroom only. Readers
+  /// see it only if the contributor deliberately turns `phonePublic` on.
   phone       String?
+  whatsapp    String?
+  phonePublic Boolean @default(false)
   website     String?
   location    String?
 
@@ -79,13 +83,16 @@ model User {
   suspendedBy     User?     @relation("suspender", fields: [suspendedById], references: [id])
   suspended       User[]    @relation("suspender")
 
-  createdAt    DateTime             @default(now())
-  articles     Article[]            @relation("author")
-  reviewed     Article[]            @relation("reviewer")
-  accounts     OAuthAccount[]
-  reviews      Review[]
-  payout       PayoutProfile?
-  translations ArticleTranslation[] @relation("translator")
+  createdAt      DateTime             @default(now())
+  articles       Article[]            @relation("author")
+  reviewed       Article[]            @relation("reviewer")
+  accounts       OAuthAccount[]
+  reviews        Review[]
+  payout         PayoutProfile?
+  translations   ArticleTranslation[] @relation("translator")
+  threads        ThreadMember[]
+  sent           InboxMessage[]       @relation("sender")
+  startedThreads InboxThread[]        @relation("threadStarter")
 }
 
 /// Where a contributor wants their payouts sent. Visible to the contributor
@@ -144,6 +151,11 @@ model Article {
   // The language the contributor wrote in; the other one comes from the editor.
   language Locale @default(EN)
 
+  /// How the desk reaches the writer about THIS piece - a story often needs a
+  /// follow-up call, and the number on file may not be the right one.
+  contactPhone    String?
+  contactWhatsapp String?
+
   submittedAt DateTime?
   publishedAt DateTime?
   createdAt   DateTime  @default(now())
@@ -151,6 +163,7 @@ model Article {
 
   media        Media[]
   reviews      Review[]
+  threads      InboxThread[]
   translations ArticleTranslation[]
 
   @@index([status, publishedAt])
@@ -257,4 +270,61 @@ model PaymentSettings {
 
   /// When on, an editor cannot publish a piece until the translation exists.
   requireTranslation Boolean @default(true)
+}
+
+/// A conversation between the newsroom and a contributor, or between two
+/// members of staff. Kept inside the site on purpose: a contributor should not
+/// need an editor's personal phone number to ask a question about their piece.
+model InboxThread {
+  id      String @id @default(cuid())
+  subject String
+
+  /// A desk thread is addressed to the newsroom rather than to one person, so
+  /// any editor or admin can read and answer it. Without this, a question would
+  /// sit unanswered whenever the one editor named on it was away.
+  desk Boolean @default(false)
+
+  /// Set when the conversation is about a specific submission.
+  articleId String?
+  article   Article? @relation(fields: [articleId], references: [id], onDelete: SetNull)
+
+  startedById String?
+  startedBy   User?   @relation("threadStarter", fields: [startedById], references: [id], onDelete: SetNull)
+
+  createdAt     DateTime @default(now())
+  /// Denormalised so the list can sort without touching every message.
+  lastMessageAt DateTime @default(now())
+
+  members  ThreadMember[]
+  messages InboxMessage[]
+
+  @@index([lastMessageAt])
+  @@index([desk, lastMessageAt])
+}
+
+model ThreadMember {
+  id       String      @id @default(cuid())
+  threadId String
+  thread   InboxThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  userId   String
+  user     User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// Everything before this moment has been seen; anything after it is unread.
+  lastReadAt DateTime?
+
+  @@unique([threadId, userId])
+  @@index([userId])
+}
+
+model InboxMessage {
+  id       String      @id @default(cuid())
+  threadId String
+  thread   InboxThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  senderId String?
+  sender   User?       @relation("sender", fields: [senderId], references: [id], onDelete: SetNull)
+
+  body      String
+  createdAt DateTime @default(now())
+
+  @@index([threadId, createdAt])
 }

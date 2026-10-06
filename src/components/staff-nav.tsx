@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { isOwner, isStaff, type SessionUser } from "@/lib/rbac";
+import { unreadCount } from "@/lib/inbox";
 
 /**
  * One bar across every working screen, so nobody has to guess where the queue,
@@ -13,13 +14,17 @@ export async function StaffNav({
   current,
 }: {
   user: SessionUser;
-  current: "desk" | "newsroom" | "people" | "settings";
+  current: "desk" | "newsroom" | "inbox" | "people" | "settings";
 }) {
   const staff = isStaff(user.role);
-  const waiting = staff ? await prisma.article.count({ where: { status: "SUBMITTED" } }) : 0;
+  const [waiting, unread] = await Promise.all([
+    staff ? prisma.article.count({ where: { status: "SUBMITTED" } }) : 0,
+    unreadCount(user),
+  ]);
 
   const items: { key: typeof current; href: string; label: string; badge?: number }[] = [
     { key: "desk", href: "/dashboard", label: "My writing desk" },
+    { key: "inbox", href: "/inbox", label: "Inbox", badge: unread },
     ...(staff
       ? [
           { key: "newsroom" as const, href: "/editorial", label: "Newsroom", badge: waiting },

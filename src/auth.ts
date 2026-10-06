@@ -42,7 +42,10 @@ export const socialProviders = social.map((p) => {
 export const { handlers, signIn, signOut, auth } = NextAuth({
   secret: process.env.AUTH_SECRET,
   trustHost: true,
-  session: { strategy: "jwt" },
+  // Thirty days, renewed while someone keeps using the site. Long on purpose -
+  // contributors should not be signed out mid-article - and the banner under
+  // the masthead makes it obvious who is signed in.
+  session: { strategy: "jwt", maxAge: 60 * 60 * 24 * 30, updateAge: 60 * 60 * 24 },
   pages: { signIn: "/login" },
   providers: [
     ...social,

@@ -3,12 +3,22 @@
 import { signIn, signOut } from "next-auth/react";
 import { useState } from "react";
 
-export function SignOutButton({ label = "Sign out" }: { label?: string }) {
+export function SignOutButton({
+  label = "Sign out",
+  compact = false,
+}: {
+  label?: string;
+  compact?: boolean;
+}) {
   return (
     <button
       type="button"
       onClick={() => signOut({ redirectTo: "/" })}
-      className="rounded-full border border-line px-3 py-1.5 text-sm text-ink-soft hover:text-ink"
+      className={
+        compact
+          ? "font-medium text-navy hover:underline"
+          : "rounded-full border border-line px-3 py-1.5 text-sm text-ink-soft hover:text-ink"
+      }
     >
       {label}
     </button>

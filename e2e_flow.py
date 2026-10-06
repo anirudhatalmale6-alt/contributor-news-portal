@@ -23,6 +23,7 @@ STAMP = str(int(time.time()))
 NEW_EMAIL = f"rosa.{STAMP}@thedocument.test"
 NEW_PASS = "demo1234"
 NEW_PASS2 = "demo-changed-5678"
+INBOX_EMAIL = f"probe.inbox.{STAMP}@thedocument.test"
 NEW_NAME = "Rosa Delgado"
 HEADLINE = "The allotment that became a flood defence"
 BN_HEADLINE = "যে বরাদ্দ জমি বন্যা প্রতিরোধের বাঁধ হয়ে উঠল"
@@ -258,6 +259,18 @@ def main():
         )
 
         # --- 5. submit ------------------------------------------------------
+        # The desk cannot chase a story it has no number for, so a submission
+        # without one has to be refused rather than quietly accepted.
+        page.click('button:has-text("Submit for review")')
+        page.wait_for_timeout(SETTLE_MS * 3)
+        check(
+            "a submission with no contact number is refused",
+            "contact number" in page.inner_text("body").lower()
+            and "Submitted for review" not in page.content(),
+        )
+        page.fill('input[placeholder="01XXXXXXXXX"] >> nth=0', "01712345678")
+        page.fill('input[placeholder="01XXXXXXXXX"] >> nth=1', "01812345678")
+        shot(page, "28-submission-contact.png", scroll="section:has-text('reach you about this piece')")
         page.click('button:has-text("Submit for review")')
         page.wait_for_selector("text=Submitted for review", timeout=20000)
         check(
@@ -528,6 +541,7 @@ def main():
             "Both sections" in page.content(),
         )
         shot(page, "22-contributor-both-languages.png", scroll="section:has-text('Also submit in')")
+        page.fill('input[placeholder="01XXXXXXXXX"] >> nth=0', "01712345678")
         page.click('button:has-text("Submit for review")')
         page.wait_for_selector("text=Submitted for review", timeout=20000)
 
@@ -605,19 +619,19 @@ def main():
         NEW_USER_ID[0] = next(u["id"] for u in roster if u["email"] == NEW_EMAIL)
 
         # search: the whole point of the screen
-        page.fill('input[placeholder="Search by name or email"]', NEW_EMAIL.split("@")[0])
+        page.fill('input[placeholder="Search by name, email or phone"]', NEW_EMAIL.split("@")[0])
         page.wait_for_timeout(SETTLE_MS)
         check(
             "searching by email narrows the list to one person",
             page.locator("tbody tr").count() == 1,
             str(page.locator("tbody tr").count()),
         )
-        page.fill('input[placeholder="Search by name or email"]', "Maya")
+        page.fill('input[placeholder="Search by name, email or phone"]', "Maya")
         page.wait_for_timeout(SETTLE_MS)
         # read the table, not page.content(): the server payload in the HTML
         # carries every row regardless of what the client is filtering to.
         check("searching by name works too", "maya@thedocument.test" in page.inner_text("tbody"))
-        page.fill('input[placeholder="Search by name or email"]', "")
+        page.fill('input[placeholder="Search by name, email or phone"]', "")
         page.click('button:has-text("Editor")')
         page.wait_for_timeout(SETTLE_MS)
         table = page.inner_text("tbody")
@@ -844,12 +858,140 @@ def main():
             r = page.request.get(f"{BASE}{missing}")
             check(f"{missing} is still a real 404", r.status == 404, f"got {r.status}")
 
+        # --- 10b. the internal inbox -----------------------------------------
+        # A contributor writes to the desk, any editor can answer it, and the
+        # reply comes back with an unread badge. Two separate browser contexts,
+        # because the whole point is that these are two different people.
+        cp = ctx.browser.new_context(viewport=DESKTOP, http_credentials=GATE)
+        cpage = cp.new_page()
+        # A brand-new contributor, because the account from earlier in the run
+        # has since been promoted to editor.
+        go(cpage, f"{BASE}/register")
+        cpage.fill('input[autocomplete="name"]', "Nadia Rahman")
+        cpage.fill('input[type="email"]', INBOX_EMAIL)
+        cpage.fill('input[type="password"]', NEW_PASS)
+        cpage.click('button[type="submit"]')
+        cpage.wait_for_url("**/dashboard", timeout=20000)
+
+        check(
+            "the logged-in strip names the person and their role",
+            "You are logged in as" in cpage.content() and "Nadia Rahman" in cpage.content(),
+        )
+
+        go(cpage, f"{BASE}/inbox")
+        cpage.click('button:has-text("Message the newsroom")')
+        cpage.fill('input[maxlength="120"]', "Can I file a follow-up on the allotment story?")
+        cpage.fill("textarea", "I have two more interviews lined up for next week.")
+        cpage.click('button:has-text("Send")')
+        cpage.wait_for_url("**/inbox/**", timeout=20000)
+        check(
+            "a contributor can open a conversation with the newsroom",
+            "two more interviews" in cpage.content(),
+        )
+        shot(cpage, "29-inbox-contributor.png", scroll="top")
+
+        thread_id = cpage.url.rsplit("/", 1)[-1]
+
+        ip = ctx.browser.new_context(viewport=DESKTOP, http_credentials=GATE)
+        epage = ip.new_page()
+        sign_in(epage, "editor@thedocument.test", "demo1234")
+        go(epage, f"{BASE}/inbox")
+        check(
+            "an editor sees the newsroom thread without being named on it",
+            "follow-up on the allotment story" in epage.content(),
+        )
+        check("the editor's inbox shows it as unread", "new" in epage.inner_text("ul"))
+        shot(epage, "30-inbox-newsroom.png", scroll="top")
+
+        go(epage, f"{BASE}/inbox/{thread_id}")
+        epage.fill("textarea", "Yes please. Send the notes over by Thursday.")
+        epage.click('button:has-text("Send reply")')
+        epage.wait_for_selector("text=Send the notes over by Thursday", timeout=20000)
+        check("an editor can reply in the thread", "by Thursday" in epage.content())
+        go(epage, f"{BASE}/inbox")
+        check(
+            "answering clears the unread badge for the editor",
+            "new" not in epage.inner_text("ul"),
+        )
+
+        go(cpage, f"{BASE}/inbox")
+        check(
+            "the reply comes back to the contributor as unread",
+            "new" in cpage.inner_text("ul"),
+        )
+        go(cpage, f"{BASE}/inbox/{thread_id}")
+        go(cpage, f"{BASE}/inbox")
+        check(
+            "reading the thread clears the contributor's badge",
+            "new" not in cpage.inner_text("ul"),
+        )
+
+        # --- 10c. contact numbers: newsroom only -----------------------------
+        go(epage, f"{BASE}/people")
+        table = epage.inner_text("tbody")
+        check(
+            "staff see contributor numbers in the people list",
+            "01711000111" in table and "newsroom only" in table,
+        )
+        shot(epage, "31-people-contacts.png", scroll="top")
+
+        anon = ctx.browser.new_context(viewport=DESKTOP, http_credentials=GATE)
+        apage = anon.new_page()
+        go(apage, f"{BASE}/en/author/{NEW_USER_ID[0]}")
+        check(
+            "a reader cannot see the contributor's number by default",
+            "01711000111" not in apage.content(),
+        )
+
+        # ...until somebody deliberately publishes it. An editor cannot edit a
+        # colleague of equal rank, so this is the admin's screen.
+        adm = ctx.browser.new_context(viewport=DESKTOP, http_credentials=GATE)
+        apg = adm.new_page()
+        sign_in(apg, "admin@thedocument.test", "demo1234")
+        go(apg, f"{BASE}/people/{NEW_USER_ID[0]}")
+        apg.check('input[name="phonePublic"]')
+        apg.click('button:has-text("Save")')
+        apg.wait_for_selector("text=Profile saved", timeout=20000)
+        go(apage, f"{BASE}/en/author/{NEW_USER_ID[0]}")
+        check(
+            "the number appears publicly only after the opt-in",
+            "01711000111" in apage.content(),
+        )
+        go(apg, f"{BASE}/people/{NEW_USER_ID[0]}")
+        apg.uncheck('input[name="phonePublic"]')
+        apg.click('button:has-text("Save")')
+        apg.wait_for_selector("text=Profile saved", timeout=20000)
+        adm.close()
+        go(apage, f"{BASE}/en/author/{NEW_USER_ID[0]}")
+        check(
+            "turning the opt-in back off hides it again",
+            "01711000111" not in apage.content(),
+        )
+        anon.close()
+        cp.close()
+        ip.close()
+
         # --- 11. mobile ------------------------------------------------------
         mob = ctx.browser.new_context(viewport=PHONE, device_scale_factor=2, http_credentials=GATE)
         mp = mob.new_page()
         go(mp, BASE)
         overflow = mp.evaluate("document.documentElement.scrollWidth > window.innerWidth + 1")
         check("no sideways scroll on a 390px phone", not overflow)
+        # The client saw the section links twice on a phone: the header row and
+        # the feed's own chips. There must now be exactly one of each link.
+        dupes = mp.evaluate(
+            """() => {
+                 // Only what the reader can actually see: the header keeps a
+                 // desktop row and a phone row in the DOM, and CSS hides one.
+                 const hrefs = [...document.querySelectorAll('a[href*="/section/"]')]
+                   .filter((a) => a.getClientRects().length > 0)
+                   .map((a) => a.getAttribute('href'));
+                 const seen = {};
+                 hrefs.forEach((h) => (seen[h] = (seen[h] || 0) + 1));
+                 return Object.entries(seen).filter(([, n]) => n > 1).map(([h]) => h);
+               }"""
+        )
+        check("the section menu appears only once on a phone", not dupes, str(dupes))
         mp.screenshot(path=os.path.join(SHOTS, "12-home-mobile.png"))
         go(mp, f"{BASE}/article/the-night-bus-that-never-came-bn")
         mp.screenshot(path=os.path.join(SHOTS, "13-article-mobile.png"))
@@ -874,9 +1016,10 @@ def main():
         ]
         check(
             "every deliberate bad request really was rejected by the server",
-            # bad wallet number, publish-before-translating, malformed website
-            # (422s) and the wrong current password (403)
-            len(rejected) == 4,
+            # a submission with no contact number, a bad wallet number,
+            # publish-before-translating, a malformed website (422s) and the
+            # wrong current password (403)
+            len(rejected) == 5,
             str(rejected),
         )
         check("no uncaught JS errors anywhere in the run", not real_errors, str(real_errors[:3]))

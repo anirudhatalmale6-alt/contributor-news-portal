@@ -14,6 +14,9 @@ type Row = {
   providers: string[];
   hasPayout: boolean;
   suspended: boolean;
+  phone: string;
+  whatsapp: string;
+  phonePublic: boolean;
   payoutMethod: string | null;
   payoutMasked: string;
   articles: number;
@@ -78,7 +81,11 @@ export function PeopleTable({
     return rows.filter((u) => {
       const matchesRole = roleFilter === "ALL" || u.role === roleFilter;
       const matchesText =
-        !q || u.email.toLowerCase().includes(q) || u.name.toLowerCase().includes(q);
+        !q ||
+        u.email.toLowerCase().includes(q) ||
+        u.name.toLowerCase().includes(q) ||
+        u.phone.includes(q) ||
+        u.whatsapp.includes(q);
       return matchesRole && matchesText;
     });
   }, [rows, query, roleFilter]);
@@ -109,7 +116,7 @@ export function PeopleTable({
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search by name or email"
+            placeholder="Search by name, email or phone"
             className="w-full rounded-full border border-line py-2.5 pl-10 pr-3 text-sm outline-none focus:border-navy"
           />
           <svg
@@ -151,6 +158,7 @@ export function PeopleTable({
             <tr>
               <th className="px-4 py-2.5 font-medium">Person</th>
               <th className="px-4 py-2.5 font-medium">Role</th>
+              <th className="px-4 py-2.5 font-medium">Contact</th>
               <th className="px-4 py-2.5 font-medium">Contributor tier</th>
               {isOwner ? <th className="px-4 py-2.5 font-medium">Payment details</th> : null}
               <th className="px-4 py-2.5 text-right font-medium">Articles</th>
@@ -160,7 +168,7 @@ export function PeopleTable({
           <tbody>
             {visible.length === 0 ? (
               <tr>
-                <td colSpan={isOwner ? 6 : 5} className="px-4 py-8 text-center text-sm text-ink-soft">
+                <td colSpan={isOwner ? 7 : 6} className="px-4 py-8 text-center text-sm text-ink-soft">
                   Nobody matches that search.
                 </td>
               </tr>
@@ -212,6 +220,34 @@ export function PeopleTable({
                       <span className="rounded-full border border-line bg-paper-soft px-2.5 py-1 text-xs font-medium text-ink-soft">
                         {ROLE_LABEL[u.role] ?? u.role}
                       </span>
+                    )}
+                  </td>
+
+                  {/* Newsroom-only by default: readers see a number only when the
+                      contributor has deliberately made it public. */}
+                  <td className="px-4 py-3">
+                    {u.phone ? (
+                      <div className="text-xs">
+                        <a href={`tel:${u.phone}`} className="font-medium tabular-nums hover:underline">
+                          {u.phone}
+                        </a>
+                        {u.whatsapp ? (
+                          <p className="text-ink-soft">
+                            WhatsApp{" "}
+                            <a
+                              href={`https://wa.me/${u.whatsapp.replace(/^0/, "88")}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="tabular-nums hover:underline"
+                            >
+                              {u.whatsapp}
+                            </a>
+                          </p>
+                        ) : null}
+                        <p className="text-ink-soft">{u.phonePublic ? "shown publicly" : "newsroom only"}</p>
+                      </div>
+                    ) : (
+                      <span className="text-xs text-ink-soft">no number on file</span>
                     )}
                   </td>
 

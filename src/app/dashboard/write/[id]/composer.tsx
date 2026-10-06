@@ -18,6 +18,8 @@ type ArticleState = {
   coverImage: string | null;
   slug: string;
   media: MediaItem[];
+  contactPhone: string;
+  contactWhatsapp: string;
 };
 
 const CATEGORIES = ["General", "Politics", "Technology", "Culture", "Business"];
@@ -46,6 +48,10 @@ export function Composer({
   const [message, setMessage] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
   const [secondKey, setSecondKey] = useState(0);
+  const [contact, setContact] = useState({
+    phone: article.contactPhone,
+    whatsapp: article.contactWhatsapp,
+  });
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const dirty = useRef(false);
@@ -134,7 +140,14 @@ export function Composer({
   async function submit() {
     setMessage(null);
     await save(true);
-    const res = await fetch(`/api/drafts/${article.id}/submit`, { method: "POST" });
+    const res = await fetch(`/api/drafts/${article.id}/submit`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contactPhone: contact.phone,
+        contactWhatsapp: contact.whatsapp,
+      }),
+    });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
       setMessage(data.error ?? "Could not submit this piece.");
@@ -367,6 +380,38 @@ export function Composer({
           </p>
         )}
       </section>
+
+      {!locked ? (
+        <section className="rounded-xl border border-line p-4">
+          <h2 className="text-sm font-medium">How the desk can reach you about this piece</h2>
+          <p className="mt-0.5 text-xs text-ink-soft">
+            Required before you submit. Editors often need one question answered before a story can
+            run. Readers never see these numbers.
+          </p>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            <label className="grid gap-1 text-sm">
+              <span className="font-medium">Phone</span>
+              <input
+                value={contact.phone}
+                onChange={(e) => setContact({ ...contact, phone: e.target.value })}
+                inputMode="numeric"
+                placeholder="01XXXXXXXXX"
+                className="rounded-lg border border-line px-3 py-2 outline-none focus:border-navy"
+              />
+            </label>
+            <label className="grid gap-1 text-sm">
+              <span className="font-medium">WhatsApp (optional)</span>
+              <input
+                value={contact.whatsapp}
+                onChange={(e) => setContact({ ...contact, whatsapp: e.target.value })}
+                inputMode="numeric"
+                placeholder="01XXXXXXXXX"
+                className="rounded-lg border border-line px-3 py-2 outline-none focus:border-navy"
+              />
+            </label>
+          </div>
+        </section>
+      ) : null}
 
       <SecondVersion
         key={secondKey}

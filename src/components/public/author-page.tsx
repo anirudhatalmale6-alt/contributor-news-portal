@@ -25,6 +25,7 @@ export async function AuthorPage({ locale, id }: { locale: Locale; id: string })
       role: true,
       publicEmail: true,
       phone: true,
+      phonePublic: true,
       website: true,
       location: true,
       suspendedAt: true,
@@ -74,7 +75,8 @@ export async function AuthorPage({ locale, id }: { locale: Locale; id: string })
                   </a>
                 </dd>
               ) : null}
-              {author.phone ? <dd>{author.phone}</dd> : null}
+              {/* A contributor's number is newsroom-only unless they opted in. */}
+              {author.phone && author.phonePublic ? <dd>{author.phone}</dd> : null}
               {author.website ? (
                 <dd>
                   <a

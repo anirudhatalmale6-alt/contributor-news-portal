@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { WriterContact } from "./writer-contact";
 import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { currentUser, isStaff } from "@/lib/rbac";
@@ -22,7 +23,9 @@ export default async function ReviewPage({ params }: { params: Promise<{ id: str
     prisma.article.findUnique({
       where: { id },
       include: {
-        author: { select: { name: true, email: true, tier: true } },
+        author: {
+          select: { id: true, name: true, email: true, tier: true, phone: true, whatsapp: true },
+        },
         media: { orderBy: { createdAt: "asc" } },
         translations: { include: { translator: { select: { id: true, name: true } } } },
         reviews: {
@@ -53,6 +56,16 @@ export default async function ReviewPage({ params }: { params: Promise<{ id: str
         <Link href="/editorial" className="inline-block py-4 text-sm text-ink-soft hover:text-ink">
           &larr; Back to the queue
         </Link>
+
+        {/* The desk often needs one question answered before a piece can run, so
+            the writer's number sits next to the copy rather than two screens away. */}
+        <WriterContact
+          articleId={article.id}
+          authorId={article.author.id}
+          authorName={article.author.name}
+          phone={article.contactPhone ?? article.author.phone}
+          whatsapp={article.contactWhatsapp ?? article.author.whatsapp}
+        />
 
         <div className="flex flex-wrap items-center gap-2">
           <StatusPill status={article.status} />

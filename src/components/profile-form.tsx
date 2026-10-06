@@ -8,6 +8,8 @@ export type ProfileFields = {
   bio: string;
   publicEmail: string;
   phone: string;
+  whatsapp: string;
+  phonePublic: boolean;
   website: string;
   location: string;
   image: string | null;
@@ -60,6 +62,8 @@ export function ProfileForm({
         bio: form.bio,
         publicEmail: form.publicEmail,
         phone: form.phone,
+        whatsapp: form.whatsapp,
+        phonePublic: form.phonePublic,
         website: form.website,
         location: form.location,
       }),
@@ -176,8 +180,35 @@ export function ProfileForm({
         </label>
 
         <label className="grid gap-1 text-sm">
-          <span className="font-medium">Phone</span>
-          <input name="phone" value={form.phone} onChange={set("phone")} className={field} />
+          <span className="font-medium">Contact number (required)</span>
+          <input
+            name="phone"
+            value={form.phone}
+            onChange={set("phone")}
+            inputMode="numeric"
+            placeholder="01XXXXXXXXX"
+            className={field}
+          />
+          {error("phone") ? <span className="text-xs text-rose-700">{error("phone")}</span> : null}
+          <span className="text-xs text-ink-soft">
+            The newsroom needs a working number for every contributor. Not shown to readers.
+          </span>
+        </label>
+
+        <label className="grid gap-1 text-sm">
+          <span className="font-medium">WhatsApp number</span>
+          <input
+            name="whatsapp"
+            value={form.whatsapp}
+            onChange={set("whatsapp")}
+            inputMode="numeric"
+            placeholder="01XXXXXXXXX"
+            className={field}
+          />
+          {error("whatsapp") ? (
+            <span className="text-xs text-rose-700">{error("whatsapp")}</span>
+          ) : null}
+          <span className="text-xs text-ink-soft">Leave empty if it is the same number.</span>
         </label>
 
         <label className="grid gap-1 text-sm">
@@ -197,6 +228,24 @@ export function ProfileForm({
           <input name="location" value={form.location} onChange={set("location")} className={field} />
         </label>
       </div>
+
+      {/* Private by default. Readers see a number only after this box is ticked. */}
+      <label className="flex items-start gap-2.5 rounded-xl border border-line bg-paper-soft p-3 text-sm">
+        <input
+          type="checkbox"
+          name="phonePublic"
+          checked={form.phonePublic}
+          onChange={(e) => setForm({ ...form, phonePublic: e.target.checked })}
+          className="mt-0.5 size-4 accent-navy"
+        />
+        <span>
+          <span className="font-medium">Show my contact number on my public profile</span>
+          <span className="block text-xs text-ink-soft">
+            Off by default. Editors and admins can always see it; readers cannot unless you turn
+            this on.
+          </span>
+        </span>
+      </label>
 
       <button
         type="submit"

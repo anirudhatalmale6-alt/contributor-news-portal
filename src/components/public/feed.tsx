@@ -6,9 +6,7 @@ import { banglaFontCss } from "@/lib/fonts";
 import { SiteFooter } from "@/components/site-footer";
 import { AdSlot } from "@/components/ad-slot";
 import { ArticleCard } from "@/components/ui";
-import { type Locale, localeMeta, localePath, sectionPath, t } from "@/lib/i18n";
-
-const SECTIONS = ["Politics", "Technology", "Culture", "Business", "General"];
+import { type Locale, localeMeta, t } from "@/lib/i18n";
 
 /**
  * The front page.
@@ -37,38 +35,12 @@ export async function Feed({ locale, category }: { locale: Locale; category: str
       lang={localeMeta[locale].htmlLang}
       style={{ "--bn-reading-font": banglaFontCss(site.banglaFont) } as React.CSSProperties}
     >
-      <SiteHeader locale={locale} />
+      <SiteHeader locale={locale} activeCategory={category === "All" ? undefined : category} />
       <main className="mx-auto max-w-5xl px-4 pb-16">
-        <div className="flex flex-wrap items-center gap-2 border-b border-line py-4">
-          <Link
-            href={localePath(locale)}
-            className={`rounded-full border px-3 py-1 text-xs font-medium ${
-              category === "All"
-                ? "border-navy bg-navy text-white"
-                : "border-line text-ink-soft hover:text-ink"
-            }`}
-          >
-            {copy.sections.All}
-          </Link>
-          {SECTIONS.map((c) => (
-            <Link
-              key={c}
-              href={sectionPath(locale, c)}
-              className={`rounded-full border px-3 py-1 text-xs font-medium ${
-                c === category
-                  ? "border-navy bg-navy text-white"
-                  : "border-line text-ink-soft hover:text-ink"
-              }`}
-            >
-              {copy.sections[c] ?? c}
-            </Link>
-          ))}
-        </div>
-
         {!lead ? (
           <p className="py-16 text-center text-ink-soft">{copy.nothingHere}</p>
         ) : (
-          <div className="pt-6">
+          <div className="pt-8">
             <div className="grid gap-8 lg:grid-cols-[1.4fr_1fr]">
               <div>
                 <ArticleCard article={lead} locale={locale} lead />

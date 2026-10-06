@@ -49,6 +49,8 @@ export default async function WritePage({ params }: { params: Promise<{ id: stri
             status: article.status,
             coverImage: article.coverImage,
             slug: article.slug,
+            contactPhone: article.contactPhone ?? "",
+            contactWhatsapp: article.contactWhatsapp ?? "",
             media: article.media.map((m) => ({
               id: m.id,
               kind: m.kind,

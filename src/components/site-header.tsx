@@ -1,18 +1,21 @@
 import Link from "next/link";
 import { currentUser } from "@/lib/rbac";
-import { SignOutButton } from "@/components/auth-buttons";
+import { SignedInBar } from "@/components/signed-in-bar";
 import { type Locale, localeMeta, localePath, other, sectionPath, t } from "@/lib/i18n";
 import { siteSettings } from "@/lib/settings";
 
-const SECTIONS = ["Politics", "Technology", "Culture", "Business"];
+const SECTIONS = ["Politics", "Technology", "Culture", "Business", "General"];
 
 export async function SiteHeader({
   locale = "EN",
   switchHref,
+  activeCategory,
 }: {
   locale?: Locale;
   /** Where the language toggle goes; defaults to the same page in the other language. */
   switchHref?: string | null;
+  /** Marks the current section, so the page does not need a second menu. */
+  activeCategory?: string;
 }) {
   const [user, site] = await Promise.all([currentUser(), siteSettings()]);
   const copy = t(locale);
@@ -22,6 +25,7 @@ export async function SiteHeader({
   const base = localePath(locale);
 
   return (
+    <>
     <header
       lang={localeMeta[locale].htmlLang}
       className="sticky top-0 z-40 border-b border-line bg-paper/95 backdrop-blur"
@@ -42,12 +46,25 @@ export async function SiteHeader({
           />
         </Link>
 
-        <nav className="ml-auto hidden items-center gap-5 text-sm text-ink-soft lg:flex">
-          <Link href={base} className="hover:text-ink">
+        <nav className="ml-auto hidden items-center gap-5 text-sm lg:flex">
+          <Link
+            href={base}
+            aria-current={!activeCategory ? "page" : undefined}
+            className={
+              !activeCategory ? "font-semibold text-ink" : "text-ink-soft hover:text-ink"
+            }
+          >
             {copy.latest}
           </Link>
           {SECTIONS.map((s) => (
-            <Link key={s} href={sectionPath(locale, s)} className="hover:text-ink">
+            <Link
+              key={s}
+              href={sectionPath(locale, s)}
+              aria-current={activeCategory === s ? "page" : undefined}
+              className={
+                activeCategory === s ? "font-semibold text-ink" : "text-ink-soft hover:text-ink"
+              }
+            >
               {copy.sections[s]}
             </Link>
           ))}
@@ -78,13 +95,8 @@ export async function SiteHeader({
               >
                 {user.role === "CONTRIBUTOR" ? copy.myDesk : copy.newsroom}
               </Link>
-              <Link
-                href="/dashboard/account"
-                className="hidden px-2 py-1.5 text-sm text-ink-soft hover:text-ink sm:inline"
-              >
-                {copy.account}
-              </Link>
-              <SignOutButton label={copy.signOut} />
+              {/* Account and Sign out live in the strip below, so the same
+                  links never appear twice on one screen. */}
             </>
           ) : (
             <>
@@ -105,16 +117,38 @@ export async function SiteHeader({
         </div>
       </div>
 
-      <div className="mx-auto flex max-w-5xl gap-4 overflow-x-auto px-4 pb-2 text-sm text-ink-soft lg:hidden">
-        <Link href={base} className="whitespace-nowrap hover:text-ink">
+      {/* The only section menu on the page. Phones get it as a scrolling row,
+          desktops inline above - never both, which is what made it look like
+          two menus. */}
+      <div className="mx-auto flex max-w-5xl gap-2 overflow-x-auto px-4 pb-2 text-sm lg:hidden">
+        <Link
+          href={base}
+          aria-current={!activeCategory ? "page" : undefined}
+          className={`whitespace-nowrap rounded-full border px-3 py-1 ${
+            !activeCategory
+              ? "border-navy bg-navy font-medium text-white"
+              : "border-line text-ink-soft"
+          }`}
+        >
           {copy.latest}
         </Link>
         {SECTIONS.map((s) => (
-          <Link key={s} href={sectionPath(locale, s)} className="whitespace-nowrap hover:text-ink">
+          <Link
+            key={s}
+            href={sectionPath(locale, s)}
+            aria-current={activeCategory === s ? "page" : undefined}
+            className={`whitespace-nowrap rounded-full border px-3 py-1 ${
+              activeCategory === s
+                ? "border-navy bg-navy font-medium text-white"
+                : "border-line text-ink-soft"
+            }`}
+          >
             {copy.sections[s]}
           </Link>
         ))}
       </div>
     </header>
+    <SignedInBar />
+    </>
   );
 }
