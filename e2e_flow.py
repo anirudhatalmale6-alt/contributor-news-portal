@@ -931,7 +931,12 @@ def main():
         table = epage.inner_text("tbody")
         check(
             "staff see contributor numbers in the people list",
-            "01711000111" in table and "newsroom only" in table,
+            "01711000111" in table,
+            table[:200],
+        )
+        check(
+            "the people screen says who those numbers are for",
+            "Contact numbers are for the newsroom" in epage.content(),
         )
         shot(epage, "31-people-contacts.png", scroll="top")
 
