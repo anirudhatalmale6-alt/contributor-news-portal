@@ -58,6 +58,19 @@ def check(name, ok, detail=""):
         raise AssertionError(name + " " + detail)
 
 
+def go(page, url, timeout=45000):
+    """
+    Navigate and settle.
+
+    `networkidle` is unreliable against a real server over TLS - one slow or
+    kept-alive connection and it never fires. Waiting for the document plus the
+    body is enough here, because every assertion reads server-rendered HTML.
+    """
+    page.goto(url, wait_until="domcontentloaded", timeout=timeout)
+    page.wait_for_selector("body", timeout=timeout)
+    page.wait_for_timeout(250)
+
+
 def norm(text):
     """Intl puts a non-breaking space between the currency code and the amount."""
     return text.replace("\u00a0", " ")
@@ -75,7 +88,7 @@ def shot(page, name, scroll="top"):
 
 
 def sign_in(page, email, password):
-    page.goto(f"{BASE}/login", wait_until="networkidle")
+    go(page, f"{BASE}/login")
     page.fill('input[type="email"]', email)
     page.fill('input[type="password"]', password)
     page.click('button[type="submit"]')
@@ -84,7 +97,7 @@ def sign_in(page, email, password):
 
 def sign_out(page):
     # the root is the Bangla site now, where the button reads সাইন আউট
-    page.goto(f"{BASE}/en", wait_until="networkidle")
+    go(page, f"{BASE}/en")
     page.click('button:has-text("Sign out")')
     page.wait_for_timeout(1500)
 
@@ -119,10 +132,14 @@ def main():
         )
 
         # --- 1. public feed -------------------------------------------------
-        page.goto(BASE, wait_until="networkidle")
+        go(page, BASE)
+        home = page.content()
         check(
             "the default home page is the Bangla feed",
-            "সর্বশেষ" in page.content() and "আজকের আরও খবর" in page.content(),
+            # the rail is headed "আজকের আরও খবর" normally and "নির্বাচিত" once
+            # something is featured, so accept either rather than depending on
+            # what the database happens to hold
+            "সর্বশেষ" in home and ("আজকের আরও খবর" in home or "নির্বাচিত" in home),
         )
         check(
             "the English switch is a visible button, not a hidden link",
@@ -143,23 +160,23 @@ def main():
         shot(page, "01-home-desktop.png")
 
         # the old /bn addresses still resolve rather than 404
-        page.goto(f"{BASE}/bn", wait_until="networkidle")
+        go(page, f"{BASE}/bn")
         check("the old /bn address redirects to the new Bangla root", page.url.rstrip("/") == BASE)
         shot(page, "21-home-bangla-default.png")
-        page.goto(f"{BASE}/en", wait_until="networkidle")
+        go(page, f"{BASE}/en")
 
         # --- 2. article page ------------------------------------------------
         # .first: the headline is a link in both the lead card and the rail
         page.locator("a:has-text('The night bus that never came')").first.click()
         page.wait_for_url("**/en/article/**", timeout=20000)
-        page.wait_for_load_state("networkidle")
+        page.wait_for_timeout(300)
         check("the headline link reaches the article", "/article/" in page.url, page.url)
         check("article page renders the body copy", "00:41" in page.content())
         check("verified badge shows on the byline", page.locator("svg[aria-label], span:has-text('Verified contributor')").count() > 0)
         shot(page, "02-article-desktop.png")
 
         # --- 3. signup ------------------------------------------------------
-        page.goto(f"{BASE}/register", wait_until="networkidle")
+        go(page, f"{BASE}/register")
         shot(page, "03-register.png")
         page.fill('input[autocomplete="name"]', NEW_NAME)
         page.fill('input[type="email"]', NEW_EMAIL)
@@ -209,7 +226,8 @@ def main():
         shot(page, "04-composer.png", scroll="top")
 
         # reload proves the copy really persisted, not just sat in React state
-        page.reload(wait_until="networkidle")
+        page.reload(wait_until="domcontentloaded")
+        page.wait_for_timeout(300)
         check(
             "draft survives a reload (saved server-side, not in the browser)",
             HEADLINE in page.content() and "attenuation basin" in page.content(),
@@ -225,7 +243,7 @@ def main():
         page.click('a:has-text("Back to my desk")')
         page.wait_for_url("**/dashboard", timeout=20000)
         check("the piece is now in review", "In review" in page.content())
-        page.goto(f"{BASE}/dashboard", wait_until="networkidle")
+        go(page, f"{BASE}/dashboard")
         check("dashboard shows it as in review", "In review" in page.content())
         check(
             "a contributor with no payment details is prompted for them",
@@ -249,28 +267,28 @@ def main():
         page.wait_for_selector("text=Payment details saved", timeout=20000)
         check("payment details save", "Payment details saved" in page.content())
 
-        page.goto(f"{BASE}/dashboard", wait_until="networkidle")
+        go(page, f"{BASE}/dashboard")
         check(
             "the dashboard shows the method and only the last four digits",
             "bKash" in page.content() and "5203" in page.content() and "01819" not in page.content(),
         )
 
         # a contributor must not reach the newsroom
-        page.goto(f"{BASE}/editorial", wait_until="networkidle")
+        go(page, f"{BASE}/editorial")
         check("a contributor is bounced out of the editorial queue", "/dashboard" in page.url)
-        page.goto(f"{BASE}/admin", wait_until="networkidle")
+        go(page, f"{BASE}/admin")
         check("a contributor is bounced out of admin", "/dashboard" in page.url)
 
         # --- 6. editor reviews ---------------------------------------------
         sign_out(page)
         sign_in(page, "editor@thedocument.test", "demo1234")
-        page.goto(f"{BASE}/editorial", wait_until="networkidle")
+        go(page, f"{BASE}/editorial")
         check("editor sees the queue with the new submission", HEADLINE in page.content())
         shot(page, "06-editorial-queue.png")
 
-        page.click(f'li:has-text("{HEADLINE}") >> a:has-text("Review")')
+        page.locator(f'li:has-text("{HEADLINE}")').last.locator('a:has-text("Review")').click()
         page.wait_for_url("**/editorial/**", timeout=20000)
-        page.wait_for_load_state("networkidle")
+        page.wait_for_timeout(300)
         check("review screen loads the submitted copy", "attenuation basin" in page.content())
 
         check(
@@ -314,7 +332,7 @@ def main():
         # --- 7. earnings ----------------------------------------------------
         sign_out(page)
         sign_in(page, NEW_EMAIL, NEW_PASS)
-        page.goto(f"{BASE}/dashboard", wait_until="networkidle")
+        go(page, f"{BASE}/dashboard")
         body = norm(page.content())
         check("payout appears on the contributor's article", "BDT 132.50" in body)
         check("cumulative earnings total updates", "Total earnings" in body and "BDT 132.50" in body)
@@ -323,14 +341,17 @@ def main():
         shot(page, "09-dashboard-earnings.png")
 
         # --- 8. live on the public site -------------------------------------
-        page.goto(f"{BASE}/en?category=Culture", wait_until="networkidle")
+        go(page, f"{BASE}/en?category=Culture")
         check("approved piece is live on the public feed", "refused to buy it" in page.content())
         shot(page, "10-public-feed-culture.png")
 
         # --- 8b. the same piece on the Bangla side of the site ---------------
-        page.goto(BASE, wait_until="networkidle")
+        go(page, BASE)
         bn_home = page.content()
-        check("the Bangla front page is in Bangla", "সর্বশেষ" in bn_home and "আজকের আরও খবর" in bn_home)
+        check(
+            "the Bangla front page is in Bangla",
+            "সর্বশেষ" in bn_home and ("আজকের আরও খবর" in bn_home or "নির্বাচিত" in bn_home),
+        )
         check("the editor's Bangla headline is live", BN_HEADLINE in bn_home)
         check(
             "a piece written in Bangla by a contributor is also there",
@@ -340,7 +361,7 @@ def main():
 
         page.locator(f"a:has-text('{BN_HEADLINE}')").first.click()
         page.wait_for_url("**/article/**", timeout=20000)
-        page.wait_for_load_state("networkidle")
+        page.wait_for_timeout(300)
         check("the Bangla article renders the translated body", BN_BODY[:24] in page.content())
         check("the page is marked as Bangla for screen readers", 'lang="bn"' in page.content())
         font = page.evaluate(
@@ -362,7 +383,7 @@ def main():
         check("the language switch lands on the English version", "refused to buy it" in page.content())
 
         # a Bangla original is readable in English too
-        page.goto(f"{BASE}/en/article/notun-sorok-puratan-khaler-opore-en", wait_until="networkidle")
+        go(page, f"{BASE}/en/article/notun-sorok-puratan-khaler-opore-en")
         check(
             "the desk's English version of a Bangla original is live",
             "A new road over an old canal" in page.content(),
@@ -371,7 +392,7 @@ def main():
         # --- 8b2. changing your own password ---------------------------------
         sign_out(page)
         sign_in(page, NEW_EMAIL, NEW_PASS)
-        page.goto(f"{BASE}/dashboard/account", wait_until="networkidle")
+        go(page, f"{BASE}/dashboard/account")
         page.fill('input[autocomplete="current-password"]', "wrong-password")
         page.fill('input[autocomplete="new-password"] >> nth=0', NEW_PASS2)
         page.fill('input[autocomplete="new-password"] >> nth=1', NEW_PASS2)
@@ -388,7 +409,7 @@ def main():
         shot(page, "23-account-password.png")
 
         sign_out(page)
-        page.goto(f"{BASE}/login", wait_until="networkidle")
+        go(page, f"{BASE}/login")
         page.fill('input[type="email"]', NEW_EMAIL)
         page.fill('input[type="password"]', NEW_PASS)
         page.click('button[type="submit"]')
@@ -400,7 +421,7 @@ def main():
         # --- 8c. a contributor writing BOTH versions themselves --------------
         sign_out(page)
         sign_in(page, NEW_EMAIL, NEW_PASS2)
-        page.goto(f"{BASE}/dashboard", wait_until="networkidle")
+        go(page, f"{BASE}/dashboard")
         page.click('button:has-text("Start a new piece")')
         page.wait_for_url("**/dashboard/write/**", timeout=20000)
         # written in English here, so the second version the writer adds is Bangla
@@ -441,15 +462,15 @@ def main():
 
         sign_out(page)
         sign_in(page, "editor@thedocument.test", "demo1234")
-        page.goto(f"{BASE}/editorial", wait_until="networkidle")
-        queue_row = page.locator(f'li:has-text("{BOTH_EN_TITLE}")')
+        go(page, f"{BASE}/editorial")
+        queue_row = page.locator(f'li:has-text("{BOTH_EN_TITLE}")').last
         check(
             "the queue shows that both languages arrived together",
             "both languages" in queue_row.inner_text(),
         )
         queue_row.locator('a:has-text("Review")').click()
         page.wait_for_url("**/editorial/**", timeout=20000)
-        page.wait_for_load_state("networkidle")
+        page.wait_for_timeout(300)
         check(
             "the editor sees the contributor's own second version, not an empty box",
             "Supplied by the contributor" in page.content() and BOTH_BN_TITLE in page.content(),
@@ -459,20 +480,24 @@ def main():
         page.wait_for_selector("text=Published.", timeout=20000)
         check("a piece that arrived in both languages publishes straight away", "90.00" in page.content())
 
-        page.goto(BASE, wait_until="networkidle")
+        go(page, BASE)
         check("it is live on the Bangla site", BOTH_BN_TITLE in page.content())
-        page.goto(f"{BASE}/en", wait_until="networkidle")
+        go(page, f"{BASE}/en")
         check("and on the English site", BOTH_EN_TITLE in page.content())
 
         # --- 8d. featuring, sections and related articles --------------------
         # (still signed in as the editor from the step above)
-        page.goto(f"{BASE}/editorial?status=APPROVED", wait_until="networkidle")
-        row = page.locator(f'li:has-text("{BOTH_EN_TITLE}")')
-        row.locator('button:has-text("Feature on front page")').click()
+        go(page, f"{BASE}/editorial?status=APPROVED")
+        # several runs leave rows with the same headline, so pin to one
+        row = page.locator(f'li:has-text("{BOTH_EN_TITLE}")').first
+        # the database may already carry a featured flag from an earlier run, so
+        # drive it to the state we want rather than assuming it starts off
+        if row.locator('button:has-text("Feature on front page")').count():
+            row.locator('button:has-text("Feature on front page")').click()
         expect(row.locator('button:has-text("On the front page")')).to_be_visible(timeout=20000)
         check("an editor can put a published piece on the front page", True)
 
-        page.goto(f"{BASE}/en", wait_until="networkidle")
+        go(page, f"{BASE}/en")
         lead = page.locator("main h2").first.inner_text()
         check(
             "the featured piece leads the front page, not just the newest",
@@ -482,19 +507,19 @@ def main():
         shot(page, "24-front-page-featured.png")
 
         # sections
-        page.goto(f"{BASE}/en/section/politics", wait_until="networkidle")
+        go(page, f"{BASE}/en/section/politics")
         body = page.content()
         check("the Politics section page lists its own stories", "night bus" in body)
         check("and nothing from another section", "corner shop" not in body)
         shot(page, "25-section-page.png")
-        page.goto(f"{BASE}/section/politics", wait_until="networkidle")
+        go(page, f"{BASE}/section/politics")
         check("the Bangla section page works too", "যে রাতের বাস কখনো আসেনি" in page.content())
 
         r = page.request.get(f"{BASE}/en/section/not-a-section")
         check("an invented section is a 404, not a blank page", r.status == 404, f"got {r.status}")
 
         # related articles
-        page.goto(f"{BASE}/en/article/the-night-bus-that-never-came", wait_until="networkidle")
+        go(page, f"{BASE}/en/article/the-night-bus-that-never-came")
         check("an article offers more to read", "More on this" in page.content())
         related = page.locator("section:has-text('More on this') a").count()
         check("related links are real links", related >= 1, str(related))
@@ -502,7 +527,7 @@ def main():
         # --- 9. admin: roles, verified flag, payment settings ---------------
         sign_out(page)
         sign_in(page, "admin@thedocument.test", "demo1234")
-        page.goto(f"{BASE}/people", wait_until="networkidle")
+        go(page, f"{BASE}/people")
         check("the owner sees every account", NEW_EMAIL in page.content())
         roster = page.request.get(f"{BASE}/api/admin/users").json()["users"]
         NEW_USER_ID[0] = next(u["id"] for u in roster if u["email"] == NEW_EMAIL)
@@ -532,20 +557,20 @@ def main():
         page.click('button:has-text("Everyone")')
         shot(page, "29-people-search.png")
 
-        row = page.locator(f'tr:has-text("{NEW_EMAIL}")')
+        row = page.locator(f'tr:has-text("{NEW_EMAIL}")').first
         row.locator('button:has-text("flag as verified")').click()
         expect(row.locator('button:has-text("Verified")')).to_be_visible(timeout=20000)
         check("the owner can flag a contributor as Verified", True)
 
         # the owner can hand out any role
-        page.select_option(f'tr:has-text("{NEW_EMAIL}") select', "EDITOR")
+        page.locator(f'tr:has-text("{NEW_EMAIL}")').first.locator("select").select_option("EDITOR")
         page.wait_for_timeout(800)
         roster = page.request.get(f"{BASE}/api/admin/users").json()["users"]
         made_editor = next(u for u in roster if u["email"] == NEW_EMAIL)
         check("the owner can promote someone to editor", made_editor["role"] == "EDITOR")
 
         # settings live on their own screen now, and only the owner gets there
-        page.goto(f"{BASE}/admin", wait_until="networkidle")
+        go(page, f"{BASE}/admin")
         check("the owner reaches Settings", "/admin" in page.url)
         page.fill('input[inputmode="decimal"] >> nth=0', "45.00")
         page.click('button:has-text("Save settings")')
@@ -561,20 +586,20 @@ def main():
         page.wait_for_selector("text=Refresh the public site", timeout=20000)
         check("site settings save", "Refresh the public site" in page.content())
 
-        page.goto(f"{BASE}/en", wait_until="networkidle")
+        go(page, f"{BASE}/en")
         check("the new site name reaches the public pages", "The Document Daily" in page.content())
         check("the advertising slot renders what was pasted", "HOUSE AD" in page.content())
         shot(page, "26-ads-and-name.png")
 
         # put the name back so the screenshots after this look like the real site
-        page.goto(f"{BASE}/admin", wait_until="networkidle")
+        go(page, f"{BASE}/admin")
         page.fill('#site-settings input[name="siteNameEn"]', "The Document")
         page.click('button:has-text("Save site settings")')
         page.wait_for_selector("text=Refresh the public site", timeout=20000)
 
         # payment details: the owner can see them, an editor never can
-        page.goto(f"{BASE}/people", wait_until="networkidle")
-        row = page.locator(f'tr:has-text("{NEW_EMAIL}")')
+        go(page, f"{BASE}/people")
+        row = page.locator(f'tr:has-text("{NEW_EMAIL}")').first
         check("the owner sees the payout method on the people list", "bKash" in row.inner_text())
         row.locator('button:has-text("bKash")').click()
         page.wait_for_timeout(800)
@@ -596,7 +621,7 @@ def main():
         ep2 = editor_only.new_page()
         sign_in(ep2, "editor@thedocument.test", "demo1234")
 
-        ep2.goto(f"{BASE}/people", wait_until="networkidle")
+        go(ep2, f"{BASE}/people")
         check("an editor can open the people list", "People" in ep2.content())
         check(
             "an editor sees no Settings link in the navigation",
@@ -607,7 +632,7 @@ def main():
         check("an editor cannot change the site design", r.status == 403, f"got {r.status}")
         r = ep2.request.patch(f"{BASE}/api/admin/settings", data={"defaultPayout": 1})
         check("an editor cannot change payment settings", r.status == 403, f"got {r.status}")
-        ep2.goto(f"{BASE}/admin", wait_until="networkidle")
+        go(ep2, f"{BASE}/admin")
         check("an editor opening Settings is sent to People", ep2.url.endswith("/people"))
 
         # but they can make a contributor an editor, which is the point
@@ -676,13 +701,13 @@ def main():
         # --- 11. mobile ------------------------------------------------------
         mob = ctx.browser.new_context(viewport=PHONE, device_scale_factor=2, http_credentials=GATE)
         mp = mob.new_page()
-        mp.goto(BASE, wait_until="networkidle")
+        go(mp, BASE)
         overflow = mp.evaluate("document.documentElement.scrollWidth > window.innerWidth + 1")
         check("no sideways scroll on a 390px phone", not overflow)
         mp.screenshot(path=os.path.join(SHOTS, "12-home-mobile.png"))
-        mp.goto(f"{BASE}/article/the-night-bus-that-never-came-bn", wait_until="networkidle")
+        go(mp, f"{BASE}/article/the-night-bus-that-never-came-bn")
         mp.screenshot(path=os.path.join(SHOTS, "13-article-mobile.png"))
-        mp.goto(f"{BASE}/login", wait_until="networkidle")
+        go(mp, f"{BASE}/login")
         mp.fill('input[type="email"]', "maya@thedocument.test")
         mp.fill('input[type="password"]', "demo1234")
         mp.click('button[type="submit"]')
