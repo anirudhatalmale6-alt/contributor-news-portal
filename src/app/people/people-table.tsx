@@ -153,7 +153,7 @@ export function PeopleTable({
       </p>
 
       <div className="mt-3 overflow-x-auto rounded-xl border border-line">
-        <table className="w-full min-w-[820px] text-sm">
+        <table className="w-full min-w-[920px] text-sm">
           <thead className="bg-paper-soft text-left text-xs uppercase tracking-wide text-ink-soft">
             <tr>
               <th className="px-4 py-2.5 font-medium">Person</th>
@@ -225,26 +225,25 @@ export function PeopleTable({
 
                   {/* Newsroom-only by default: readers see a number only when the
                       contributor has deliberately made it public. */}
-                  <td className="px-4 py-3">
+                  <td className="whitespace-nowrap px-4 py-3">
                     {u.phone ? (
-                      <div className="text-xs">
+                      <div className="text-xs leading-5">
                         <a href={`tel:${u.phone}`} className="font-medium tabular-nums hover:underline">
                           {u.phone}
                         </a>
                         {u.whatsapp ? (
-                          <p className="text-ink-soft">
-                            WhatsApp{" "}
-                            <a
-                              href={`https://wa.me/${u.whatsapp.replace(/^0/, "88")}`}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="tabular-nums hover:underline"
-                            >
-                              {u.whatsapp}
-                            </a>
-                          </p>
+                          <a
+                            href={`https://wa.me/${u.whatsapp.replace(/^0/, "88")}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="ml-2 font-medium text-emerald-800 hover:underline"
+                          >
+                            WhatsApp
+                          </a>
                         ) : null}
-                        <p className="text-ink-soft">{u.phonePublic ? "shown publicly" : "newsroom only"}</p>
+                        {u.phonePublic ? (
+                          <p className="text-amber-700">shown publicly</p>
+                        ) : null}
                       </div>
                     ) : (
                       <span className="text-xs text-ink-soft">no number on file</span>

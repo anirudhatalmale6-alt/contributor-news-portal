@@ -51,7 +51,7 @@ export default async function PeoplePage() {
   return (
     <>
       <SiteHeader />
-      <main className="mx-auto max-w-5xl px-4 pb-20">
+      <main className="mx-auto max-w-7xl px-4 pb-20">
         <div className="pt-4">
           <StaffNav user={user} current="people" />
         </div>
@@ -61,6 +61,11 @@ export default async function PeoplePage() {
           {isOwner(user.role)
             ? "Everyone with an account. You can set any role, including other owners."
             : "Everyone with an account. You can make a contributor an editor, and put an editor back."}
+        </p>
+
+        <p className="mt-1 text-sm text-ink-soft">
+          Contact numbers are for the newsroom. A reader sees one only if that
+          contributor has chosen to publish it.
         </p>
 
         <PeopleTable
