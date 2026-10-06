@@ -184,6 +184,12 @@ npm run demo:clear -- --yes
 accounts, real articles and your settings are left alone, and it prints what it is about to do
 before you confirm.
 
+## The preview lock
+
+While the site is being finished, `SITE_GATE_PASSWORD` in `.env` puts the whole thing behind one
+shared password (HTTP Basic, username `preview` unless `SITE_GATE_USER` says otherwise). Remove the
+line and restart to open the site to the public - there is no second switch to forget.
+
 ## Going live for real
 
 Before you open it to the public:

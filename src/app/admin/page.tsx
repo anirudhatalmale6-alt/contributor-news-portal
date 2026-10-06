@@ -39,6 +39,8 @@ export default async function AdminPage() {
     }),
   ]);
 
+  const waiting = await prisma.article.count({ where: { status: "SUBMITTED" } });
+
   const sums = await prisma.article.groupBy({
     by: ["authorId"],
     where: { status: "APPROVED" },
@@ -54,14 +56,20 @@ export default async function AdminPage() {
           <div>
             <h1 className="font-serif text-2xl font-bold sm:text-3xl">Admin</h1>
             <p className="mt-1 text-sm text-ink-soft">
-              User management, roles and payment settings.
+              User management, roles and payment settings. Articles waiting for a decision live in
+              the Editorial queue.
             </p>
           </div>
           <Link
             href="/editorial"
-            className="rounded-full border border-line px-4 py-2 text-sm font-medium hover:bg-paper-soft"
+            className="rounded-full bg-navy px-4 py-2 text-sm font-medium text-white hover:bg-navy-dark"
           >
             Editorial queue
+            {waiting > 0 ? (
+              <span className="ml-2 rounded-full bg-white px-2 py-0.5 text-xs font-bold text-navy">
+                {waiting}
+              </span>
+            ) : null}
           </Link>
         </div>
 

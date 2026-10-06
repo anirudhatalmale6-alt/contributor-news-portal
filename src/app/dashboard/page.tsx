@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { currentUser } from "@/lib/rbac";
+import { currentUser, isStaff } from "@/lib/rbac";
 import { longDate, money, timeAgo } from "@/lib/format";
 import { paymentSettings } from "@/lib/settings";
 import { SiteHeader } from "@/components/site-header";
@@ -52,7 +52,17 @@ export default async function DashboardPage() {
               <span className="text-xs text-ink-soft">{user.email}</span>
             </div>
           </div>
-          <NewDraftButton />
+          <div className="flex flex-wrap gap-2">
+            {isStaff(user.role) ? (
+              <Link
+                href="/editorial"
+                className="rounded-full border border-line px-4 py-2 text-sm font-medium hover:bg-paper-soft"
+              >
+                Editorial queue
+              </Link>
+            ) : null}
+            <NewDraftButton />
+          </div>
         </div>
 
         <section className="grid gap-3 py-6 sm:grid-cols-2 lg:grid-cols-4">

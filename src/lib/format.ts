@@ -1,9 +1,15 @@
-export function money(cents: number, currency = "USD") {
+/**
+ * Money is stored in minor units (poisha for BDT, cents for USD) and only ever
+ * becomes a decimal here. BDT renders as "BDT 1,500.00" rather than the ৳ glyph,
+ * which several Windows fonts still draw as a box.
+ */
+export function money(minorUnits: number, currency = "BDT") {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency,
+    currencyDisplay: "code",
     minimumFractionDigits: 2,
-  }).format(cents / 100);
+  }).format(minorUnits / 100);
 }
 
 export function slugify(title: string) {

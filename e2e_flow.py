@@ -41,6 +41,13 @@ BOTH_BN_TITLE = "যে ফেরি চুক্তির খরচ কেউ �
 # filled in once the test account exists, so the admin check can hit its API
 NEW_USER_ID = [""]
 
+# While the site sits behind the preview password, every context needs it.
+GATE = (
+    {"username": os.environ.get("GATE_USER", "preview"), "password": os.environ["GATE_PASSWORD"]}
+    if os.environ.get("GATE_PASSWORD")
+    else None
+)
+
 results = []
 
 
@@ -49,6 +56,11 @@ def check(name, ok, detail=""):
     print(("PASS " if ok else "FAIL ") + name + ((" - " + detail) if detail else ""))
     if not ok:
         raise AssertionError(name + " " + detail)
+
+
+def norm(text):
+    """Intl puts a non-breaking space between the currency code and the amount."""
+    return text.replace("\u00a0", " ")
 
 
 def shot(page, name, scroll="top"):
@@ -97,7 +109,7 @@ def main():
 
     with sync_playwright() as p:
         browser = p.chromium.launch()
-        ctx = browser.new_context(viewport=DESKTOP)
+        ctx = browser.new_context(viewport=DESKTOP, http_credentials=GATE)
         page = ctx.new_page()
         errors = []
         page.on("pageerror", lambda e: errors.append(str(e)))
@@ -186,8 +198,8 @@ def main():
         page.wait_for_selector("li img", timeout=20000)
         check("image upload attaches to the draft", page.locator("section li img").count() >= 1)
         page.click('button:has-text("Save draft")')
-        page.wait_for_selector("text=saved", timeout=20000)
-        check("manual save reports success", "saved" in page.content())
+        page.wait_for_selector("text=Draft saved", timeout=20000)
+        check("saving a draft confirms it in words", "come back to it any time" in page.content())
         shot(page, "04-composer.png", scroll="top")
 
         # reload proves the copy really persisted, not just sat in React state
@@ -199,8 +211,14 @@ def main():
 
         # --- 5. submit ------------------------------------------------------
         page.click('button:has-text("Submit for review")')
-        page.wait_for_selector("text=An editor will review it", timeout=20000)
-        check("submit puts the piece in the editorial queue", "In review" in page.content())
+        page.wait_for_selector("text=Submitted for review", timeout=20000)
+        check(
+            "submitting shows a confirmation with a way back",
+            "Back to my desk" in page.content(),
+        )
+        page.click('a:has-text("Back to my desk")')
+        page.wait_for_url("**/dashboard", timeout=20000)
+        check("the piece is now in review", "In review" in page.content())
         page.goto(f"{BASE}/dashboard", wait_until="networkidle")
         check("dashboard shows it as in review", "In review" in page.content())
         check(
@@ -291,9 +309,9 @@ def main():
         sign_out(page)
         sign_in(page, NEW_EMAIL, NEW_PASS)
         page.goto(f"{BASE}/dashboard", wait_until="networkidle")
-        body = page.content()
-        check("payout appears on the contributor's article", "$132.50" in body)
-        check("cumulative earnings total updates", "Total earnings" in body and "$132.50" in body)
+        body = norm(page.content())
+        check("payout appears on the contributor's article", "BDT 132.50" in body)
+        check("cumulative earnings total updates", "Total earnings" in body and "BDT 132.50" in body)
         check("editor's note reaches the writer", "Tightened the headline" in body)
         check("the editor's headline edit is what the writer now sees", "refused to buy it" in body)
         shot(page, "09-dashboard-earnings.png")
@@ -404,7 +422,7 @@ def main():
         )
         shot(page, "22-contributor-both-languages.png", scroll="section:has-text('Also submit in')")
         page.click('button:has-text("Submit for review")')
-        page.wait_for_selector("text=An editor will review it", timeout=20000)
+        page.wait_for_selector("text=Submitted for review", timeout=20000)
 
         sign_out(page)
         sign_in(page, "editor@thedocument.test", "demo1234")
@@ -468,13 +486,13 @@ def main():
         check("a bogus user id is rejected, not silently applied", resp.status >= 400)
 
         # --- 10. API spot checks -------------------------------------------
-        anon = ctx.browser.new_context()
+        anon = ctx.browser.new_context(http_credentials=GATE)
         anon_page = anon.new_page()
         r = anon_page.request.get(f"{BASE}/api/drafts")
         check("GET /api/drafts without a session is 401", r.status == 401, f"got {r.status}")
         r = anon_page.request.get(f"{BASE}/api/editorial/queue")
         check("GET /api/editorial/queue without a session is 401", r.status == 401, f"got {r.status}")
-        editor_ctx = ctx.browser.new_context()
+        editor_ctx = ctx.browser.new_context(http_credentials=GATE)
         ep = editor_ctx.new_page()
         sign_in(ep, "editor@thedocument.test", "demo1234")
         r = ep.request.get(f"{BASE}/api/admin/users/{NEW_USER_ID[0]}/payout")
@@ -491,7 +509,7 @@ def main():
         anon.close()
 
         # --- 11. mobile ------------------------------------------------------
-        mob = ctx.browser.new_context(viewport=PHONE, device_scale_factor=2)
+        mob = ctx.browser.new_context(viewport=PHONE, device_scale_factor=2, http_credentials=GATE)
         mp = mob.new_page()
         mp.goto(BASE, wait_until="networkidle")
         overflow = mp.evaluate("document.documentElement.scrollWidth > window.innerWidth + 1")

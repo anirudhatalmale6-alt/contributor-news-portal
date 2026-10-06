@@ -192,8 +192,8 @@ model Review {
 // Single-row table the Admin edits under Payment settings
 model PaymentSettings {
   id               Int    @id @default(1)
-  currency         String @default("USD")
-  defaultPayout    Int    @default(2500) // cents, pre-filled in the editor's payout box
+  currency         String @default("BDT")
+  defaultPayout    Int    @default(150000) // minor units (poisha), pre-filled in the editor's payout box
   verifiedBonusPct Int    @default(20) // Verified Contributors get +20% suggested
   payoutNote       String @default("Payouts are estimates and are settled on the 1st of each month.")
 

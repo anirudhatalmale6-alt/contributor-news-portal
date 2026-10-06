@@ -44,6 +44,7 @@ export function Composer({
   const [media, setMedia] = useState<MediaItem[]>(article.media);
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [message, setMessage] = useState<string | null>(null);
+  const [submitted, setSubmitted] = useState(false);
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const dirty = useRef(false);
@@ -65,6 +66,7 @@ export function Composer({
       }
       dirty.current = false;
       setSaveState("saved");
+      if (!silent) setMessage("Draft saved. You can close this and come back to it any time.");
       if (status === "REJECTED") setStatus("DRAFT");
     },
     [article.id, form, locked, status],
@@ -130,12 +132,47 @@ export function Composer({
       return;
     }
     setStatus("SUBMITTED");
-    setMessage("Submitted. An editor will review it and set the payout on approval.");
+    setSubmitted(true);
+    setMessage(null);
     router.refresh();
   }
 
   const words = form.body.trim().split(/\s+/).filter(Boolean).length;
   const otherName = form.language === "EN" ? "বাংলা (Bangla)" : "English";
+
+  if (submitted) {
+    return (
+      <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-6 text-center sm:p-10">
+        <svg viewBox="0 0 24 24" aria-hidden className="mx-auto size-12 fill-none stroke-emerald-600 stroke-2">
+          <circle cx="12" cy="12" r="10" />
+          <path d="m8 12.5 2.5 2.5L16 9.5" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+        <h2 className="mt-3 font-serif text-2xl font-bold text-emerald-900">
+          Submitted for review
+        </h2>
+        <p className="mx-auto mt-2 max-w-md text-sm text-emerald-900">
+          An editor will read <span className="font-medium">{form.title}</span>, make any changes
+          they need, and set your payout when they approve it. You will see the decision and the
+          amount on your dashboard.
+        </p>
+        <div className="mt-6 flex flex-wrap justify-center gap-2">
+          <Link
+            href="/dashboard"
+            className="rounded-full bg-navy px-5 py-2.5 text-sm font-medium text-white hover:bg-navy-dark"
+          >
+            Back to my desk
+          </Link>
+          <button
+            type="button"
+            onClick={() => setSubmitted(false)}
+            className="rounded-full border border-emerald-300 px-5 py-2.5 text-sm font-medium text-emerald-900 hover:bg-emerald-100"
+          >
+            View the piece
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="grid gap-5">

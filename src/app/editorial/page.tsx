@@ -62,14 +62,22 @@ export default async function EditorialPage({
               Signed in as {user.name} · {user.role === "ADMIN" ? "Admin" : "Editor"}
             </p>
           </div>
-          {user.role === "ADMIN" ? (
+          <div className="flex flex-wrap gap-2">
             <Link
-              href="/admin"
+              href="/dashboard"
               className="rounded-full border border-line px-4 py-2 text-sm font-medium hover:bg-paper-soft"
             >
-              Admin settings
+              My writing desk
             </Link>
-          ) : null}
+            {user.role === "ADMIN" ? (
+              <Link
+                href="/admin"
+                className="rounded-full border border-line px-4 py-2 text-sm font-medium hover:bg-paper-soft"
+              >
+                Admin settings
+              </Link>
+            ) : null}
+          </div>
         </div>
 
         <section className="grid gap-3 py-6 sm:grid-cols-2 lg:grid-cols-4">
