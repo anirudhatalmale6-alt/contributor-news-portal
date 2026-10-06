@@ -7,7 +7,7 @@ import { siteSettings } from "@/lib/settings";
 const SECTIONS = ["Politics", "Technology", "Culture", "Business"];
 
 export async function SiteHeader({
-  locale = "BN",
+  locale = "EN",
   switchHref,
 }: {
   locale?: Locale;
@@ -22,7 +22,10 @@ export async function SiteHeader({
   const base = localePath(locale);
 
   return (
-    <header className="sticky top-0 z-40 border-b border-line bg-paper/95 backdrop-blur">
+    <header
+      lang={localeMeta[locale].htmlLang}
+      className="sticky top-0 z-40 border-b border-line bg-paper/95 backdrop-blur"
+    >
       <div className="mx-auto flex max-w-5xl items-center gap-3 px-4 py-3">
         <Link href={base} aria-label={siteName} className="shrink-0">
           {/* Width and height are fixed so the masthead never shifts the layout
