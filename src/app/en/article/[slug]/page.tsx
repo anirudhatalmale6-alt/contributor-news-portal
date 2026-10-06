@@ -1,8 +1,11 @@
 import type { Metadata } from "next";
 import { ArticleView } from "@/components/public/article-view";
-import { articleForLocale, publishedSlugs } from "@/lib/articles";
+import { articleForLocale } from "@/lib/articles";
 
-export const revalidate = 60;
+// The header reads the session cookie, which makes this page dynamic. Trying to
+// prerender it throws DYNAMIC_SERVER_USAGE at runtime, so say so explicitly.
+// (The next commit moves the session out of the header and restores caching.)
+export const dynamic = "force-dynamic";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -28,10 +31,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       locale: "en",
     },
   };
-}
-
-export async function generateStaticParams() {
-  return (await publishedSlugs("EN")).map((slug) => ({ slug }));
 }
 
 export default async function EnglishArticlePage({ params }: Props) {
