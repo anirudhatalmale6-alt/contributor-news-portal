@@ -2,6 +2,7 @@ import Link from "next/link";
 import { money, readingTime } from "@/lib/format";
 import { type Locale, localeDate, localeNumber, t } from "@/lib/i18n";
 import type { LocalisedArticle } from "@/lib/articles";
+import { CoverImage } from "@/components/cover-image";
 
 /**
  * One grid for the whole public site. The masthead, the section bar, the front
@@ -120,20 +121,13 @@ export function ArticleCard({
     <article className={`group border-line ${lead || compact ? "" : "border-t pt-5"}`}>
       <Link href={article.href} className="block">
         {article.coverImage ? (
-          <div
-            className={`mb-3 overflow-hidden rounded bg-paper-soft ${
-              lead ? "aspect-16/9" : "aspect-3/2"
-            }`}
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={article.coverImage}
-              alt=""
-              loading={lead ? "eager" : "lazy"}
-              decoding="async"
-              className="size-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
-            />
-          </div>
+          <CoverImage
+            src={article.coverImage}
+            crop={article.coverCropHome}
+            shape="home"
+            eager={lead}
+            className="mb-3 rounded"
+          />
         ) : null}
 
         <p className="text-[13px] font-semibold uppercase tracking-wide text-brand sm:text-xs">

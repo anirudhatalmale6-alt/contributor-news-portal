@@ -20,9 +20,17 @@ export const localeMeta: Record<Locale, { htmlLang: string; label: string; short
 
 export const other = (locale: Locale): Locale => (locale === "EN" ? "BN" : "EN");
 
-/** Section pages: /section/politics, /en/section/politics. */
+/**
+ * Section pages: /section/politics, /en/section/law-and-order.
+ *
+ * A category with more than one word becomes hyphens in the address rather than
+ * one run-together word, because the address is something readers see and share.
+ */
+export const categorySlug = (category: string) =>
+  category.replace(/([a-z])([A-Z])/g, "$1-$2").toLowerCase();
+
 export const sectionPath = (locale: Locale, category: string) =>
-  localePath(locale, `/section/${category.toLowerCase()}`);
+  localePath(locale, `/section/${categorySlug(category)}`);
 
 /** The category behind a section slug, or null if nobody publishes under it. */
 /**
@@ -34,6 +42,7 @@ export const sectionPath = (locale: Locale, category: string) =>
  */
 export const CATEGORIES = [
   "Politics",
+  "LawAndOrder",
   "Technology",
   "Economy",
   "World",
@@ -51,7 +60,10 @@ export const CATEGORIES = [
 /** What the reader is offered in the top menu: everything except the legacy bucket. */
 export const MENU_CATEGORIES = CATEGORIES.filter((c) => c !== "General");
 export const categoryFromSlug = (slug: string) =>
-  CATEGORIES.find((c) => c.toLowerCase() === slug.toLowerCase()) ?? null;
+  CATEGORIES.find((c) => categorySlug(c) === slug.toLowerCase()) ??
+  // Older addresses used the run-together form; keep them working.
+  CATEGORIES.find((c) => c.toLowerCase() === slug.toLowerCase()) ??
+  null;
 
 /** Bangla is the root site; English is prefixed with `/en`. */
 export const localePath = (locale: Locale, path = "") =>
@@ -96,6 +108,7 @@ const EN_DICT: Dict = {
   sections: {
     All: "All",
     Politics: "Politics",
+    LawAndOrder: "Law and order",
     Technology: "Technology",
     Economy: "Economy",
     World: "World",
@@ -147,6 +160,7 @@ const BN_DICT: Dict = {
   sections: {
     All: "সব",
     Politics: "রাজনীতি",
+    LawAndOrder: "আইনশৃঙ্খলা",
     Technology: "প্রযুক্তি",
     Economy: "অর্থনীতি",
     World: "বিশ্ব",

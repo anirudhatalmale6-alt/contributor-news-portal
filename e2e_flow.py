@@ -105,6 +105,9 @@ def shot(page, name, scroll="top"):
     page.screenshot(path=os.path.join(SHOTS, name))
 
 
+STAFF_PASS = os.environ.get("STAFF_PASSWORD", "demo1234")
+
+
 def sign_in(page, email, password):
     go(page, f"{BASE}/login")
     # /login sends a signed-in visitor to their dashboard, so a leftover session
@@ -327,7 +330,7 @@ def main():
 
         # --- 6. editor reviews ---------------------------------------------
         sign_out(page)
-        sign_in(page, "editor@thedocument.test", "demo1234")
+        sign_in(page, "editor@thedocument.test", STAFF_PASS)
         go(page, f"{BASE}/editorial")
         check("editor sees the queue with the new submission", HEADLINE in page.content())
         shot(page, "06-editorial-queue.png")
@@ -595,7 +598,7 @@ def main():
         page.wait_for_selector("text=Submitted for review", timeout=20000)
 
         sign_out(page)
-        sign_in(page, "editor@thedocument.test", "demo1234")
+        sign_in(page, "editor@thedocument.test", STAFF_PASS)
         go(page, f"{BASE}/editorial")
         queue_row = page.locator(f'li:has-text("{BOTH_EN_TITLE}")').last
         check(
@@ -691,7 +694,7 @@ def main():
 
         # --- 9. admin: roles, verified flag, payment settings ---------------
         sign_out(page)
-        sign_in(page, "admin@thedocument.test", "demo1234")
+        sign_in(page, "admin@thedocument.test", STAFF_PASS)
         go(page, f"{BASE}/people")
         check("the owner sees every account", NEW_EMAIL in page.content())
         roster = page.request.get(f"{BASE}/api/admin/users").json()["users"]
@@ -833,7 +836,7 @@ def main():
         # --- 9b. an editor's limits ------------------------------------------
         editor_only = ctx.browser.new_context(http_credentials=GATE)
         ep2 = editor_only.new_page()
-        sign_in(ep2, "editor@thedocument.test", "demo1234")
+        sign_in(ep2, "editor@thedocument.test", STAFF_PASS)
 
         go(ep2, f"{BASE}/people")
         check("an editor can open the people list", "People" in ep2.content())
@@ -896,7 +899,7 @@ def main():
         check("GET /api/editorial/queue without a session is 401", r.status == 401, f"got {r.status}")
         editor_ctx = ctx.browser.new_context(http_credentials=GATE)
         ep = editor_ctx.new_page()
-        sign_in(ep, "editor@thedocument.test", "demo1234")
+        sign_in(ep, "editor@thedocument.test", STAFF_PASS)
         r = ep.request.get(f"{BASE}/api/admin/users/{NEW_USER_ID[0]}/payout")
         check("an editor cannot read anyone's payment details", r.status == 403, f"got {r.status}")
         r = ep.request.get(f"{BASE}/api/admin/users")
@@ -977,7 +980,7 @@ def main():
 
         ip = ctx.browser.new_context(viewport=DESKTOP, http_credentials=GATE)
         epage = ip.new_page()
-        sign_in(epage, "editor@thedocument.test", "demo1234")
+        sign_in(epage, "editor@thedocument.test", STAFF_PASS)
         go(epage, f"{BASE}/inbox")
         check(
             "an editor sees the newsroom thread without being named on it",
@@ -1039,7 +1042,7 @@ def main():
         # colleague of equal rank, so this is the admin's screen.
         adm = ctx.browser.new_context(viewport=DESKTOP, http_credentials=GATE)
         apg = adm.new_page()
-        sign_in(apg, "admin@thedocument.test", "demo1234")
+        sign_in(apg, "admin@thedocument.test", STAFF_PASS)
         go(apg, f"{BASE}/people/{NEW_USER_ID[0]}")
         apg.check('input[name="phonePublic"]')
         apg.click('button:has-text("Save profile")')
@@ -1123,7 +1126,7 @@ def main():
         # --- 10e. published list, and corrections to what someone earned -----
         adm2 = ctx.browser.new_context(viewport=DESKTOP, http_credentials=GATE)
         ap2 = adm2.new_page()
-        sign_in(ap2, "admin@thedocument.test", "demo1234")
+        sign_in(ap2, "admin@thedocument.test", STAFF_PASS)
 
         go(ap2, f"{BASE}/editorial?status=APPROVED")
         check(
@@ -1211,7 +1214,7 @@ def main():
         # from the inbox section is closed by now, so this is a fresh one.)
         ed2 = ctx.browser.new_context(viewport=DESKTOP, http_credentials=GATE)
         ep3 = ed2.new_page()
-        sign_in(ep3, "editor@thedocument.test", "demo1234")
+        sign_in(ep3, "editor@thedocument.test", STAFF_PASS)
         r = ep3.request.post(
             f"{BASE}/api/admin/users/{NEW_USER_ID[0]}/earnings",
             data={"amountCents": 10000, "reason": "Editors should not be able to do this"},
@@ -1228,7 +1231,7 @@ def main():
         # --- 10f. saving a role, messaging a person, and being told ----------
         adm3 = ctx.browser.new_context(viewport=DESKTOP, http_credentials=GATE)
         ap3 = adm3.new_page()
-        sign_in(ap3, "admin@thedocument.test", "demo1234")
+        sign_in(ap3, "admin@thedocument.test", STAFF_PASS)
         go(ap3, f"{BASE}/people/{NEW_USER_ID[0]}")
 
         check(
@@ -1311,7 +1314,7 @@ def main():
 
         ed3 = ctx.browser.new_context(viewport=DESKTOP, http_credentials=GATE)
         ep4 = ed3.new_page()
-        sign_in(ep4, "editor@thedocument.test", "demo1234")
+        sign_in(ep4, "editor@thedocument.test", STAFF_PASS)
         go(ep4, f"{BASE}/editorial?status=SUBMITTED&q={REJECT_TITLE.split(' ')[0]}")
         ep4.locator(f'li:has-text("{REJECT_TITLE}") a:has-text("Review")').first.click()
         ep4.wait_for_url("**/editorial/**", timeout=20000)
@@ -1392,7 +1395,7 @@ def main():
             viewport=PHONE, device_scale_factor=2, http_credentials=GATE
         )
         php = ph.new_page()
-        sign_in(php, "admin@thedocument.test", "demo1234")
+        sign_in(php, "admin@thedocument.test", STAFF_PASS)
         go(php, BASE)
         php.evaluate("window.scrollTo(0, 400)")
         php.wait_for_timeout(SETTLE_MS)
@@ -1439,7 +1442,7 @@ def main():
         # --- 10j. the desk's new controls -------------------------------------
         nd = ctx.browser.new_context(viewport=DESKTOP, http_credentials=GATE)
         np = nd.new_page()
-        sign_in(np, "admin@thedocument.test", "demo1234")
+        sign_in(np, "admin@thedocument.test", STAFF_PASS)
 
         # The menu now carries the owner's own list of sections.
         go(np, BASE)
@@ -1583,6 +1586,106 @@ def main():
         )
         nd.close()
 
+        # --- 10k. favicon, sections, and framing the cover -------------------
+        ic = ctx.browser.new_context(viewport=DESKTOP, http_credentials=GATE)
+        ip2 = ic.new_page()
+
+        # The owner's own favicon, served as the icon the browser asks for.
+        go(ip2, BASE)
+        icon = ip2.evaluate(
+            """() => {
+                 const l = document.querySelector('link[rel~="icon"]');
+                 return l ? l.getAttribute('href') : '';
+               }"""
+        )
+        check("the page declares an icon", bool(icon), str(icon))
+        r = ip2.request.get(icon if icon.startswith("http") else f"{BASE}{icon}")
+        check(
+            "the icon is a PNG that really loads",
+            r.status == 200 and "png" in (r.headers.get("content-type") or ""),
+            f"{r.status} {r.headers.get('content-type')}",
+        )
+
+        # The section he asked for, and a readable address for it.
+        menu = ip2.inner_text("header + nav")
+        check("the menu carries আইনশৃঙ্খলা", "আইনশৃঙ্খলা" in menu, menu[:120])
+        r = ip2.request.get(f"{BASE}/section/law-and-order")
+        check("its address reads properly and resolves", r.status == 200, f"got {r.status}")
+
+        # Framing a cover, and proving the front page obeys it.
+        sign_in(ip2, "admin@thedocument.test", STAFF_PASS)
+        go(ip2, f"{BASE}/editorial?status=APPROVED")
+        opened = False
+        for i in range(6):
+            rows = ip2.locator('main ul > li a:has-text("Open")')
+            if i >= rows.count():
+                break
+            rows.nth(i).click()
+            ip2.wait_for_url("**/editorial/**", timeout=20000)
+            ip2.wait_for_timeout(SETTLE_MS)
+            if ip2.locator('button:has-text("Save this framing")').count():
+                opened = True
+                break
+            go(ip2, f"{BASE}/editorial?status=APPROVED")
+
+        if not opened:
+            print("SKIP  no published piece on this site has a cover photo to frame")
+        if opened:
+            check(
+                "a cover offers two framings, one per place it appears",
+                ip2.locator('button:has-text("Save this framing")').count() == 2,
+            )
+            article_url = ip2.url
+            # Zoom the front-page framing right in, then save it.
+            ip2.locator('input[type="range"]').first.fill("40")
+            ip2.wait_for_timeout(300)
+            ip2.locator('button:has-text("Save this framing")').first.click()
+            ip2.wait_for_selector("text=Saved.", timeout=20000)
+            ip2.wait_for_timeout(SETTLE_MS)
+            shot(ip2, "41-cover-framing.png")
+
+            stored = ip2.request.get(f"{BASE}/api/editorial/{article_url.rstrip('/').split('/')[-1]}").json()
+            crop = stored["article"]["coverCropHome"]
+            check("the framing is stored against the article", bool(crop), str(crop))
+
+            # And the reader's page must show that slice, not the whole photo.
+            # The article's own page is the deterministic place to look: the
+            # front page might not be carrying this piece today.
+            ip2.locator('input[type="range"]').nth(1).fill("45")
+            ip2.wait_for_timeout(300)
+            ip2.locator('button:has-text("Save this framing")').nth(1).click()
+            ip2.wait_for_timeout(SETTLE_MS * 2)
+
+            live_href = ip2.locator('a:has-text("View live")').first.get_attribute("href")
+            go(ip2, f"{BASE}{live_href}")
+            wait_article(ip2)
+            shown = ip2.evaluate(
+                """() => {
+                     const img = document.querySelector('main figure img');
+                     if (!img) return null;
+                     const frame = img.parentElement.getBoundingClientRect();
+                     const box = img.getBoundingClientRect();
+                     return { zoom: Math.round((box.width / frame.width) * 100) / 100 };
+                   }"""
+            )
+            check(
+                "a zoomed framing really is zoomed on the reader's page",
+                bool(shown) and shown["zoom"] > 1.2,
+                str(shown),
+            )
+
+            go(ip2, article_url)
+            ip2.wait_for_timeout(SETTLE_MS)
+            ip2.locator('button:has-text("Use the whole picture")').nth(1).click()
+            ip2.wait_for_timeout(SETTLE_MS)
+
+            # Put it back, so the run leaves nothing behind.
+            go(ip2, article_url)
+            ip2.wait_for_timeout(SETTLE_MS)
+            ip2.locator('button:has-text("Use the whole picture")').first.click()
+            ip2.wait_for_timeout(SETTLE_MS)
+        ic.close()
+
         # --- 11. mobile ------------------------------------------------------
         mob = ctx.browser.new_context(viewport=PHONE, device_scale_factor=2, http_credentials=GATE)
         mp = mob.new_page()
@@ -1611,7 +1714,7 @@ def main():
         mp.screenshot(path=os.path.join(SHOTS, "13-article-mobile.png"))
         go(mp, f"{BASE}/login")
         mp.fill('input[type="email"]', "maya@thedocument.test")
-        mp.fill('input[type="password"]', "demo1234")
+        mp.fill('input[type="password"]', STAFF_PASS)
         mp.click('button[type="submit"]')
         mp.wait_for_url("**/dashboard", timeout=20000)
         mp.screenshot(path=os.path.join(SHOTS, "14-dashboard-mobile.png"))

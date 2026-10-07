@@ -7,6 +7,7 @@ import { siteSettings } from "@/lib/settings";
 import { banglaFontCss } from "@/lib/fonts";
 import { SiteFooter } from "@/components/site-footer";
 import { SHELL, TierBadge } from "@/components/ui";
+import { CoverImage } from "@/components/cover-image";
 import { readingTime } from "@/lib/format";
 import {
   type Locale,
@@ -234,11 +235,12 @@ export async function ArticleView({ locale, slug }: { locale: Locale; slug: stri
 
           {article.coverImage ? (
             <figure className="mt-6">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
+              <CoverImage
                 src={article.coverImage}
-                alt=""
-                className="w-full rounded-xl bg-paper-soft object-cover"
+                crop={article.coverCropArticle}
+                shape="article"
+                eager
+                className="rounded-xl"
               />
             </figure>
           ) : null}

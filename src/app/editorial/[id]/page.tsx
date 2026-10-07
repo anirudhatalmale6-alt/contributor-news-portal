@@ -11,6 +11,7 @@ import { ReviewPanel } from "./review-panel";
 import { TranslationPanel } from "./translation-panel";
 import { MediaDesk } from "./media-desk";
 import { CoverPanel } from "./cover-panel";
+import { CropEditor } from "./crop-editor";
 import { DeleteArticle } from "./delete-article";
 
 export const metadata = { title: "Review" };
@@ -130,6 +131,15 @@ export default async function ReviewPage({ params }: { params: Promise<{ id: str
               initialCover={article.coverImage}
               published={article.status === "APPROVED"}
             />
+
+            {article.coverImage ? (
+              <CropEditor
+                articleId={article.id}
+                src={article.coverImage}
+                home={article.coverCropHome}
+                article={article.coverCropArticle}
+              />
+            ) : null}
 
             {/* Removing a piece is an admin's call, not an editor's. */}
             {isAdmin(user.role) ? (

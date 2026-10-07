@@ -154,6 +154,13 @@ model Article {
   // The language the contributor wrote in; the other one comes from the editor.
   language Locale @default(EN)
 
+  /// How the cover is cropped for each place it appears, as "x,y,w,h" in
+  /// percentages of the original picture. Null means show the middle of it.
+  /// Two separate crops because the front page wants a wide strip and the
+  /// article page wants more of the picture.
+  coverCropHome    String?
+  coverCropArticle String?
+
   /// Where an editor has pinned this piece on the front page:
   /// LEAD, STRIP (beside the masthead), LEFT, MIDDLE or RIGHT. Null means the
   /// page decides for itself, newest first, which is what most pieces do.

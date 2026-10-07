@@ -20,6 +20,8 @@ export type LocalisedArticle = {
   body: string;
   category: string;
   coverImage: string | null;
+  coverCropHome: string | null;
+  coverCropArticle: string | null;
   publishedAt: Date | null;
   isTranslation: boolean;
   translatorName: string | null;
@@ -37,6 +39,8 @@ function pick(
     body: string;
     category: string;
     coverImage: string | null;
+    coverCropHome: string | null;
+    coverCropArticle: string | null;
     publishedAt: Date | null;
     language: Locale;
     author: { id?: string; name: string; tier: string; bio?: string | null };
@@ -55,6 +59,8 @@ function pick(
     id: article.id,
     category: article.category,
     coverImage: article.coverImage,
+    coverCropHome: article.coverCropHome,
+    coverCropArticle: article.coverCropArticle,
     publishedAt: article.publishedAt,
     author: article.author,
   };
