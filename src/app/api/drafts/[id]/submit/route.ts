@@ -6,6 +6,7 @@ import { bdMobile, normalisePhone } from "@/lib/profile";
 const schema = z.object({
   contactPhone: z.string().trim().max(24).optional(),
   contactWhatsapp: z.string().trim().max(24).optional(),
+  witnesses: z.string().trim().max(2000).optional(),
 });
 
 type Ctx = { params: Promise<{ id: string }> };
@@ -45,13 +46,16 @@ export async function POST(req: Request, { params }: Ctx) {
       parsed.data.contactWhatsapp || article.contactWhatsapp || author?.whatsapp || "",
     );
 
-    if (!phone) {
+    // The desk asks a contributor for a number because it may need to chase
+    // the story. It does not need to ask itself.
+    const isStaff = user.role !== "CONTRIBUTOR";
+    if (!phone && !isStaff) {
       throw new HttpError(
         422,
         "Add a contact number for this piece - the desk may need to call you about it",
       );
     }
-    if (!bdMobile.test(phone)) {
+    if (phone && !bdMobile.test(phone)) {
       throw new HttpError(422, "That contact number does not look right. Use 01XXXXXXXXX");
     }
     if (whatsapp && !bdMobile.test(whatsapp)) {
@@ -65,8 +69,11 @@ export async function POST(req: Request, { params }: Ctx) {
         data: {
           status: "SUBMITTED",
           submittedAt: new Date(),
-          contactPhone: phone,
+          contactPhone: phone || null,
           contactWhatsapp: whatsapp || null,
+          ...(parsed.data.witnesses !== undefined
+            ? { witnesses: parsed.data.witnesses.trim() || null }
+            : {}),
         },
       }),
       // A contributor with no number on file gets this one saved, so the
@@ -74,7 +81,7 @@ export async function POST(req: Request, { params }: Ctx) {
       prisma.user.update({
         where: { id: user.id },
         data: {
-          ...(author?.phone ? {} : { phone }),
+          ...(author?.phone || !phone ? {} : { phone }),
           ...(author?.whatsapp || !whatsapp ? {} : { whatsapp }),
         },
       }),

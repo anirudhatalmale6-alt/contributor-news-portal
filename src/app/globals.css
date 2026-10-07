@@ -205,6 +205,19 @@ body {
   }
 }
 
+/*
+  A row that scrolls sideways on purpose - the section menu, the signed-in
+  strip - should not draw a scrollbar across itself. The browser was painting
+  one over the dark strip, which read as a stray grey border.
+*/
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
 /* Keeps a long headline from pushing the layout sideways on a 320px phone. */
 .balance {
   text-wrap: balance;

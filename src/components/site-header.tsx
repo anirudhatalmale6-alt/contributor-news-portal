@@ -171,7 +171,7 @@ export async function SiteHeader({
           sideways on a phone and sits inline on a desktop - never both, which
           is what made it look like two menus. */}
       <nav className="sticky top-0 z-40 border-b border-line bg-paper/95 backdrop-blur">
-        <div className={`${SHELL} flex gap-1 overflow-x-auto py-2 text-base lg:gap-0 lg:text-[15px]`}>
+        <div className={`${SHELL} no-scrollbar flex gap-1 overflow-x-auto py-2 text-base lg:gap-0 lg:text-[15px]`}>
           <Link
             href={base}
             aria-current={!activeCategory ? "page" : undefined}

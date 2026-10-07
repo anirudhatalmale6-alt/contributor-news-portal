@@ -45,7 +45,7 @@ export async function SignedInBar() {
           <span className="text-white/70"> ({ROLE_LABEL[user.role] ?? user.role})</span>
         </span>
 
-        <nav className="ml-auto flex items-center gap-3 overflow-x-auto sm:gap-4">
+        <nav className="no-scrollbar ml-auto flex items-center gap-3 overflow-x-auto sm:gap-4">
           <Link href="/dashboard" className={link}>
             Updates
             {badge(updates)}

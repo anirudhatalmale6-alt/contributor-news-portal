@@ -20,8 +20,11 @@ type ArticleState = {
   coverImage: string | null;
   slug: string;
   media: MediaItem[];
+  /** The desk writes for itself: no contact number, no witness box. */
+  isStaff: boolean;
   contactPhone: string;
   contactWhatsapp: string;
+  witnesses: string;
 };
 
 
@@ -54,6 +57,8 @@ export function Composer({
     phone: article.contactPhone,
     whatsapp: article.contactWhatsapp,
   });
+  const [witnesses, setWitnesses] = useState(article.witnesses);
+  const isStaff = article.isStaff;
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const dirty = useRef(false);
@@ -148,6 +153,7 @@ export function Composer({
       body: JSON.stringify({
         contactPhone: contact.phone,
         contactWhatsapp: contact.whatsapp,
+        witnesses,
       }),
     });
     const data = await res.json().catch(() => ({}));
@@ -410,7 +416,7 @@ export function Composer({
         )}
       </section>
 
-      {!locked ? (
+      {!locked && !isStaff ? (
         <section className="rounded-xl border border-line p-4">
           <h2 className="text-sm font-medium">How the desk can reach you about this piece</h2>
           <p className="mt-0.5 text-xs text-ink-soft">
@@ -439,6 +445,25 @@ export function Composer({
               />
             </label>
           </div>
+
+          {/* Optional, and in the contributor's own language: the desk may want
+              to speak to somebody who was there. */}
+          <label className="mt-4 grid gap-1 text-sm" lang="bn">
+            <span className="font-medium">
+              বর্ণিত সংবাদ বা ঘটনার কোনো প্রত্যক্ষদর্শী ও সাক্ষীর পরিচয় জানা থাকলে তাদের নাম,
+              ঠিকানা, ও ফোন নাম্বার লিখুন:
+            </span>
+            <textarea
+              value={witnesses}
+              onChange={(e) => setWitnesses(e.target.value)}
+              rows={3}
+              maxLength={2000}
+              className="rounded-lg border border-line px-3 py-2 outline-none focus:border-navy"
+            />
+            <span lang="en" className="text-xs text-ink-soft">
+              Optional. Seen by the newsroom only, never published.
+            </span>
+          </label>
         </section>
       ) : null}
 

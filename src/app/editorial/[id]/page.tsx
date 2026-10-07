@@ -68,6 +68,7 @@ export default async function ReviewPage({ params }: { params: Promise<{ id: str
           authorName={article.author.name}
           phone={article.contactPhone ?? article.author.phone}
           whatsapp={article.contactWhatsapp ?? article.author.whatsapp}
+          witnesses={article.witnesses}
         />
 
         <div className="flex flex-wrap items-center gap-2">
@@ -82,17 +83,20 @@ export default async function ReviewPage({ params }: { params: Promise<{ id: str
           <span className="rounded-full border border-line bg-paper-soft px-2 py-0.5 text-xs font-medium text-ink-soft">
             written in {article.language === "BN" ? "Bangla" : "English"}
           </span>
-          <span
+          {/* A missing version is something to go and fix, so the badge takes
+              you to the box where you write it. */}
+          <a
+            href="#translation"
             className={`rounded-full border px-2 py-0.5 text-xs font-medium ${
               translation
                 ? "border-emerald-200 bg-emerald-50 text-emerald-800"
-                : "border-amber-200 bg-amber-50 text-amber-800"
+                : "border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100"
             }`}
           >
             {translation
               ? `${needed === "BN" ? "Bangla" : "English"} version ready`
-              : `${needed === "BN" ? "Bangla" : "English"} version missing`}
-          </span>
+              : `${needed === "BN" ? "Bangla" : "English"} version missing - write it`}
+          </a>
         </div>
 
         <div className="mt-5 grid gap-6 lg:grid-cols-[1.6fr_1fr] lg:items-start">

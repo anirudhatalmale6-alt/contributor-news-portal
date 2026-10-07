@@ -26,6 +26,7 @@ NEW_PASS = "demo1234"
 NEW_PASS2 = "demo-changed-5678"
 INBOX_EMAIL = f"probe.inbox.{STAMP}@thedocument.test"
 REJECT_TITLE = "The minutes nobody has seen"
+WITNESS_TITLE = "The roadworks nobody signed off"
 NEW_NAME = "Rosa Delgado"
 HEADLINE = "The allotment that became a flood defence"
 BN_HEADLINE = "যে বরাদ্দ জমি বন্যা প্রতিরোধের বাঁধ হয়ে উঠল"
@@ -367,7 +368,7 @@ def main():
         shot(
             page,
             "17-translation-panel.png",
-            scroll="section:has-text('Translation - বাংলা (Bangla)')",
+            scroll="section#translation",
         )
         page.click('button:has-text("Save translation")')
         page.wait_for_selector("text=version saved", timeout=20000)
@@ -1761,6 +1762,115 @@ def main():
                 f"{orig.status} {orig.headers.get('content-type')}",
             )
         pc.close()
+
+        # --- 10m. the strip, staff writing, witnesses, both toolbars ---------
+        sb = ctx.browser.new_context(viewport=DESKTOP, http_credentials=GATE)
+        sp = sb.new_page()
+        sign_in(sp, "admin@thedocument.test", STAFF_PASS)
+
+        # No scrollbar painted across the signed-in strip, at either width.
+        for width, label in ((DESKTOP["width"], "desktop"), (PHONE["width"], "a phone")):
+            sp.set_viewport_size({"width": width, "height": 800})
+            go(sp, BASE)
+            bars = sp.evaluate(
+                """() => {
+                     const strip = document.querySelector('header').previousElementSibling;
+                     const row = strip ? strip.querySelector('nav') : null;
+                     if (!row) return null;
+                     return {
+                       overflowing: row.scrollWidth - row.clientWidth,
+                       hidden: getComputedStyle(row).scrollbarWidth === 'none',
+                     };
+                   }"""
+            )
+            check(
+                f"no scrollbar is drawn across the signed-in strip on {label}",
+                bars is None or bars["hidden"],
+                str(bars),
+            )
+        sp.set_viewport_size(DESKTOP)
+
+        # An editor writing their own piece is not asked for a contact number.
+        go(sp, f"{BASE}/dashboard")
+        sp.click('button:has-text("Start a new piece")')
+        sp.wait_for_url("**/dashboard/write/**", timeout=20000)
+        sp.wait_for_timeout(SETTLE_MS)
+        desk = sp.inner_text("main")
+        check(
+            "the desk is not asked how to reach itself",
+            "How the desk can reach you" not in desk,
+            desk[:200],
+        )
+        sp.fill('input[placeholder="Headline"]', "A piece filed by the desk itself")
+        sp.fill(
+            "textarea >> nth=0",
+            "Written in the newsroom rather than sent in, so there is nobody to telephone "
+            "about it and no witness to name. It still has to publish like anything else.",
+        )
+        sp.click('button:has-text("Save draft")')
+        sp.wait_for_selector("text=Draft saved", timeout=20000)
+        sp.click('button:has-text("Submit for review")')
+        sp.wait_for_selector("text=Submitted for review", timeout=20000)
+        check("and can still submit without one", True)
+        sb.close()
+
+        # A contributor gets the witness box, and the desk sees what they wrote.
+        # Not NEW_EMAIL: that account was promoted to editor earlier in the run,
+        # and an editor is deliberately not asked any of this.
+        wc = ctx.browser.new_context(viewport=DESKTOP, http_credentials=GATE)
+        wp = wc.new_page()
+        sign_in(wp, INBOX_EMAIL, NEW_PASS)
+        go(wp, f"{BASE}/dashboard")
+        wp.click('button:has-text("Start a new piece")')
+        wp.wait_for_url("**/dashboard/write/**", timeout=20000)
+        wp.wait_for_timeout(SETTLE_MS)
+        check(
+            "a contributor is asked who saw it happen, in Bangla",
+            "প্রত্যক্ষদর্শী" in wp.inner_text("main"),
+        )
+        wp.fill('input[placeholder="Headline"]', WITNESS_TITLE)
+        wp.fill(
+            "textarea >> nth=0",
+            "A filing that names somebody who was standing there, so the desk can ring them "
+            "before it runs. Long enough to pass the length check on submission.",
+        )
+        witness_text = "মোঃ রফিকুল ইসলাম, বাগেরহাট সদর, ০১৭১১২২৩৩৪৪"
+        wp.fill("textarea >> nth=1", witness_text)
+        wp.fill('input[placeholder="01XXXXXXXXX"] >> nth=0', "01711000111")
+        wp.click('button:has-text("Save draft")')
+        wp.wait_for_selector("text=Draft saved", timeout=20000)
+        wp.click('button:has-text("Submit for review")')
+        wp.wait_for_selector("text=Submitted for review", timeout=20000)
+        wc.close()
+
+        ec = ctx.browser.new_context(viewport=DESKTOP, http_credentials=GATE)
+        ep5 = ec.new_page()
+        sign_in(ep5, "editor@thedocument.test", STAFF_PASS)
+        go(ep5, f"{BASE}/editorial?status=SUBMITTED&q={WITNESS_TITLE.split(' ')[1]}")
+        ep5.locator(f'li:has-text("{WITNESS_TITLE}") a:has-text("Review")').first.click()
+        ep5.wait_for_url("**/editorial/**", timeout=20000)
+        ep5.wait_for_timeout(SETTLE_MS)
+        review = ep5.inner_text("main")
+        check("the desk sees the witnesses the contributor named", witness_text[:14] in review, review[:200])
+
+        # The missing other-language version is a link to the box that writes it.
+        check(
+            "a missing language version points at the box that fixes it",
+            ep5.locator('a[href="#translation"]').count() == 1,
+        )
+        check(
+            "and that box offers the same formatting as the original",
+            ep5.locator('section#translation button[title^="Bold"]').count() == 1,
+        )
+
+        # Write the English version there and prove it saves.
+        ep5.fill('section#translation input >> nth=0', "A witness named, and the desk rang them")
+        ep5.fill('section#translation textarea', "The English version, written by the desk.")
+        ep5.click('section#translation button:has-text("Save translation")')
+        ep5.wait_for_selector("text=version saved", timeout=20000)
+        check("an editor can write the missing version themselves", True)
+        shot(ep5, "42-translation-desk.png")
+        ec.close()
 
         # --- 11. mobile ------------------------------------------------------
         mob = ctx.browser.new_context(viewport=PHONE, device_scale_factor=2, http_credentials=GATE)

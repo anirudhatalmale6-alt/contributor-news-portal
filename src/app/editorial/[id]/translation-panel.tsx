@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { FormatToolbar } from "@/components/format-toolbar";
 
 type Locale = "EN" | "BN";
 
@@ -39,6 +40,7 @@ export function TranslationPanel({
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
   const [saved, setSaved] = useState(Boolean(existing));
+  const bodyRef = useRef<HTMLTextAreaElement>(null);
 
   async function save() {
     setBusy(true);
@@ -62,10 +64,10 @@ export function TranslationPanel({
   const lang = target === "BN" ? "bn" : "en";
 
   return (
-    <section className="grid gap-3 rounded-xl border border-line p-4">
+    <section id="translation" className="grid gap-3 rounded-xl border border-line p-4 scroll-mt-20">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-xs font-bold uppercase tracking-widest text-ink-soft">
-          Translation - {NAME[target]}
+          {saved ? `${NAME[target]} version` : `Write the ${NAME[target]} version`}
         </h2>
         <span
           className={`rounded-full border px-2.5 py-0.5 text-xs font-medium ${
@@ -141,14 +143,24 @@ export function TranslationPanel({
             placeholder={target === "BN" ? "সংক্ষিপ্ত বিবরণ" : "Standfirst"}
             className="w-full rounded-lg border border-line px-3 py-2 text-sm outline-none focus:border-navy"
           />
-          <textarea
-            value={form.body}
-            lang={lang}
-            onChange={(e) => setForm({ ...form, body: e.target.value })}
-            rows={12}
-            placeholder={target === "BN" ? "অনুবাদ এখানে লিখুন" : "Write the translation here"}
-            className="prose-article w-full rounded-lg border border-line p-3 outline-none focus:border-navy"
-          />
+          <div>
+            {/* The same bold, italics and subtitles the original was written
+                with - a translation that cannot carry them is not a translation. */}
+            <FormatToolbar
+              textareaRef={bodyRef}
+              value={form.body}
+              onChange={(next) => setForm({ ...form, body: next })}
+            />
+            <textarea
+              ref={bodyRef}
+              value={form.body}
+              lang={lang}
+              onChange={(e) => setForm({ ...form, body: e.target.value })}
+              rows={12}
+              placeholder={target === "BN" ? "অনুবাদ এখানে লিখুন" : "Write the translation here"}
+              className="prose-article w-full rounded-b-lg border border-line p-3 outline-none focus:border-navy"
+            />
+          </div>
         </div>
       </div>
 

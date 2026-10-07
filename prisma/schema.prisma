@@ -168,6 +168,10 @@ model Article {
   /// Order within a slot, lowest first.
   homeOrder Int     @default(0)
 
+  /// Who saw it happen, if the contributor knows. Names, addresses and phone
+  /// numbers of witnesses: newsroom-only, never published, and never required.
+  witnesses String?
+
   /// How the desk reaches the writer about THIS piece - a story often needs a
   /// follow-up call, and the number on file may not be the right one.
   contactPhone    String?

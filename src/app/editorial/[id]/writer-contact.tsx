@@ -14,12 +14,15 @@ export function WriterContact({
   authorName,
   phone,
   whatsapp,
+  witnesses,
 }: {
   articleId: string;
   authorId: string;
   authorName: string;
   phone: string | null;
   whatsapp: string | null;
+  /** Who the contributor says saw it happen. Newsroom only. */
+  witnesses: string | null;
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -84,6 +87,17 @@ export function WriterContact({
 
       <span className="text-xs text-ink-soft">Newsroom only, never shown to readers.</span>
       {error ? <span className="text-xs text-rose-700">{error}</span> : null}
+
+      {witnesses?.trim() ? (
+        <div className="w-full border-t border-line pt-2">
+          <p className="text-xs font-semibold uppercase tracking-wide text-ink-soft">
+            Witnesses the contributor named
+          </p>
+          <p className="mt-1 whitespace-pre-wrap text-sm" lang="bn">
+            {witnesses}
+          </p>
+        </div>
+      ) : null}
     </div>
   );
 }
