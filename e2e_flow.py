@@ -927,7 +927,9 @@ def main():
         go(page, f"{BASE}/en")
         loading_seen = page.evaluate(
             """() => new Promise((resolve) => {
-                 const link = [...document.querySelectorAll('main a[href*="/article/"]')][0];
+                 // A headline inside an article card, never an advertisement:
+                 // the owner runs ads that link to his own pieces in a new tab.
+                 const link = [...document.querySelectorAll('main article a[href*="/article/"]')][0];
                  if (!link) return resolve('no link');
                  const observer = new MutationObserver(() => {
                    if (document.querySelector('[role="progressbar"][aria-busy="true"]')) {
