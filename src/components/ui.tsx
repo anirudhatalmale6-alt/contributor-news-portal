@@ -3,6 +3,13 @@ import { money, readingTime } from "@/lib/format";
 import { type Locale, localeDate, localeNumber, t } from "@/lib/i18n";
 import type { LocalisedArticle } from "@/lib/articles";
 
+/**
+ * One grid for the whole public site. The masthead, the section bar, the front
+ * page columns and the article column all start on this left edge, which is
+ * what makes the pages look like one newspaper rather than three screens.
+ */
+export const SHELL = "mx-auto w-full max-w-[1280px] px-4 sm:px-6";
+
 const STATUS_STYLE: Record<string, string> = {
   DRAFT: "bg-paper-soft text-ink-soft border-line",
   SUBMITTED: "bg-amber-50 text-amber-800 border-amber-200",
@@ -99,24 +106,23 @@ export function ArticleCard({
   article,
   locale = "EN",
   lead,
+  compact,
 }: {
   article: LocalisedArticle;
   locale?: Locale;
   lead?: boolean;
+  /** Sits under the lead: no rule above it, and a smaller picture. */
+  compact?: boolean;
 }) {
   const copy = t(locale);
   const minutes = localeNumber(readingTime(article.body), locale);
   return (
-    <article
-      className={`group border-line ${lead ? "" : "border-t pt-5"} ${
-        lead ? "pb-6 sm:pb-8" : ""
-      }`}
-    >
+    <article className={`group border-line ${lead || compact ? "" : "border-t pt-5"}`}>
       <Link href={article.href} className="block">
         {article.coverImage ? (
           <div
-            className={`mb-3 overflow-hidden rounded-xl bg-paper-soft ${
-              lead ? "aspect-16/9" : "aspect-3/2 sm:aspect-16/9"
+            className={`mb-3 overflow-hidden rounded bg-paper-soft ${
+              lead ? "aspect-16/9" : "aspect-3/2"
             }`}
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -135,7 +141,7 @@ export function ArticleCard({
         </p>
         <h2
           className={`balance mt-1 font-serif font-bold leading-tight group-hover:underline ${
-            lead ? "text-2xl sm:text-4xl" : "text-lg sm:text-xl"
+            lead ? "text-[26px] sm:text-[38px]" : compact ? "text-lg" : "text-[17px]"
           }`}
         >
           {article.title}

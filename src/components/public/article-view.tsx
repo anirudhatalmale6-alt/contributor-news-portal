@@ -6,7 +6,7 @@ import { SiteHeader } from "@/components/site-header";
 import { siteSettings } from "@/lib/settings";
 import { banglaFontCss } from "@/lib/fonts";
 import { SiteFooter } from "@/components/site-footer";
-import { TierBadge } from "@/components/ui";
+import { SHELL, TierBadge } from "@/components/ui";
 import { readingTime } from "@/lib/format";
 import {
   type Locale,
@@ -56,7 +56,8 @@ export async function ArticleView({ locale, slug }: { locale: Locale; slug: stri
   const evidence = article.media
     .filter((m) => m.isEvidence)
     .sort((a, b) => a.sortOrder - b.sortOrder);
-  const related = await relatedArticles(locale, article.id, article.category, 4);
+  // The right panel wants more than the four that used to sit at the foot.
+  const related = await relatedArticles(locale, article.id, article.category, 8);
 
   return (
     <div
@@ -66,8 +67,15 @@ export async function ArticleView({ locale, slug }: { locale: Locale; slug: stri
       <SiteHeader
         locale={locale}
         switchHref={article.counterpartHref ?? localePath(alt)}
+        activeCategory={article.category}
+        teasers
+        teaserExclude={[article.href, ...related.map((r) => r.href)]}
       />
-      <main className="mx-auto max-w-2xl px-4 pb-16">
+      {/* The copy starts on the same left edge as the masthead, with the other
+          news in a panel down the right. The reading column is still capped,
+          because a headline can be wide but a paragraph cannot. */}
+      <main className={`${SHELL} grid gap-8 pb-16 lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-10`}>
+        <div className="min-w-0 max-w-[48rem]">
         <nav className="py-4 text-xs text-ink-soft">
           <Link href={localePath(locale)} className="hover:text-ink">
             {copy.latest}
@@ -197,32 +205,40 @@ export async function ArticleView({ locale, slug }: { locale: Locale; slug: stri
 
           <AdSlot slot="article" />
 
+        </article>
+        </div>
+
+        {/* Other news, as rectangular blocks down the right. It sticks as you
+            read, so there is always somewhere to go next. */}
+        <aside className="lg:sticky lg:top-14 lg:self-start lg:border-l lg:border-line lg:pl-8">
           {related.length > 0 ? (
-            <section className="mt-10 border-t border-line pt-6">
-              <h2 className="mb-4 text-xs font-bold uppercase tracking-widest text-ink-soft">
+            <section className="pt-6">
+              <h2 className="border-b-2 border-ink pb-2 text-xs font-bold uppercase tracking-widest">
                 {copy.relatedTitle}
               </h2>
-              <ul className="grid gap-5 sm:grid-cols-2">
+              <ul className="mt-4 grid gap-4">
                 {related.map((r) => (
-                  <li key={r.href}>
-                    <Link href={r.href} className="group flex gap-3">
+                  <li key={r.href} className="border border-line">
+                    <Link href={r.href} className="group block">
                       {r.coverImage ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={r.coverImage}
-                          alt=""
-                          loading="lazy"
-                          className="size-20 shrink-0 rounded-lg object-cover"
-                        />
+                        <span className="block aspect-16/9 overflow-hidden bg-paper-soft">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={r.coverImage}
+                            alt=""
+                            loading="lazy"
+                            className="size-full object-cover"
+                          />
+                        </span>
                       ) : null}
-                      <span>
-                        <span className="block text-xs font-semibold uppercase tracking-wide text-brand">
+                      <span className="block p-3">
+                        <span className="block text-[11px] font-semibold uppercase tracking-wide text-brand">
                           {copy.sections[r.category] ?? r.category}
                         </span>
-                        <span className="mt-0.5 block font-serif text-sm font-bold leading-snug group-hover:underline">
+                        <span className="mt-0.5 block font-serif text-[15px] font-bold leading-snug group-hover:underline">
                           {r.title}
                         </span>
-                        <span className="mt-0.5 block text-xs text-ink-soft">{r.author.name}</span>
+                        <span className="mt-1 block text-xs text-ink-soft">{r.author.name}</span>
                       </span>
                     </Link>
                   </li>
@@ -230,7 +246,7 @@ export async function ArticleView({ locale, slug }: { locale: Locale; slug: stri
               </ul>
             </section>
           ) : null}
-        </article>
+        </aside>
       </main>
       <SiteFooter locale={locale} />
     </div>

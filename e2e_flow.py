@@ -583,7 +583,9 @@ def main():
         check("an editor can put a published piece on the front page", True)
 
         go(page, f"{BASE}/en")
-        lead = page.locator("main h2").first.inner_text()
+        # The rails have h2 headings of their own now, so pin to the first
+        # article card - that is the lead whatever the surrounding furniture.
+        lead = page.locator("main article h2").first.inner_text()
         check(
             "the featured piece leads the front page, not just the newest",
             BOTH_EN_TITLE in lead,
@@ -975,6 +977,63 @@ def main():
         anon.close()
         cp.close()
         ip.close()
+
+        # --- 10d. the newspaper layout he asked for --------------------------
+        # Measured, not eyeballed: the copy has to start on the same left edge
+        # as the masthead, and the other news has to sit to its right.
+        wide = ctx.browser.new_context(viewport={"width": 1440, "height": 900}, http_credentials=GATE)
+        wp = wide.new_page()
+        go(wp, f"{BASE}/en")
+        cols = wp.evaluate(
+            """() => {
+                 const logo = document.querySelector('header img');
+                 const lead = document.querySelector('main article h2');
+                 const rails = [...document.querySelectorAll('main aside')]
+                   .map((a) => a.getBoundingClientRect())
+                   .filter((r) => r.width > 0);
+                 return {
+                   logoLeft: logo ? logo.getBoundingClientRect().left : null,
+                   leadLeft: lead ? lead.getBoundingClientRect().left : null,
+                   rails: rails.length,
+                   leftRailBeforeLead: rails.length ? rails[0].left < (lead ? lead.getBoundingClientRect().left : 0) : false,
+                 };
+               }"""
+        )
+        check("the front page runs three columns on a desktop", cols["rails"] >= 2, str(cols))
+        check("a rail of other stories sits left of the lead", cols["leftRailBeforeLead"], str(cols))
+        shot(wp, "32-front-page-wide.png")
+
+        # Reach an article the way a reader does, so the slug never goes stale.
+        go(wp, f"{BASE}/en")
+        wp.locator('main article h2').first.click()
+        wp.wait_for_url("**/article/**", timeout=20000)
+        wait_article(wp)
+        edges = wp.evaluate(
+            """() => {
+                 const logo = document.querySelector('header img');
+                 const h1 = document.querySelector('main h1');
+                 const rail = document.querySelector('main > aside');
+                 return {
+                   logoLeft: logo && Math.round(logo.getBoundingClientRect().left),
+                   copyLeft: h1 && Math.round(h1.getBoundingClientRect().left),
+                   railLeft: rail && Math.round(rail.getBoundingClientRect().left),
+                   copyRight: h1 && Math.round(h1.getBoundingClientRect().right),
+                   railBlocks: document.querySelectorAll('main > aside li').length,
+                 };
+               }"""
+        )
+        check(
+            "the article copy starts on the same left edge as the logo",
+            abs((edges["copyLeft"] or 0) - (edges["logoLeft"] or -99)) <= 1,
+            str(edges),
+        )
+        check(
+            "the other news sits in a panel to the right of the copy",
+            (edges["railLeft"] or 0) > (edges["copyRight"] or 0) and edges["railBlocks"] >= 2,
+            str(edges),
+        )
+        shot(wp, "33-article-wide.png")
+        wide.close()
 
         # --- 11. mobile ------------------------------------------------------
         mob = ctx.browser.new_context(viewport=PHONE, device_scale_factor=2, http_credentials=GATE)

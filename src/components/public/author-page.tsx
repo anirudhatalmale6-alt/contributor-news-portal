@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { feedArticlesByAuthor } from "@/lib/articles";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
-import { ArticleCard, TierBadge } from "@/components/ui";
+import { ArticleCard, TierBadge, SHELL } from "@/components/ui";
 import { siteSettings } from "@/lib/settings";
 import { banglaFontCss } from "@/lib/fonts";
 import { type Locale, localeMeta, localeNumber, t } from "@/lib/i18n";
@@ -41,7 +41,7 @@ export async function AuthorPage({ locale, id }: { locale: Locale; id: string })
       style={{ "--bn-reading-font": banglaFontCss(site.banglaFont) } as React.CSSProperties}
     >
       <SiteHeader locale={locale} switchHref={locale === "BN" ? `/en/author/${id}` : `/author/${id}`} />
-      <main className="mx-auto max-w-4xl px-4 pb-16">
+      <main className={`${SHELL} pb-16`}>
         <header className="flex flex-wrap items-start gap-5 border-b border-line py-8">
           <span className="grid size-24 shrink-0 place-items-center overflow-hidden rounded-full border border-line bg-paper-soft">
             {author.image ? (

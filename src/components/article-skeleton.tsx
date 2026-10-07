@@ -5,9 +5,11 @@
  * immediately that something is happening and roughly what is coming, which
  * reads faster than a blank screen even when the wait is identical.
  */
+import { SHELL } from "@/components/ui";
+
 export function ArticleSkeleton() {
   return (
-    <main className="mx-auto max-w-2xl px-4 pb-16" aria-busy="true" aria-live="polite">
+    <main className={`${SHELL} pb-16`} aria-busy="true" aria-live="polite">
       <div className="flex items-center gap-3 py-6 text-sm text-ink-soft">
         <svg viewBox="0 0 24 24" aria-hidden className="size-5 animate-spin">
           <circle cx="12" cy="12" r="9" className="fill-none stroke-line stroke-[3]" />

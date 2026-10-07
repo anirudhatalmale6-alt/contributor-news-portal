@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { SHELL } from "@/components/ui";
 import { type Locale, localePath, t } from "@/lib/i18n";
 import { siteSettings } from "@/lib/settings";
 
@@ -10,7 +11,7 @@ export async function SiteFooter({ locale = "EN" }: { locale?: Locale }) {
   const legal = locale === "BN" ? site.footerBn : site.footerEn;
   return (
     <footer lang={locale === "BN" ? "bn" : "en"} className="border-t border-line bg-paper-soft">
-      <div className="mx-auto flex max-w-5xl flex-col gap-3 px-4 py-8 text-sm text-ink-soft sm:flex-row sm:items-center sm:justify-between">
+      <div className={`${SHELL} flex flex-col gap-3 py-8 text-sm text-ink-soft sm:flex-row sm:items-center sm:justify-between`}>
         <p className="flex items-center gap-2">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { SHELL } from "@/components/ui";
 import { currentUser } from "@/lib/rbac";
 import { SignOutButton } from "@/components/auth-buttons";
 import { unreadCount } from "@/lib/inbox";
@@ -22,7 +23,7 @@ export async function SignedInBar() {
 
   return (
     <div className="border-b border-line bg-paper-soft">
-      <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2 text-xs text-ink-soft">
+      <div className={`${SHELL} flex flex-wrap items-center gap-x-3 gap-y-1 py-2 text-xs text-ink-soft`}>
         <span>
           You are logged in as <span className="font-semibold text-ink">{user.name}</span> (
           {ROLE_LABEL[user.role] ?? user.role})

@@ -4,7 +4,7 @@ import { siteSettings } from "@/lib/settings";
 import { banglaFontCss } from "@/lib/fonts";
 import { SiteFooter } from "@/components/site-footer";
 import { AdSlot } from "@/components/ad-slot";
-import { ArticleCard } from "@/components/ui";
+import { ArticleCard, SHELL } from "@/components/ui";
 import { type Locale, localeMeta, sectionPath, t } from "@/lib/i18n";
 
 /** One section of the paper, in one language. */
@@ -25,7 +25,7 @@ export async function SectionPage({ locale, category }: { locale: Locale; catego
         activeCategory={category}
         switchHref={sectionPath(locale === "BN" ? "EN" : "BN", category)}
       />
-      <main className="mx-auto max-w-5xl px-4 pb-16">
+      <main className={`${SHELL} pb-16`}>
         <h1 className="mt-8 font-serif text-3xl font-bold sm:text-4xl">{name}</h1>
 
         {!lead ? (
