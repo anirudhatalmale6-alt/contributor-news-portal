@@ -105,6 +105,36 @@ export async function feedArticles(locale: Locale, category: string, take = 13) 
   return rows.map((r) => pick(r, locale)).filter((a): a is LocalisedArticle => a !== null);
 }
 
+/**
+ * The pieces an editor has pinned to a named place on the front page.
+ *
+ * Returned slot by slot so the page can take what it was given and fill the
+ * rest itself - a half-planned front page still has to look finished.
+ */
+export async function pinnedArticles(locale: Locale) {
+  const rows = await prisma.article.findMany({
+    where: {
+      status: "APPROVED",
+      homeSlot: { not: null },
+      OR: [{ language: locale }, { translations: { some: { locale } } }],
+    },
+    orderBy: [{ homeOrder: "asc" }, { publishedAt: "desc" }],
+    include: {
+      author: AUTHOR,
+      translations: { include: { translator: { select: { name: true } } } },
+    },
+  });
+
+  const bySlot = new Map<string, LocalisedArticle[]>();
+  for (const r of rows) {
+    const a = pick(r, locale);
+    if (!a) continue;
+    const slot = r.homeSlot as string;
+    bySlot.set(slot, [...(bySlot.get(slot) ?? []), a]);
+  }
+  return bySlot;
+}
+
 /** Pieces an editor has put on the front page, newest first. */
 export async function featuredArticles(locale: Locale, take = 5) {
   const rows = await prisma.article.findMany({

@@ -25,7 +25,31 @@ export const sectionPath = (locale: Locale, category: string) =>
   localePath(locale, `/section/${category.toLowerCase()}`);
 
 /** The category behind a section slug, or null if nobody publishes under it. */
-export const CATEGORIES = ["Politics", "Technology", "Culture", "Business", "General"] as const;
+/**
+ * Every section the paper runs, in the order the owner wants them in the menu.
+ *
+ * "General" is deliberately last and deliberately not in the public menu: it is
+ * where the pieces filed before this list existed still sit, and it empties
+ * itself as the desk re-files them.
+ */
+export const CATEGORIES = [
+  "Politics",
+  "Technology",
+  "Economy",
+  "World",
+  "Opinion",
+  "Culture",
+  "Literature",
+  "Philosophy",
+  "Science",
+  "Entertainment",
+  "Lifestyle",
+  "Career",
+  "General",
+] as const;
+
+/** What the reader is offered in the top menu: everything except the legacy bucket. */
+export const MENU_CATEGORIES = CATEGORIES.filter((c) => c !== "General");
 export const categoryFromSlug = (slug: string) =>
   CATEGORIES.find((c) => c.toLowerCase() === slug.toLowerCase()) ?? null;
 
@@ -73,8 +97,16 @@ const EN_DICT: Dict = {
     All: "All",
     Politics: "Politics",
     Technology: "Technology",
+    Economy: "Economy",
+    World: "World",
+    Opinion: "Opinion",
     Culture: "Culture",
-    Business: "Business",
+    Literature: "Literature",
+    Philosophy: "Philosophy",
+    Science: "Science",
+    Entertainment: "Entertainment",
+    Lifestyle: "Lifestyle",
+    Career: "Career",
     General: "General",
   },
   alsoToday: "Also today",
@@ -116,8 +148,16 @@ const BN_DICT: Dict = {
     All: "সব",
     Politics: "রাজনীতি",
     Technology: "প্রযুক্তি",
+    Economy: "অর্থনীতি",
+    World: "বিশ্ব",
+    Opinion: "মতামত",
     Culture: "সংস্কৃতি",
-    Business: "অর্থনীতি",
+    Literature: "সাহিত্য",
+    Philosophy: "দর্শন",
+    Science: "বিজ্ঞান",
+    Entertainment: "বিনোদন",
+    Lifestyle: "লাইফস্টাইল",
+    Career: "ক্যারিয়ার",
     General: "সাধারণ",
   },
   alsoToday: "আজকের আরও খবর",

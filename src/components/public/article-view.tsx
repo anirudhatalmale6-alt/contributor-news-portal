@@ -27,6 +27,31 @@ import {
  * heading and starts the next line underneath it, without a blank line between,
  * means a heading followed by a paragraph - not one very long heading.
  */
+/**
+ * Inline emphasis: **bold** and *italic*.
+ *
+ * Built into React elements rather than injected as HTML, so a contributor
+ * cannot smuggle markup into a published page by typing it.
+ */
+function inline(text: string, keyBase: string) {
+  const out: (string | React.ReactElement)[] = [];
+  const pattern = /\*\*([^*]+)\*\*|\*([^*]+)\*/g;
+  let last = 0;
+  let m: RegExpExecArray | null;
+  let i = 0;
+  while ((m = pattern.exec(text)) !== null) {
+    if (m.index > last) out.push(text.slice(last, m.index));
+    if (m[1] !== undefined) {
+      out.push(<strong key={`${keyBase}-b${i++}`}>{m[1]}</strong>);
+    } else {
+      out.push(<em key={`${keyBase}-i${i++}`}>{m[2]}</em>);
+    }
+    last = pattern.lastIndex;
+  }
+  if (last < text.length) out.push(text.slice(last));
+  return out.length ? out : text;
+}
+
 function renderBody(body: string) {
   const lines = body.replace(/\r\n/g, "\n").split("\n");
   const out: React.ReactElement[] = [];
@@ -36,7 +61,10 @@ function renderBody(body: string) {
   let key = 0;
 
   const flushPara = () => {
-    if (para.length) out.push(<p key={key++}>{para.join(" ")}</p>);
+    if (para.length) {
+      const k = key++;
+      out.push(<p key={k}>{inline(para.join(" "), `p${k}`)}</p>);
+    }
     para = [];
   };
   const flushBullets = () => {
@@ -44,7 +72,7 @@ function renderBody(body: string) {
       out.push(
         <ul key={key++}>
           {bullets.map((li, i) => (
-            <li key={i}>{li}</li>
+            <li key={i}>{inline(li, `li${i}`)}</li>
           ))}
         </ul>,
       );
@@ -52,7 +80,10 @@ function renderBody(body: string) {
     bullets = [];
   };
   const flushQuote = () => {
-    if (quote.length) out.push(<blockquote key={key++}>{quote.join(" ")}</blockquote>);
+    if (quote.length) {
+      const k = key++;
+      out.push(<blockquote key={k}>{inline(quote.join(" "), `q${k}`)}</blockquote>);
+    }
     quote = [];
   };
   const flushAll = () => {
@@ -69,12 +100,12 @@ function renderBody(body: string) {
     }
     if (line.startsWith("### ")) {
       flushAll();
-      out.push(<h3 key={key++}>{line.slice(4)}</h3>);
+      out.push(<h3 key={key++}>{inline(line.slice(4), `h3${key}`)}</h3>);
       continue;
     }
     if (line.startsWith("## ")) {
       flushAll();
-      out.push(<h2 key={key++}>{line.slice(3)}</h2>);
+      out.push(<h2 key={key++}>{inline(line.slice(3), `h2${key}`)}</h2>);
       continue;
     }
     if (/^[-*] /.test(line)) {

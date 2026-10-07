@@ -154,6 +154,13 @@ model Article {
   // The language the contributor wrote in; the other one comes from the editor.
   language Locale @default(EN)
 
+  /// Where an editor has pinned this piece on the front page:
+  /// LEAD, STRIP (beside the masthead), LEFT, MIDDLE or RIGHT. Null means the
+  /// page decides for itself, newest first, which is what most pieces do.
+  homeSlot  String?
+  /// Order within a slot, lowest first.
+  homeOrder Int     @default(0)
+
   /// How the desk reaches the writer about THIS piece - a story often needs a
   /// follow-up call, and the number on file may not be the right one.
   contactPhone    String?

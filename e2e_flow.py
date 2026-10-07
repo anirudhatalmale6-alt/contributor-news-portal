@@ -702,6 +702,10 @@ def main():
         # site settings: wording and advertising, no developer needed
         page.fill('#site-settings input[name="siteNameEn"]', "The Document Daily")
         page.check('#site-settings input[name="adsEnabled"]')
+        # The code boxes now sit behind a fold, because most owners upload a
+        # picture instead; open it the way a person would.
+        page.click('summary:has-text("Or paste code from an ad network")')
+        page.wait_for_timeout(300)
         page.fill('#site-settings textarea[name="adHomeHtml"]', '<div id="ad-home-test">HOUSE AD</div>')
         page.click('button:has-text("Save site settings")')
         page.wait_for_selector("text=Refresh the public site", timeout=20000)
@@ -1387,6 +1391,134 @@ def main():
         check("list thumbnails are big enough to see", sizes["thumb"] == 0 or sizes["thumb"] >= 88, str(sizes))
         shot(php, "38-phone-front.png")
         ph.close()
+
+        # --- 10j. the desk's new controls -------------------------------------
+        nd = ctx.browser.new_context(viewport=DESKTOP, http_credentials=GATE)
+        np = nd.new_page()
+        sign_in(np, "admin@thedocument.test", "demo1234")
+
+        # The menu now carries the owner's own list of sections.
+        go(np, BASE)
+        menu = np.inner_text("header + nav")
+        for want in ("রাজনীতি", "অর্থনীতি", "বিশ্ব", "মতামত", "সাহিত্য", "বিজ্ঞান", "ক্যারিয়ার"):
+            check(f"the Bangla menu carries {want}", want in menu, menu[:160])
+        go(np, f"{BASE}/en")
+        menu_en = np.inner_text("header + nav")
+        for want in ("Economy", "World", "Opinion", "Literature", "Science", "Career"):
+            check(f"the English menu carries {want}", want in menu_en, menu_en[:160])
+        check(
+            "a new section page actually resolves",
+            np.request.get(f"{BASE}/en/section/world").status == 200,
+        )
+
+        # The newsroom tabs change the query string only, which used to leave
+        # the loading bar running for ever.
+        go(np, f"{BASE}/editorial?status=SUBMITTED")
+        np.click('a:has-text("Published")')
+        np.wait_for_url("**status=APPROVED**", timeout=20000)
+        np.wait_for_timeout(SETTLE_MS * 2)
+        check(
+            "the loading bar stops when only the query string changed",
+            np.locator('[role="progressbar"]').count() == 0,
+        )
+
+        # Open a published piece: cover controls, a working live link, a delete.
+        np.locator('main ul > li a:has-text("Open")').first.click()
+        np.wait_for_url("**/editorial/**", timeout=20000)
+        np.wait_for_timeout(SETTLE_MS)
+        # The heading is uppercased by CSS, so compare without case.
+        check(
+            "an admin can change the cover photo",
+            "cover photo" in np.inner_text("main").lower()
+            and np.locator('button:has-text("cover")').count() > 0,
+        )
+        check("an admin gets a delete control", "Delete this article" in np.inner_text("main"))
+        check(
+            "the save button says it updates the live article",
+            "Save and update the live article" in np.inner_text("main"),
+        )
+        live = np.locator('a:has-text("View live")').first.get_attribute("href")
+        r = np.request.get(f"{BASE}{live}")
+        check("the View live link goes to a real page", r.status == 200, f"{live} -> {r.status}")
+        shot(np, "39-editorial-controls.png")
+
+        # Deleting asks first, and then really deletes.
+        np.click('button:has-text("Delete this article")')
+        check("deleting asks for confirmation first", "Yes, delete it" in np.inner_text("main"))
+        np.click('button:has-text("Keep it")')
+        check("and can be called off", "Yes, delete it" not in np.inner_text("main"))
+
+        # Front page board.
+        go(np, f"{BASE}/editorial/front-page")
+        board = np.inner_text("main")
+        for slot in ("Main headline", "Beside the masthead", "Left column", "Under the headline", "Right column"):
+            check(f"the front page board has a {slot} position", slot in board)
+        # Start from an empty board, so an earlier run cannot change what the
+        # first "Add" button does.
+        while np.locator('button:has-text("Remove")').count():
+            np.locator('button:has-text("Remove")').first.click()
+            np.wait_for_timeout(SETTLE_MS)
+
+        np.locator('button:has-text("Add an article")').first.click()
+        np.wait_for_timeout(SETTLE_MS)
+        # The candidate list is inside the open position, not anywhere in main.
+        np.locator('section:has(input[placeholder^="Search published"]) ul button').first.click()
+        np.wait_for_selector("text=Placed.", timeout=20000)
+        np.wait_for_timeout(SETTLE_MS)
+        check("an article can be pinned to a position", "Remove" in np.inner_text("main"))
+        shot(np, "40-front-page-board.png")
+
+        pinned_title = np.evaluate(
+            """() => {
+                 const first = document.querySelector('main section li span span');
+                 return first ? first.innerText : '';
+               }"""
+        )
+        # The board shows English titles, so check the English front page - and
+        # check it is the LEAD, not merely somewhere on the page.
+        go(np, f"{BASE}/en")
+        lead_now = np.locator("main article h2").first.inner_text()
+        check(
+            "the pinned piece really leads the front page",
+            pinned_title[:24] in lead_now,
+            f"pinned {pinned_title[:40]!r} vs lead {lead_now[:40]!r}",
+        )
+
+        # And it can be taken off again.
+        go(np, f"{BASE}/editorial/front-page")
+        np.locator('button:has-text("Remove")').first.click()
+        np.wait_for_selector("text=Taken off the front page", timeout=20000)
+        check("and taken off again", True)
+
+        # Formatting toolbar, and what it writes.
+        go(np, f"{BASE}/dashboard")
+        np.click('button:has-text("Start a new piece")')
+        np.wait_for_url("**/dashboard/write/**", timeout=20000)
+        np.wait_for_timeout(SETTLE_MS)
+        check("the writing desk has a formatting toolbar", np.locator('button[title^="Bold"]').count() == 1)
+        np.fill("textarea >> nth=0", "The committee met twice")
+        np.evaluate(
+            """() => {
+                 const ta = document.querySelector('textarea');
+                 ta.focus();
+                 ta.setSelectionRange(4, 13);
+               }"""
+        )
+        np.click('button[title^="Bold"]')
+        np.wait_for_timeout(400)
+        check(
+            "pressing Bold wraps the chosen words",
+            "**committee**" in np.input_value("textarea >> nth=0"),
+            np.input_value("textarea >> nth=0"),
+        )
+        np.click('button:has-text("Big subtitle")')
+        np.wait_for_timeout(400)
+        check(
+            "and Big subtitle marks the line as a heading",
+            np.input_value("textarea >> nth=0").startswith("## "),
+            np.input_value("textarea >> nth=0")[:40],
+        )
+        nd.close()
 
         # --- 11. mobile ------------------------------------------------------
         mob = ctx.browser.new_context(viewport=PHONE, device_scale_factor=2, http_credentials=GATE)

@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { AdUploader } from "./ad-uploader";
 import { BANGLA_FONTS } from "@/lib/fonts";
 
 type Site = {
@@ -212,33 +213,47 @@ export function SiteForm({ settings }: { settings: Site }) {
           </span>
         </label>
 
-        <div className="grid gap-3">
+        {/* The picture route first: most advertisers send an image, not code. */}
+        <div className="grid gap-3 sm:grid-cols-2">
+          <AdUploader slot="banner" label="Banner" size="970 x 90 (phones 320 x 100)" current={form.adBannerHtml} />
+          <AdUploader slot="square" label="Square" size="300 x 250" current={form.adSquareHtml} />
+          <AdUploader slot="home" label="Home page extra" size="300 x 250 or taller" current={form.adHomeHtml} />
+          <AdUploader slot="article" label="Article page" size="728 x 90 or 300 x 250" current={form.adArticleHtml} />
+        </div>
+
+        <details className="rounded-lg border border-line p-3">
+          <summary className="cursor-pointer text-sm font-medium">
+            Or paste code from an ad network
+          </summary>
+        <div className="mt-3 grid gap-3">
           <label className="grid gap-1 text-sm">
-            <span className="text-xs font-medium text-ink-soft">Home page slot</span>
+            <span className="text-xs font-medium text-ink-soft">Home page slot, 300 x 250 or taller</span>
             <textarea name="adHomeHtml" value={form.adHomeHtml} onChange={set("adHomeHtml")} rows={3} className={`${field} font-mono text-xs`} />
           </label>
           <label className="grid gap-1 text-sm">
-            <span className="text-xs font-medium text-ink-soft">Article page slot</span>
+            <span className="text-xs font-medium text-ink-soft">Article page slot, 728 x 90 or 300 x 250</span>
             <textarea name="adArticleHtml" value={form.adArticleHtml} onChange={set("adArticleHtml")} rows={3} className={`${field} font-mono text-xs`} />
           </label>
           <label className="grid gap-1 text-sm">
-            <span className="text-xs font-medium text-ink-soft">Section page slot</span>
+            <span className="text-xs font-medium text-ink-soft">Section page slot, 728 x 90</span>
             <textarea name="adSectionHtml" value={form.adSectionHtml} onChange={set("adSectionHtml")} rows={3} className={`${field} font-mono text-xs`} />
           </label>
           <label className="grid gap-1 text-sm">
             <span className="text-xs font-medium text-ink-soft">
-              Banner, wide strip (runs under the menu on the front and section pages, and
-              part-way down an article)
+              Banner, 970 x 90 on a desktop and 320 x 100 on a phone. Runs under the menu on the
+              front and section pages, and part-way down an article.
             </span>
             <textarea name="adBannerHtml" value={form.adBannerHtml} onChange={set("adBannerHtml")} rows={3} className={`${field} font-mono text-xs`} />
           </label>
           <label className="grid gap-1 text-sm">
             <span className="text-xs font-medium text-ink-soft">
-              Square, 300x250 (sits in the right-hand column beside the news)
+              Square, 300 x 250. Sits in the right-hand column beside the news, and at the top of
+              the panel on an article page.
             </span>
             <textarea name="adSquareHtml" value={form.adSquareHtml} onChange={set("adSquareHtml")} rows={3} className={`${field} font-mono text-xs`} />
           </label>
         </div>
+        </details>
       </section>
 
       <button

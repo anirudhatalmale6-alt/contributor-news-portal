@@ -15,7 +15,7 @@ export async function StaffNav({
   current,
 }: {
   user: SessionUser;
-  current: "desk" | "newsroom" | "published" | "inbox" | "people" | "settings";
+  current: "desk" | "newsroom" | "published" | "frontpage" | "inbox" | "people" | "settings";
 }) {
   const staff = isStaff(user.role);
   const [waiting, unread, updates] = await Promise.all([
@@ -35,6 +35,7 @@ export async function StaffNav({
             href: "/editorial?status=APPROVED",
             label: "Published",
           },
+          { key: "frontpage" as const, href: "/editorial/front-page", label: "Front page" },
           { key: "people" as const, href: "/people", label: "People" },
         ]
       : []),

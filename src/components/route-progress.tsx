@@ -1,6 +1,6 @@
 "use client";
 
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
 /**
@@ -14,6 +14,10 @@ import { useEffect, useState } from "react";
  */
 export function RouteProgress() {
   const pathname = usePathname();
+  // The newsroom tabs change only the query string. Watching the path alone
+  // meant the bar started and never stopped on those, which showed up as a
+  // loading flash that would not go away.
+  const search = useSearchParams().toString();
   const [busy, setBusy] = useState(false);
 
   // Any click on an internal link starts the bar.
@@ -44,7 +48,15 @@ export function RouteProgress() {
   // The new page having rendered is the signal to stop.
   useEffect(() => {
     setBusy(false);
-  }, [pathname]);
+  }, [pathname, search]);
+
+  // And a backstop: nothing should leave a progress bar running for ten
+  // seconds, whatever went wrong.
+  useEffect(() => {
+    if (!busy) return;
+    const timer = setTimeout(() => setBusy(false), 10_000);
+    return () => clearTimeout(timer);
+  }, [busy]);
 
   // A back/forward press cancels it too.
   useEffect(() => {

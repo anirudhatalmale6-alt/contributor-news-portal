@@ -2,7 +2,7 @@ import Link from "next/link";
 import { WriterContact } from "./writer-contact";
 import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { currentUser, isStaff } from "@/lib/rbac";
+import { currentUser, isAdmin, isStaff } from "@/lib/rbac";
 import { timeAgo } from "@/lib/format";
 import { paymentSettings } from "@/lib/settings";
 import { SiteHeader } from "@/components/site-header";
@@ -10,6 +10,8 @@ import { StatusPill, TierBadge } from "@/components/ui";
 import { ReviewPanel } from "./review-panel";
 import { TranslationPanel } from "./translation-panel";
 import { MediaDesk } from "./media-desk";
+import { CoverPanel } from "./cover-panel";
+import { DeleteArticle } from "./delete-article";
 
 export const metadata = { title: "Review" };
 
@@ -102,6 +104,9 @@ export default async function ReviewPage({ params }: { params: Promise<{ id: str
               category: article.category,
               status: article.status,
               slug: article.slug,
+              language: article.language,
+              coverImage: article.coverImage,
+              homeSlot: article.homeSlot,
               payoutCents: article.payoutCents,
               media: article.media.map((m) => ({
                 id: m.id,
@@ -119,7 +124,19 @@ export default async function ReviewPage({ params }: { params: Promise<{ id: str
           />
 
 
-          <aside className="rounded-xl border border-line p-4">
+          <div className="grid gap-6">
+            <CoverPanel
+              articleId={article.id}
+              initialCover={article.coverImage}
+              published={article.status === "APPROVED"}
+            />
+
+            {/* Removing a piece is an admin's call, not an editor's. */}
+            {isAdmin(user.role) ? (
+              <DeleteArticle articleId={article.id} title={article.title} />
+            ) : null}
+
+            <aside className="rounded-xl border border-line p-4">
             <h2 className="text-xs font-bold uppercase tracking-widest text-ink-soft">
               Activity
             </h2>
@@ -140,7 +157,8 @@ export default async function ReviewPage({ params }: { params: Promise<{ id: str
                 </li>
               ))}
             </ol>
-          </aside>
+            </aside>
+          </div>
 
           <div className="lg:col-span-2">
             <MediaDesk

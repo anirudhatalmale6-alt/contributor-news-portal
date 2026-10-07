@@ -3,10 +3,8 @@ import { currentUser } from "@/lib/rbac";
 import { SignedInBar } from "@/components/signed-in-bar";
 import { SHELL } from "@/components/ui";
 import { feedArticles } from "@/lib/articles";
-import { type Locale, localeMeta, localePath, other, sectionPath, t } from "@/lib/i18n";
+import { MENU_CATEGORIES, type Locale, localeMeta, localePath, other, sectionPath, t } from "@/lib/i18n";
 import { siteSettings } from "@/lib/settings";
-
-const SECTIONS = ["Politics", "Technology", "Culture", "Business", "General"];
 
 export async function SiteHeader({
   locale = "EN",
@@ -15,6 +13,7 @@ export async function SiteHeader({
   teasers = false,
   teaserExclude = [],
   teaserNever,
+  teaserPinned = [],
 }: {
   locale?: Locale;
   /** Where the language toggle goes; defaults to the same page in the other language. */
@@ -29,6 +28,8 @@ export async function SiteHeader({
   teaserExclude?: string[];
   /** The one piece the strip must never carry: the lead, directly beneath it. */
   teaserNever?: string;
+  /** Hrefs an editor pinned to the strip. These go first, in their order. */
+  teaserPinned?: string[];
 }) {
   const [user, site, pool] = await Promise.all([
     currentUser(),
@@ -37,9 +38,14 @@ export async function SiteHeader({
   ]);
   const shown = new Set(teaserExclude);
   const allowed = pool.filter((a) => a.href !== teaserNever);
+  const pinnedFirst = teaserPinned
+    .map((href) => allowed.find((a) => a.href === href))
+    .filter((a): a is (typeof allowed)[number] => Boolean(a));
+  const pinnedHrefs = new Set(pinnedFirst.map((a) => a.href));
   const strip = [
-    ...allowed.filter((a) => !shown.has(a.href)),
-    ...allowed.filter((a) => shown.has(a.href)),
+    ...pinnedFirst,
+    ...allowed.filter((a) => !pinnedHrefs.has(a.href) && !shown.has(a.href)),
+    ...allowed.filter((a) => !pinnedHrefs.has(a.href) && shown.has(a.href)),
   ].slice(0, 3);
   const copy = t(locale);
   const siteName = locale === "BN" ? site.siteNameBn : site.siteNameEn;
@@ -165,7 +171,7 @@ export async function SiteHeader({
           >
             {copy.latest}
           </Link>
-          {SECTIONS.map((s) => (
+          {MENU_CATEGORIES.map((s) => (
             <Link
               key={s}
               href={sectionPath(locale, s)}

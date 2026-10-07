@@ -1,8 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { CATEGORIES } from "@/lib/i18n";
+import { FormatToolbar } from "@/components/format-toolbar";
+
+/** The front-page positions, in the order they read down the page. */
+const SLOT_LABEL: Record<string, string> = {
+  LEAD: "Main headline",
+  STRIP: "Beside the masthead",
+  LEFT: "Left column",
+  MIDDLE: "Under the headline",
+  RIGHT: "Right column",
+};
 
 type MediaItem = { id: string; kind: string; url: string; caption: string | null };
 
@@ -14,11 +25,14 @@ type ArticleState = {
   category: string;
   status: string;
   slug: string;
+  /** Which half of the site this piece lives on, so "View live" goes somewhere real. */
+  language: string;
+  coverImage: string | null;
+  homeSlot: string | null;
   payoutCents: number;
   media: MediaItem[];
 };
 
-const CATEGORIES = ["General", "Politics", "Technology", "Culture", "Business"];
 
 export function ReviewPanel({
   article,
@@ -41,6 +55,8 @@ export function ReviewPanel({
   const [status, setStatus] = useState(article.status);
   const [busy, setBusy] = useState<string | null>(null);
   const [message, setMessage] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
+  const bodyRef = useRef<HTMLTextAreaElement>(null);
+  const [slot, setSlot] = useState(article.homeSlot ?? "");
 
   function update<K extends keyof typeof form>(key: K, value: string) {
     setForm((f) => ({ ...f, [key]: value }));
@@ -59,9 +75,18 @@ export function ReviewPanel({
       setMessage({ kind: "err", text: "Could not save the edits." });
       return;
     }
-    setMessage({ kind: "ok", text: "Edits saved." });
+    setMessage({
+      kind: "ok",
+      text:
+        status === "APPROVED"
+          ? "Updated. The live article now shows these changes."
+          : "Edits saved.",
+    });
     router.refresh();
   }
+
+  /** Where this piece actually sits for a reader. */
+  const liveHref = article.language === "BN" ? `/article/${article.slug}` : `/en/article/${article.slug}`;
 
   async function decide(decision: "APPROVE" | "REJECT") {
     setBusy(decision);
@@ -91,12 +116,24 @@ export function ReviewPanel({
       setMessage({ kind: "err", text: data.error ?? "Could not record the decision." });
       return;
     }
+    // A place on the front page can only be given to something published, so it
+    // is applied after the decision, not with it.
+    if (decision === "APPROVE" && slot) {
+      await fetch(`/api/editorial/${article.id}/home-slot`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ homeSlot: slot }),
+      });
+    }
+
     setStatus(decision === "APPROVE" ? "APPROVED" : "REJECTED");
     setMessage({
       kind: "ok",
       text:
         decision === "APPROVE"
-          ? `Published. The contributor now sees ${settings.currency} ${payout} on their dashboard.`
+          ? `Published${
+              slot ? ` in ${SLOT_LABEL[slot] ?? slot}` : ""
+            }. The contributor now sees ${settings.currency} ${payout} on their dashboard.`
           : "Sent back to the contributor with your note.",
     });
     setNote("");
@@ -165,12 +202,20 @@ export function ReviewPanel({
             ))}
           </select>
         </label>
-        <textarea
-          value={form.body}
-          onChange={(e) => update("body", e.target.value)}
-          rows={16}
-          className="prose-article w-full rounded-xl border border-line p-4 outline-none focus:border-navy"
-        />
+        <div>
+          <FormatToolbar
+            textareaRef={bodyRef}
+            value={form.body}
+            onChange={(next) => update("body", next)}
+          />
+          <textarea
+            ref={bodyRef}
+            value={form.body}
+            onChange={(e) => update("body", e.target.value)}
+            rows={16}
+            className="prose-article w-full rounded-b-xl border border-line p-4 outline-none focus:border-navy"
+          />
+        </div>
 
         <button
           type="button"
@@ -178,7 +223,11 @@ export function ReviewPanel({
           disabled={busy !== null}
           className="justify-self-start rounded-full border border-line px-4 py-2 text-sm font-medium hover:bg-paper-soft disabled:opacity-60"
         >
-          {busy === "save" ? "Saving..." : "Save edits"}
+          {busy === "save"
+            ? "Saving..."
+            : status === "APPROVED"
+              ? "Save and update the live article"
+              : "Save edits"}
         </button>
       </section>
 
@@ -197,6 +246,49 @@ export function ReviewPanel({
             Suggested from payment settings
             {authorTier === "VERIFIED" ? ` incl. +${settings.verifiedBonusPct}% verified bonus` : ""}
             . The writer sees this figure the moment you approve.
+          </span>
+        </label>
+
+        <label className="grid gap-1 text-sm">
+          <span className="font-medium">Where it goes on the front page</span>
+          <select
+            name="homeSlot"
+            value={slot}
+            onChange={(e) => {
+              setSlot(e.target.value);
+              // Already live? Move it straight away rather than making the
+              // editor re-publish to apply a placement.
+              if (status === "APPROVED") {
+                void fetch(`/api/editorial/${article.id}/home-slot`, {
+                  method: "PATCH",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ homeSlot: e.target.value || null }),
+                }).then(() => {
+                  setMessage({
+                    kind: "ok",
+                    text: e.target.value
+                      ? `Moved to ${SLOT_LABEL[e.target.value]} on the front page.`
+                      : "Taken off its fixed place. The front page will choose for itself.",
+                  });
+                  router.refresh();
+                });
+              }
+            }}
+            className="w-full rounded-lg border border-line px-3 py-2 text-sm outline-none focus:border-navy sm:w-72"
+          >
+            <option value="">Let the front page decide</option>
+            {Object.entries(SLOT_LABEL).map(([k, label]) => (
+              <option key={k} value={k}>
+                {label}
+              </option>
+            ))}
+          </select>
+          <span className="text-xs text-ink-soft">
+            Arrange every position at once on the{" "}
+            <Link href="/editorial/front-page" className="underline hover:text-ink">
+              Front page
+            </Link>{" "}
+            screen.
           </span>
         </label>
 
@@ -239,7 +331,9 @@ export function ReviewPanel({
                 {busy === "payout" ? "Saving..." : "Update payout only"}
               </button>
               <Link
-                href={`/article/${article.slug}`}
+                href={liveHref}
+                target="_blank"
+                rel="noreferrer"
                 className="rounded-full border border-line px-4 py-2 text-sm font-medium hover:bg-paper-soft"
               >
                 View live

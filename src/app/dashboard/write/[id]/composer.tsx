@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { FormatToolbar } from "@/components/format-toolbar";
+import { CATEGORIES } from "@/lib/i18n";
 import Link from "next/link";
 import { StatusPill } from "@/components/ui";
 
@@ -22,7 +24,6 @@ type ArticleState = {
   contactWhatsapp: string;
 };
 
-const CATEGORIES = ["General", "Politics", "Technology", "Culture", "Business"];
 
 export function Composer({
   article,
@@ -48,6 +49,7 @@ export function Composer({
   const [message, setMessage] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
   const [secondKey, setSecondKey] = useState(0);
+  const bodyRef = useRef<HTMLTextAreaElement>(null);
   const [contact, setContact] = useState({
     phone: article.contactPhone,
     whatsapp: article.contactWhatsapp,
@@ -308,15 +310,42 @@ export function Composer({
         </label>
       </div>
 
-      <textarea
-        value={form.body}
-        onChange={(e) => update("body", e.target.value)}
-        disabled={locked}
-        lang={form.language === "BN" ? "bn" : "en"}
-        rows={18}
-        placeholder={"Write your piece here.\n\nBlank line starts a new paragraph. Use ## for a subheading, > for a pull quote and - for a bullet."}
-        className="prose-article w-full rounded-xl border border-line p-4 outline-none focus:border-navy"
-      />
+      <div>
+        <FormatToolbar
+          textareaRef={bodyRef}
+          value={form.body}
+          onChange={(next) => update("body", next)}
+          disabled={locked}
+        />
+        <textarea
+          ref={bodyRef}
+          value={form.body}
+          onChange={(e) => update("body", e.target.value)}
+          onKeyDown={(e) => {
+            // The shortcuts people already have in their fingers.
+            if (!(e.ctrlKey || e.metaKey)) return;
+            const key = e.key.toLowerCase();
+            if (key !== "b" && key !== "i") return;
+            e.preventDefault();
+            const el = bodyRef.current;
+            if (!el) return;
+            const mark = key === "b" ? "**" : "*";
+            const start = el.selectionStart ?? 0;
+            const end = el.selectionEnd ?? 0;
+            const chosen = form.body.slice(start, end) || (key === "b" ? "bold text" : "italic text");
+            update("body", form.body.slice(0, start) + mark + chosen + mark + form.body.slice(end));
+            requestAnimationFrame(() => {
+              el.focus();
+              el.setSelectionRange(start + mark.length, start + mark.length + chosen.length);
+            });
+          }}
+          disabled={locked}
+          lang={form.language === "BN" ? "bn" : "en"}
+          rows={18}
+          placeholder={"Write your piece here.\n\nBlank line starts a new paragraph. Use the buttons above for bold, italics and subtitles."}
+          className="prose-article w-full rounded-b-xl border border-line p-4 outline-none focus:border-navy"
+        />
+      </div>
 
       <section className="rounded-xl border border-line p-4">
         <div className="flex flex-wrap items-center justify-between gap-3">

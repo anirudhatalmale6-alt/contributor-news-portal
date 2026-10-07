@@ -1,5 +1,10 @@
 import Link from "next/link";
-import { featuredArticles, feedArticles, type LocalisedArticle } from "@/lib/articles";
+import {
+  featuredArticles,
+  feedArticles,
+  pinnedArticles,
+  type LocalisedArticle,
+} from "@/lib/articles";
 import { SiteHeader } from "@/components/site-header";
 import { siteSettings } from "@/lib/settings";
 import { banglaFontCss } from "@/lib/fonts";
@@ -60,22 +65,35 @@ function RailItem({
 export async function Feed({ locale, category }: { locale: Locale; category: string }) {
   const copy = t(locale);
   const site = await siteSettings();
-  const [featured, latest] = await Promise.all([
-    category === "All" ? featuredArticles(locale, 5) : Promise.resolve([] as LocalisedArticle[]),
-    feedArticles(locale, category, 22),
+  const home = category === "All";
+  const [featured, latest, pinned] = await Promise.all([
+    home ? featuredArticles(locale, 5) : Promise.resolve([] as LocalisedArticle[]),
+    feedArticles(locale, category, 24),
+    home ? pinnedArticles(locale) : Promise.resolve(new Map<string, LocalisedArticle[]>()),
   ]);
 
+  // Anything an editor pinned is spoken for; the automatic fill never repeats it.
+  const spoken = new Set<string>();
+  for (const list of pinned.values()) for (const a of list) spoken.add(a.href);
+
   const featuredHrefs = new Set(featured.map((a) => a.href));
-  const rest = latest.filter((a) => !featuredHrefs.has(a.href));
+  const rest = latest.filter((a) => !featuredHrefs.has(a.href) && !spoken.has(a.href));
 
   // Both rails are filled before the two pieces under the lead, so a young
   // site with six stories still reads as three columns rather than one column
   // with two empty gutters.
-  const pool = [...featured.slice(1), ...rest];
-  const lead = featured[0] ?? pool.shift() ?? null;
-  const leftRail = pool.splice(0, 3);
-  const rightRail = pool.splice(0, 4);
-  const underLead = pool.splice(0, 2);
+  const pool = [...featured.filter((a) => !spoken.has(a.href)), ...rest];
+  const take = (slot: string, n: number) => {
+    const chosen = (pinned.get(slot) ?? []).slice(0, n);
+    while (chosen.length < n && pool.length) chosen.push(pool.shift()!);
+    return chosen;
+  };
+
+  const lead = (pinned.get("LEAD") ?? [])[0] ?? pool.shift() ?? null;
+  const leftRail = take("LEFT", 3);
+  const rightRail = take("RIGHT", 4);
+  const underLead = take("MIDDLE", 2);
+  const strip = pinned.get("STRIP") ?? [];
   const more = pool;
 
   return (
@@ -88,6 +106,7 @@ export async function Feed({ locale, category }: { locale: Locale; category: str
         activeCategory={category === "All" ? undefined : category}
         teasers
         teaserNever={lead?.href}
+        teaserPinned={strip.map((a) => a.href)}
         teaserExclude={[...leftRail, ...rightRail, ...underLead].map((a) => a.href)}
       />
       <main className={`${SHELL} pb-16`}>
