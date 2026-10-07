@@ -1129,10 +1129,11 @@ def main():
         ap2.fill('input[placeholder^="Payment void"]', "Payment void: unverified claim")
         ap2.click('button:has-text("Take off earnings")')
         ap2.wait_for_selector("text=Deduction taken off", timeout=20000)
-        check(
-            "a deduction lands on the ledger",
-            "unverified claim" in ap2.inner_text("main"),
-        )
+        # The ledger redraws after the save returns, which over the internet is
+        # a beat later than the confirmation message.
+        ap2.wait_for_timeout(SETTLE_MS)
+        ledger = ap2.inner_text("main")
+        check("a deduction lands on the ledger", "unverified claim" in ledger, ledger[:300])
 
         # An editor must not be able to move money at all. (The editor context
         # from the inbox section is closed by now, so this is a fresh one.)
@@ -1148,6 +1149,7 @@ def main():
 
         ap2.click('button:has-text("Remove") >> nth=0')
         ap2.wait_for_selector("text=Entry removed", timeout=20000)
+        ap2.wait_for_timeout(SETTLE_MS)
         check("an entry can be taken back off", "Entry removed" in ap2.inner_text("main"))
         adm2.close()
 
