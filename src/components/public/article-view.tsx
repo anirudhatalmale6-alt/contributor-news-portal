@@ -104,9 +104,13 @@ function renderBody(body: string) {
       out.push(<h3 key={key++}>{inline(line.slice(4), `h3${key}`)}</h3>);
       continue;
     }
-    if (line.startsWith("## ")) {
+    // "## " is what the toolbar writes, but people type "# " as well, and it
+    // was printing the hash as if it were part of the sentence. Both are the
+    // same heading here: the page already has its h1 in the masthead.
+    if (line.startsWith("## ") || line.startsWith("# ")) {
       flushAll();
-      out.push(<h2 key={key++}>{inline(line.slice(3), `h2${key}`)}</h2>);
+      const text = line.startsWith("## ") ? line.slice(3) : line.slice(2);
+      out.push(<h2 key={key++}>{inline(text, `h2${key}`)}</h2>);
       continue;
     }
     if (/^[-*] /.test(line)) {

@@ -1866,7 +1866,7 @@ def main():
         # Write the English version there and prove it saves.
         ep5.fill('section#translation input >> nth=0', "A witness named, and the desk rang them")
         ep5.fill('section#translation textarea', "The English version, written by the desk.")
-        ep5.click('section#translation button:has-text("Save translation")')
+        ep5.click('section#translation button:has-text("translation")')
         ep5.wait_for_selector("text=version saved", timeout=20000)
         check("an editor can write the missing version themselves", True)
         shot(ep5, "42-translation-desk.png")

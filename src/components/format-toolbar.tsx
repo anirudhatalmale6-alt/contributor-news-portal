@@ -85,7 +85,7 @@ export function FormatToolbar({
     const lineStart = value.lastIndexOf("\n", Math.max(0, start - 1)) + 1;
     const lineEnd = value.indexOf("\n", start) === -1 ? value.length : value.indexOf("\n", start);
     const line = value.slice(lineStart, lineEnd);
-    const stripped = line.replace(/^(#{2,3} |> |- )/, "");
+    const stripped = line.replace(/^(#{1,3} |> |- )/, "");
     const already = line.startsWith(action.text);
     const nextLine = already ? stripped : action.text + stripped;
     const next = value.slice(0, lineStart) + nextLine + value.slice(lineEnd);
