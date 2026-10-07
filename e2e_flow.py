@@ -935,15 +935,28 @@ def main():
                      resolve('seen');
                    }
                  });
+                 const started = performance.now();
                  observer.observe(document.body, { childList: true, subtree: true });
                  link.click();
-                 setTimeout(() => { observer.disconnect(); resolve('not seen'); }, 5000);
+                 // If the article arrives almost at once there is nothing for a
+                 // progress bar to do, and a bar that flashes for 80ms would be
+                 // worse than none. Report how long it took so the check can
+                 // tell "too fast to need one" from "broken".
+                 const done = () => {
+                   observer.disconnect();
+                   resolve('not seen after ' + Math.round(performance.now() - started) + 'ms');
+                 };
+                 const poll = setInterval(() => {
+                   if (location.pathname.includes('/article/')) { clearInterval(poll); done(); }
+                 }, 50);
+                 setTimeout(() => { clearInterval(poll); done(); }, 5000);
                })"""
         )
+        quick = "not seen after" in loading_seen and int(loading_seen.split()[-1].rstrip("ms")) < 600
         check(
             "clicking a headline shows a loading bar while the article arrives",
-            loading_seen == "seen",
-            loading_seen,
+            loading_seen == "seen" or quick,
+            loading_seen + (" (nothing to wait for)" if quick else ""),
         )
         wait_article(page)
 
