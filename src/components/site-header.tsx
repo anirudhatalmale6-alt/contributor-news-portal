@@ -53,6 +53,13 @@ export async function SiteHeader({
   const altHref = switchHref ?? localePath(alt);
   const base = localePath(locale);
 
+  // An uploaded masthead is a photograph like any other and was being sent at
+  // full size on every single page. The packaged default is already small.
+  const logo = site.logoUrl || "/brand/the-document-masthead.png";
+  const uploaded = logo.startsWith("/media/");
+  const logoSrc = uploaded ? `${logo}?w=640` : logo;
+  const logoSet = uploaded ? `${logo}?w=320 320w, ${logo}?w=640 640w` : undefined;
+
   return (
     <>
       {/* The strip sits above the masthead. It used to sit below the section
@@ -71,7 +78,9 @@ export async function SiteHeader({
                 image optimiser round-trip. */}
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src={site.logoUrl || "/brand/the-document-masthead.png"}
+              src={logoSrc}
+              srcSet={logoSet}
+              sizes="(min-width: 640px) 320px, 220px"
               alt={siteName}
               width={1000}
               height={294}

@@ -43,7 +43,14 @@ export async function POST(req: Request) {
     }
 
     const { url } = await saveUpload(file);
-    const img = `<img src="${escape(url)}" alt="${escape(alt)}" style="display:block;width:100%;height:auto">`;
+    // Served at a sensible width like every other picture on the site, with a
+    // smaller one offered to phones.
+    const img =
+      `<img src="${escape(url)}?w=1200" ` +
+      `srcset="${escape(url)}?w=480 480w, ${escape(url)}?w=800 800w, ${escape(url)}?w=1200 1200w" ` +
+      `sizes="(min-width: 1024px) 970px, 100vw" ` +
+      `alt="${escape(alt)}" loading="lazy" decoding="async" ` +
+      `style="display:block;width:100%;height:auto">`;
     const html = link
       ? `<a href="${escape(link)}" target="_blank" rel="noopener sponsored">${img}</a>`
       : img;
