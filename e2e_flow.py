@@ -1481,6 +1481,25 @@ def main():
             "the save button says it updates the live article",
             "Save and update the live article" in np.inner_text("main"),
         )
+        # A Bangla piece must be editable in a Bengali face, not in boxes.
+        faces = np.evaluate(
+            """() => {
+                 const ta = document.querySelector('section textarea');
+                 if (!ta) return { lang: '', font: '' };
+                 return { lang: ta.getAttribute('lang') || '', font: getComputedStyle(ta).fontFamily };
+               }"""
+        )
+        check(
+            "the editor's copy box is marked with the piece's language",
+            faces["lang"] in ("bn", "en"),
+            str(faces),
+        )
+        if faces["lang"] == "bn":
+            check(
+                "and a Bangla piece is edited in a Bengali face",
+                any(n in faces["font"] for n in ("Hind Siliguri", "Anek Bangla", "Tiro Bangla", "Bengali")),
+                faces["font"],
+            )
         live = np.locator('a:has-text("View live")').first.get_attribute("href")
         r = np.request.get(f"{BASE}{live}")
         check("the View live link goes to a real page", r.status == 200, f"{live} -> {r.status}")

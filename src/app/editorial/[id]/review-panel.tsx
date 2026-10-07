@@ -180,11 +180,13 @@ export function ReviewPanel({
         <input
           value={form.title}
           onChange={(e) => update("title", e.target.value)}
+          lang={article.language === "BN" ? "bn" : "en"}
           className="w-full border-b border-line pb-2 font-serif text-xl font-bold outline-none focus:border-navy"
         />
         <input
           value={form.dek}
           onChange={(e) => update("dek", e.target.value)}
+          lang={article.language === "BN" ? "bn" : "en"}
           placeholder="Standfirst"
           className="w-full rounded-lg border border-line px-3 py-2 text-sm outline-none focus:border-navy"
         />
@@ -212,6 +214,7 @@ export function ReviewPanel({
             ref={bodyRef}
             value={form.body}
             onChange={(e) => update("body", e.target.value)}
+            lang={article.language === "BN" ? "bn" : "en"}
             rows={16}
             className="prose-article w-full rounded-b-xl border border-line p-4 outline-none focus:border-navy"
           />
