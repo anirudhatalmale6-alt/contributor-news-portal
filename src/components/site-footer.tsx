@@ -14,12 +14,18 @@ export async function SiteFooter({ locale = "EN" }: { locale?: Locale }) {
       <div className={`${SHELL} flex flex-col gap-3 py-8 text-sm text-ink-soft sm:flex-row sm:items-center sm:justify-between`}>
         <p className="flex items-center gap-2">
           {/* eslint-disable-next-line @next/next/no-img-element */}
+          {/* 24px tall, so a 320px copy is already generous. */}
           <img
-            src={site.logoUrl || "/brand/the-document-mark.png"}
+            src={
+              site.logoUrl?.startsWith("/media/")
+                ? `${site.logoUrl}?w=320`
+                : site.logoUrl || "/brand/the-document-mark.png"
+            }
             alt=""
             width={214}
             height={235}
             loading="lazy"
+            decoding="async"
             className="h-6 w-auto"
           />
           <span>
