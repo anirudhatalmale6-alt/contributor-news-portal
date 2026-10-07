@@ -37,15 +37,20 @@ export default async function LoginPage() {
           </Link>
         </p>
 
-        <div className="mt-8 rounded-xl border border-line bg-paper-soft p-4 text-xs text-ink-soft">
-          <p className="font-medium text-ink">Demo logins (password: demo1234)</p>
-          <ul className="mt-2 grid gap-1">
-            <li>admin@thedocument.test - Owner (site settings)</li>
-            <li>editor@thedocument.test - Editor (newsroom only)</li>
-            <li>maya@thedocument.test - Verified contributor</li>
-            <li>sam@thedocument.test - General contributor</li>
-          </ul>
-        </div>
+        {/* The demo accounts include an owner, and their password is printed
+            here. That is fine on a laptop and unacceptable on a public site, so
+            it only appears when SHOW_DEMO_LOGINS is deliberately switched on. */}
+        {process.env.SHOW_DEMO_LOGINS === "true" ? (
+          <div className="mt-8 rounded-xl border border-line bg-paper-soft p-4 text-xs text-ink-soft">
+            <p className="font-medium text-ink">Demo logins (password: demo1234)</p>
+            <ul className="mt-2 grid gap-1">
+              <li>admin@thedocument.test - Owner (site settings)</li>
+              <li>editor@thedocument.test - Editor (newsroom only)</li>
+              <li>maya@thedocument.test - Verified contributor</li>
+              <li>sam@thedocument.test - General contributor</li>
+            </ul>
+          </div>
+        ) : null}
       </main>
     </>
   );

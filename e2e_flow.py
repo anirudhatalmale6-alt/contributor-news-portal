@@ -1303,6 +1303,14 @@ def main():
         # social provider is actually configured.
         if "Continue with" in buttons:
             check("Google sign-in is still offered", "Continue with Google" in buttons)
+        # The demo accounts include an owner; their password must never be
+        # printed on a site the public can reach.
+        r = op.request.get(f"{BASE}/login")
+        check(
+            "the live sign-in page does not print the demo passwords",
+            ("demo1234" in r.text()) == (os.environ.get("SHOW_DEMO_LOGINS") == "true"),
+            "demo1234 visible" if "demo1234" in r.text() else "hidden",
+        )
         out.close()
 
         # --- 11. mobile ------------------------------------------------------
