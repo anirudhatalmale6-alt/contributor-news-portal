@@ -634,6 +634,14 @@ def main():
         expect(row.locator('button:has-text("On the front page")')).to_be_visible(timeout=20000)
         check("an editor can put a published piece on the front page", True)
 
+        # A piece pinned to the lead on the Front page screen outranks the
+        # featured flag, by design. Clear any pin first, or this check is really
+        # testing whatever an earlier run left behind.
+        go(page, f"{BASE}/editorial/front-page")
+        while page.locator('button:has-text("Remove")').count():
+            page.locator('button:has-text("Remove")').first.click()
+            page.wait_for_timeout(SETTLE_MS)
+
         go(page, f"{BASE}/en")
         # The rails have h2 headings of their own now, so pin to the first
         # article card - that is the lead whatever the surrounding furniture.
