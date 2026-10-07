@@ -5,6 +5,7 @@ import { SiteHeader } from "@/components/site-header";
 import { StaffNav } from "@/components/staff-nav";
 import { PeopleTable } from "./people-table";
 import { paymentSettings } from "@/lib/settings";
+import { earningsByUser } from "@/lib/earnings";
 import { maskedDestination, methodLabel } from "@/lib/payout";
 
 export const metadata = { title: "People" };
@@ -18,7 +19,7 @@ export default async function PeoplePage() {
   if (!user) redirect("/login");
   if (!isStaff(user.role)) redirect("/dashboard");
 
-  const [users, settings, sums] = await Promise.all([
+  const [users, settings, earned] = await Promise.all([
     prisma.user.findMany({
       orderBy: { createdAt: "asc" },
       select: {
@@ -40,13 +41,8 @@ export default async function PeoplePage() {
       },
     }),
     paymentSettings(),
-    prisma.article.groupBy({
-      by: ["authorId"],
-      where: { status: "APPROVED" },
-      _sum: { payoutCents: true },
-    }),
+    earningsByUser(),
   ]);
-  const earned = new Map(sums.map((s) => [s.authorId, s._sum.payoutCents ?? 0]));
 
   return (
     <>
@@ -87,7 +83,7 @@ export default async function PeoplePage() {
             payoutMethod: u.payout ? methodLabel(u.payout.method) : null,
             payoutMasked: u.payout ? maskedDestination(u.payout) : "",
             articles: u._count.articles,
-            earnedCents: earned.get(u.id) ?? 0,
+            earnedCents: earned.get(u.id)?.totalCents ?? 0,
           }))}
         />
       </main>

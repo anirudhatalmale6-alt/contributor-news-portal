@@ -14,6 +14,47 @@
   unicode-range: U+0951-0952, U+0964-0965, U+0980-09FE, U+200C-200D, U+20B9, U+25CC;
 }
 
+
+/*
+  The English side reads like the Guardian: a crisp serif for headlines, a
+  news-text Egyptian for body copy, and a humanist sans for the furniture.
+  Their own faces (Guardian Headline, Guardian Text Egyptian, Guardian Text
+  Sans) are licensed to them, so these are the closest freely licensed
+  equivalents - self-hosted, like everything else here, so the pages still make
+  no third-party requests.
+*/
+@font-face {
+  font-family: "Source Serif 4";
+  src: url("/fonts/source-serif-4.woff2") format("woff2");
+  font-weight: 200 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Source Sans 3";
+  src: url("/fonts/source-sans-3.woff2") format("woff2");
+  font-weight: 200 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Noticia Text";
+  src: url("/fonts/noticia-text-400.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Noticia Text";
+  src: url("/fonts/noticia-text-700.woff2") format("woff2");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
 /* Reader-font options. Prothom Alo's own face (Shurjo) is licensed to them, so
    these are the closest free equivalents, self-hosted like everything else. */
 @font-face {
@@ -72,9 +113,13 @@
 */
 @theme {
   --font-sans:
-    ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial,
-    "Noto Sans Bengali", sans-serif;
-  --font-serif: ui-serif, Georgia, Cambria, "Times New Roman", "Noto Serif Bengali", serif;
+    "Source Sans 3", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, "Noto Sans Bengali", sans-serif;
+  /* Headlines and anything set in the display face. */
+  --font-serif: "Source Serif 4", ui-serif, Georgia, Cambria, "Times New Roman",
+    "Noto Serif Bengali", serif;
+  /* Body copy only: an Egyptian cut for long reading, as on the Guardian. */
+  --font-reading: "Noticia Text", Georgia, Cambria, "Times New Roman", serif;
 
   /* Taken off the masthead: the navy of "Document" and the red of the D swoosh. */
   --color-ink: #0d1726;
@@ -104,13 +149,17 @@ body {
 }
 
 .prose-article {
-  font-family: var(--font-serif);
+  font-family: var(--font-reading);
   font-size: 1.125rem;
-  line-height: 1.75;
+  line-height: 1.72;
   color: #1b2230;
 }
 .prose-article p {
   margin-block: 1.1em;
+}
+.prose-article h2,
+.prose-article h3 {
+  font-family: var(--font-serif);
 }
 .prose-article h2 {
   font-size: 1.5rem;
@@ -169,8 +218,13 @@ body {
   font-family: var(--bn-reading-font, "Hind Siliguri"), "Noto Sans Bengali", var(--font-sans);
 }
 
+/* The English display face has no Bengali glyphs, and a rule set directly on a
+   heading beats one inherited from its container - so the Bangla headings have
+   to be named here too, or they would quietly drop the owner's chosen face. */
 [lang="bn"] .font-serif,
-[lang="bn"] .prose-article {
+[lang="bn"] .prose-article,
+[lang="bn"] .prose-article h2,
+[lang="bn"] .prose-article h3 {
   font-family: var(--bn-reading-font, "Hind Siliguri"), "Noto Serif Bengali", var(--font-serif);
 }
 

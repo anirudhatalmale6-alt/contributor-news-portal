@@ -1,7 +1,7 @@
-"""Proves the live site hands off to Google with the client's real app.
+"""Proves the live site hands off to Google and Facebook with the real apps.
 
-Clicks "Continue with Google" on https://thedocument.net and intercepts the
-outbound request. Nothing is ever sent to Google: the request is aborted the
+Clicks each button on https://thedocument.net and intercepts the outbound
+request. Nothing is ever sent to either provider: the request is aborted the
 moment its URL has been read.
 
     BASE_URL=https://thedocument.net GATE_PASSWORD=... python3 verify_google_live.py
@@ -19,7 +19,8 @@ GATE = (
     if os.environ.get("GATE_PASSWORD")
     else None
 )
-EXPECT_ID = os.environ.get("EXPECT_CLIENT_ID", "")
+EXPECT_GOOGLE = os.environ.get("EXPECT_GOOGLE_ID", "")
+EXPECT_FACEBOOK = os.environ.get("EXPECT_FACEBOOK_ID", "")
 
 seen = {}
 ok = True
@@ -39,32 +40,47 @@ with sync_playwright() as pw:
     def intercept(route):
         url = route.request.url
         if "accounts.google.com" in url:
-            seen["url"] = url
+            seen["google"] = url
+            route.abort()
+            return
+        if "facebook.com/" in url and "oauth" in url:
+            seen["facebook"] = url
             route.abort()
             return
         route.continue_()
 
     ctx.route("**/*", intercept)
 
-    page.goto(f"{BASE}/login", wait_until="domcontentloaded")
-    page.wait_for_timeout(1800)
-    check("the Google button is on the sign-in page", page.locator('text=Continue with Google').count() > 0)
-    page.click('text=Continue with Google')
-    page.wait_for_timeout(5000)
-
-    check("pressing it hands off to Google", "url" in seen, str(seen))
-    if "url" in seen:
-        q = parse_qs(urlparse(seen["url"]).query)
-        cid = (q.get("client_id") or [""])[0]
-        redirect = (q.get("redirect_uri") or [""])[0]
-        check("it carries the real client id", cid.startswith(EXPECT_ID[:20]) if EXPECT_ID else bool(cid), cid)
+    for provider, label, expect in (
+        ("google", "Google", EXPECT_GOOGLE),
+        ("facebook", "Facebook", EXPECT_FACEBOOK),
+    ):
+        page.goto(f"{BASE}/login", wait_until="domcontentloaded")
+        page.wait_for_timeout(1800)
         check(
-            "the callback it asks for is this site's",
-            redirect == f"{BASE}/api/auth/callback/google",
-            redirect,
+            f"the {label} button is on the sign-in page",
+            page.locator(f"text=Continue with {label}").count() > 0,
         )
-        check("the hand-off is over https", seen["url"].startswith("https://accounts.google.com/"))
-    page.screenshot(path=os.path.join(os.path.dirname(os.path.abspath(__file__)), "shots13", "h-login-google.png"))
+        page.click(f"text=Continue with {label}")
+        page.wait_for_timeout(5000)
+
+        check(f"pressing it hands off to {label}", provider in seen, str(seen.keys()))
+        if provider in seen:
+            q = parse_qs(urlparse(seen[provider]).query)
+            cid = (q.get("client_id") or [""])[0]
+            redirect = (q.get("redirect_uri") or [""])[0]
+            check(
+                f"it carries the real {label} app id",
+                cid.startswith(expect[:20]) if expect else bool(cid),
+                cid,
+            )
+            check(
+                f"the callback {label} is asked for is this site's",
+                redirect == f"{BASE}/api/auth/callback/{provider}",
+                redirect,
+            )
+            check(f"the {label} hand-off is over https", seen[provider].startswith("https://"))
+
     browser.close()
 
 print("OK" if ok else "FAILED")

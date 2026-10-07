@@ -1,11 +1,14 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { canChangeRole, currentUser, isStaff } from "@/lib/rbac";
+import { canChangeRole, currentUser, isAdmin, isStaff } from "@/lib/rbac";
 import { SiteHeader } from "@/components/site-header";
 import { StaffNav } from "@/components/staff-nav";
 import { ProfileForm } from "@/components/profile-form";
 import { SuspendPanel } from "./suspend-panel";
+import { EarningsPanel } from "./earnings-panel";
+import { earningsFor } from "@/lib/earnings";
+import { paymentSettings } from "@/lib/settings";
 import { StatusPill, TierBadge } from "@/components/ui";
 import { longDate } from "@/lib/format";
 
@@ -47,6 +50,26 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
   });
   if (!person) notFound();
 
+  // Only an admin may move money, so only an admin pays for these queries.
+  const mayAdjust = isAdmin(me.role);
+  const [totals, ledger, payment] = mayAdjust
+    ? await Promise.all([
+        earningsFor(person.id),
+        prisma.earningAdjustment.findMany({
+          where: { userId: person.id },
+          orderBy: { createdAt: "desc" },
+          select: {
+            id: true,
+            amountCents: true,
+            reason: true,
+            createdAt: true,
+            createdBy: { select: { name: true } },
+          },
+        }),
+        paymentSettings(),
+      ])
+    : [null, [], null];
+
   const mayEdit = person.id !== me.id && canChangeRole(me.role, person.role, person.role);
 
   return (
@@ -85,6 +108,19 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
           </p>
         ) : (
           <div className="mt-6 grid gap-6">
+            {mayAdjust && totals && payment ? (
+              <EarningsPanel
+                userId={person.id}
+                name={person.name}
+                currency={payment.currency}
+                initialTotals={totals}
+                initialEntries={ledger.map((e) => ({
+                  ...e,
+                  createdAt: e.createdAt.toISOString(),
+                }))}
+              />
+            ) : null}
+
             <SuspendPanel
               userId={person.id}
               name={person.name}

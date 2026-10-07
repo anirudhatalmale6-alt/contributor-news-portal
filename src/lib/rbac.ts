@@ -99,6 +99,18 @@ export async function requireOwner(): Promise<SessionUser> {
   return user;
 }
 
+/** Runs the newsroom's money: payouts and earnings corrections, not design. */
+export const isAdmin = (role: string) => role === "SUPERADMIN" || role === "ADMIN";
+
+/** Throws 403 unless the signed-in user is an admin or the owner. */
+export async function requireAdmin(): Promise<SessionUser> {
+  const user = await requireUser();
+  if (!isAdmin(user.role)) {
+    throw new HttpError(403, "Only an admin can change what a contributor has earned");
+  }
+  return user;
+}
+
 /** Throws 403 unless the signed-in user is staff of any kind. */
 export async function requireStaff(): Promise<SessionUser> {
   const user = await requireUser();

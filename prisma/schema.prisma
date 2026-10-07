@@ -83,16 +83,18 @@ model User {
   suspendedBy     User?     @relation("suspender", fields: [suspendedById], references: [id])
   suspended       User[]    @relation("suspender")
 
-  createdAt      DateTime             @default(now())
-  articles       Article[]            @relation("author")
-  reviewed       Article[]            @relation("reviewer")
-  accounts       OAuthAccount[]
-  reviews        Review[]
-  payout         PayoutProfile?
-  translations   ArticleTranslation[] @relation("translator")
-  threads        ThreadMember[]
-  sent           InboxMessage[]       @relation("sender")
-  startedThreads InboxThread[]        @relation("threadStarter")
+  createdAt       DateTime             @default(now())
+  articles        Article[]            @relation("author")
+  reviewed        Article[]            @relation("reviewer")
+  accounts        OAuthAccount[]
+  reviews         Review[]
+  payout          PayoutProfile?
+  translations    ArticleTranslation[] @relation("translator")
+  threads         ThreadMember[]
+  sent            InboxMessage[]       @relation("sender")
+  startedThreads  InboxThread[]        @relation("threadStarter")
+  adjustments     EarningAdjustment[]  @relation("adjusted")
+  adjustmentsMade EarningAdjustment[]  @relation("adjuster")
 }
 
 /// Where a contributor wants their payouts sent. Visible to the contributor
@@ -327,4 +329,27 @@ model InboxMessage {
   createdAt DateTime @default(now())
 
   @@index([threadId, createdAt])
+}
+
+/// A hand-made correction to what a contributor has earned: a bonus for a piece
+/// that did more than its payout, or a deduction when an earning is voided.
+///
+/// Kept as its own signed ledger rather than by editing the payout on an
+/// article, because the payout is what an editor agreed for that piece and the
+/// history of it should stay readable afterwards.
+model EarningAdjustment {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation("adjusted", fields: [userId], references: [id], onDelete: Cascade)
+
+  /// Signed minor units. Positive adds to the total, negative takes away.
+  amountCents Int
+  /// Required: whoever reads the ledger later needs to know why.
+  reason      String
+
+  createdById String?
+  createdBy   User?    @relation("adjuster", fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt   DateTime @default(now())
+
+  @@index([userId, createdAt])
 }

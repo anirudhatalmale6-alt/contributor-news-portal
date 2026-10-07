@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { currentUser, isStaff } from "@/lib/rbac";
 import { money, timeAgo } from "@/lib/format";
 import { paymentSettings } from "@/lib/settings";
+import { earningsTotal } from "@/lib/earnings";
 import { SiteHeader } from "@/components/site-header";
 import { StaffNav } from "@/components/staff-nav";
 import { StatCard, StatusPill, TierBadge } from "@/components/ui";
@@ -21,24 +22,44 @@ const TABS = [
 export default async function EditorialPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string }>;
+  searchParams: Promise<{ status?: string; q?: string }>;
 }) {
   const user = await currentUser();
   if (!user) redirect("/login");
   if (!isStaff(user.role)) redirect("/dashboard");
 
-  const { status = "SUBMITTED" } = await searchParams;
-  const where =
-    status === "ALL"
+  const { status = "SUBMITTED", q = "" } = await searchParams;
+  const term = q.trim();
+  const where = {
+    ...(status === "ALL"
       ? {}
-      : { status: status as "SUBMITTED" | "APPROVED" | "REJECTED" | "DRAFT" };
+      : { status: status as "SUBMITTED" | "APPROVED" | "REJECTED" | "DRAFT" }),
+    ...(term
+      ? {
+          OR: [
+            { title: { contains: term, mode: "insensitive" as const } },
+            { author: { name: { contains: term, mode: "insensitive" as const } } },
+          ],
+        }
+      : {}),
+  };
+
+  // A review queue wants the oldest first so nothing waits behind newer work.
+  // A list of published work wants the opposite: the newest piece is the one
+  // most likely to need a correction.
+  const orderBy =
+    status === "APPROVED"
+      ? [{ publishedAt: "desc" as const }, { updatedAt: "desc" as const }]
+      : status === "SUBMITTED"
+        ? [{ submittedAt: "asc" as const }, { updatedAt: "desc" as const }]
+        : [{ updatedAt: "desc" as const }];
 
   const [articles, settings, counts] = await Promise.all([
     prisma.article.findMany({
       where,
-      orderBy: [{ submittedAt: "asc" }, { updatedAt: "desc" }],
+      orderBy,
       include: {
-        author: { select: { name: true, tier: true, role: true } },
+        author: { select: { id: true, name: true, tier: true, role: true } },
         media: { select: { id: true, kind: true } },
         translations: { select: { locale: true } },
       },
@@ -48,24 +69,27 @@ export default async function EditorialPage({
   ]);
 
   const countOf = (s: string) => counts.find((c) => c.status === s)?._count._all ?? 0;
-  const paidOut = await prisma.article.aggregate({
-    where: { status: "APPROVED" },
-    _sum: { payoutCents: true },
-  });
+  const owed = await earningsTotal();
 
   return (
     <>
       <SiteHeader />
       <main className="mx-auto max-w-5xl px-4 pb-16">
         <div className="pt-4">
-          <StaffNav user={user} current="newsroom" />
+          <StaffNav user={user} current={status === "APPROVED" ? "published" : "newsroom"} />
         </div>
 
         <div className="flex flex-wrap items-end justify-between gap-3 border-b border-line py-6">
           <div>
-            <h1 className="font-serif text-2xl font-bold sm:text-3xl">Editorial queue</h1>
+            <h1 className="font-serif text-2xl font-bold sm:text-3xl">
+              {status === "APPROVED" ? "Published articles" : "Editorial queue"}
+            </h1>
             <p className="mt-1 text-sm text-ink-soft">
-              Oldest submissions first, so nothing waits behind newer work.
+              {status === "APPROVED"
+                ? "Newest first. Open any piece to edit it and publish the correction."
+                : status === "SUBMITTED"
+                  ? "Oldest submissions first, so nothing waits behind newer work."
+                  : "Most recently changed first."}
             </p>
           </div>
 
@@ -81,17 +105,21 @@ export default async function EditorialPage({
           <StatCard label="Published" value={String(countOf("APPROVED"))} />
           <StatCard label="Sent back" value={String(countOf("REJECTED"))} />
           <StatCard
-            label="Assigned payouts"
-            value={money(paidOut._sum.payoutCents ?? 0, settings.currency)}
-            hint="Across all published work"
+            label="Owed to contributors"
+            value={money(owed.totalCents, settings.currency)}
+            hint={
+              owed.adjustmentCents
+                ? `Including ${money(owed.adjustmentCents, settings.currency)} in corrections`
+                : "Across all published work"
+            }
           />
         </section>
 
-        <div className="flex flex-wrap gap-2 border-b border-line pb-4">
+        <div className="flex flex-wrap items-center gap-2 border-b border-line pb-4">
           {TABS.map((t) => (
             <Link
               key={t.key}
-              href={`/editorial?status=${t.key}`}
+              href={`/editorial?status=${t.key}${term ? `&q=${encodeURIComponent(term)}` : ""}`}
               className={`rounded-full border px-3 py-1 text-xs font-medium ${
                 t.key === status
                   ? "border-navy bg-navy text-white"
@@ -102,10 +130,38 @@ export default async function EditorialPage({
               {t.key !== "ALL" ? ` (${countOf(t.key)})` : ""}
             </Link>
           ))}
+
+          {/* A search that survives a page reload, because the newsroom will
+              come back to the same piece more than once. */}
+          <form method="GET" className="ml-auto flex items-center gap-2">
+            <input type="hidden" name="status" value={status} />
+            <input
+              name="q"
+              defaultValue={term}
+              placeholder="Search headline or writer"
+              className="w-56 rounded-full border border-line px-3.5 py-1.5 text-xs outline-none focus:border-navy"
+            />
+            <button
+              type="submit"
+              className="rounded-full border border-line px-3 py-1.5 text-xs font-medium hover:bg-paper-soft"
+            >
+              Search
+            </button>
+            {term ? (
+              <Link
+                href={`/editorial?status=${status}`}
+                className="text-xs text-ink-soft hover:text-ink"
+              >
+                Clear
+              </Link>
+            ) : null}
+          </form>
         </div>
 
         {articles.length === 0 ? (
-          <p className="py-16 text-center text-sm text-ink-soft">Nothing in this view.</p>
+          <p className="py-16 text-center text-sm text-ink-soft">
+            {term ? `Nothing matches "${term}" in this view.` : "Nothing in this view."}
+          </p>
         ) : (
           <ul className="grid gap-3 pt-5">
             {articles.map((a) => (
@@ -116,9 +172,11 @@ export default async function EditorialPage({
                       <StatusPill status={a.status} />
                       <span className="text-xs text-ink-soft">
                         {a.category} ·{" "}
-                        {a.submittedAt
-                          ? `submitted ${timeAgo(a.submittedAt)}`
-                          : `edited ${timeAgo(a.updatedAt)}`}
+                        {a.status === "APPROVED" && a.publishedAt
+                          ? `published ${timeAgo(a.publishedAt)}`
+                          : a.submittedAt
+                            ? `submitted ${timeAgo(a.submittedAt)}`
+                            : `edited ${timeAgo(a.updatedAt)}`}
                       </span>
                     </div>
                     <p className="mt-1.5 font-serif text-lg font-bold">

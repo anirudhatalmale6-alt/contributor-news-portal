@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { currentUser } from "@/lib/rbac";
 import { longDate, money, timeAgo } from "@/lib/format";
 import { paymentSettings } from "@/lib/settings";
+import { earningsFor } from "@/lib/earnings";
 import { SiteHeader } from "@/components/site-header";
 import { StaffNav } from "@/components/staff-nav";
 import { StatCard, StatusPill, TierBadge } from "@/components/ui";
@@ -35,7 +36,10 @@ export default async function DashboardPage() {
   ]);
 
   const published = articles.filter((a) => a.status === "APPROVED");
-  const totalCents = published.reduce((sum, a) => sum + a.payoutCents, 0);
+  // One resolver decides this figure, so the desk and the newsroom can never
+  // disagree about what somebody is owed.
+  const earnings = await earningsFor(user.id);
+  const totalCents = earnings.totalCents;
   const inReview = articles.filter((a) => a.status === "SUBMITTED").length;
   const needsWork = articles.filter((a) => a.status === "REJECTED").length;
 
@@ -70,7 +74,15 @@ export default async function DashboardPage() {
           <StatCard
             label="Total earnings"
             value={money(totalCents, settings.currency)}
-            hint="Across every published piece"
+            // A contributor adding up their own articles and getting a different
+            // number would reasonably think the site was wrong.
+            hint={
+              earnings.adjustmentCents
+                ? `${money(earnings.articleCents, settings.currency)} from articles, ${
+                    earnings.adjustmentCents > 0 ? "plus" : "less"
+                  } ${money(Math.abs(earnings.adjustmentCents), settings.currency)} adjusted by the desk`
+                : "Across every published piece"
+            }
             accent
           />
           <StatCard label="Published" value={String(published.length)} hint="Live on the site" />

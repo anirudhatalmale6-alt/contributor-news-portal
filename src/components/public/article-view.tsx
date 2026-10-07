@@ -19,30 +19,82 @@ import {
   t,
 } from "@/lib/i18n";
 
-/** Paragraphs, H2/H3, pull quotes and bullets - the same subset in both languages. */
+/**
+ * Paragraphs, H2/H3, pull quotes and bullets - the same subset in both
+ * languages.
+ *
+ * Read line by line rather than block by block. A contributor who writes a
+ * heading and starts the next line underneath it, without a blank line between,
+ * means a heading followed by a paragraph - not one very long heading.
+ */
 function renderBody(body: string) {
-  return body
-    .replace(/\r\n/g, "\n")
-    .split(/\n{2,}/)
-    .map((raw, i) => {
-      const block = raw.trim();
-      if (!block) return null;
-      if (block.startsWith("### ")) return <h3 key={i}>{block.slice(4)}</h3>;
-      if (block.startsWith("## ")) return <h2 key={i}>{block.slice(3)}</h2>;
-      if (block.startsWith("> ")) {
-        return <blockquote key={i}>{block.replace(/^> ?/gm, "")}</blockquote>;
-      }
-      if (/^[-*] /.test(block)) {
-        return (
-          <ul key={i}>
-            {block.split("\n").map((li, j) => (
-              <li key={j}>{li.replace(/^[-*] /, "")}</li>
-            ))}
-          </ul>
-        );
-      }
-      return <p key={i}>{block}</p>;
-    });
+  const lines = body.replace(/\r\n/g, "\n").split("\n");
+  const out: React.ReactElement[] = [];
+  let para: string[] = [];
+  let bullets: string[] = [];
+  let quote: string[] = [];
+  let key = 0;
+
+  const flushPara = () => {
+    if (para.length) out.push(<p key={key++}>{para.join(" ")}</p>);
+    para = [];
+  };
+  const flushBullets = () => {
+    if (bullets.length) {
+      out.push(
+        <ul key={key++}>
+          {bullets.map((li, i) => (
+            <li key={i}>{li}</li>
+          ))}
+        </ul>,
+      );
+    }
+    bullets = [];
+  };
+  const flushQuote = () => {
+    if (quote.length) out.push(<blockquote key={key++}>{quote.join(" ")}</blockquote>);
+    quote = [];
+  };
+  const flushAll = () => {
+    flushPara();
+    flushBullets();
+    flushQuote();
+  };
+
+  for (const raw of lines) {
+    const line = raw.trim();
+    if (!line) {
+      flushAll();
+      continue;
+    }
+    if (line.startsWith("### ")) {
+      flushAll();
+      out.push(<h3 key={key++}>{line.slice(4)}</h3>);
+      continue;
+    }
+    if (line.startsWith("## ")) {
+      flushAll();
+      out.push(<h2 key={key++}>{line.slice(3)}</h2>);
+      continue;
+    }
+    if (/^[-*] /.test(line)) {
+      flushPara();
+      flushQuote();
+      bullets.push(line.replace(/^[-*] /, ""));
+      continue;
+    }
+    if (line.startsWith(">")) {
+      flushPara();
+      flushBullets();
+      quote.push(line.replace(/^> ?/, ""));
+      continue;
+    }
+    flushBullets();
+    flushQuote();
+    para.push(line);
+  }
+  flushAll();
+  return out;
 }
 
 export async function ArticleView({ locale, slug }: { locale: Locale; slug: string }) {

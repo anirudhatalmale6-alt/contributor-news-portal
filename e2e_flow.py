@@ -7,6 +7,7 @@ Every step asserts, and screenshots land in shots/ at 1280x720 (phone shots at
 390x780) so nothing exceeds the chat image limits.
 """
 
+import re
 import os
 import sys
 import time
@@ -400,6 +401,14 @@ def main():
         page.wait_for_url("**/article/**", timeout=20000)
         wait_article(page)
         check("the Bangla article renders the translated body", BN_BODY[:24] in page.content())
+        headings = page.evaluate(
+            """() => [...document.querySelectorAll('.prose-article h2')].map((h) => h.innerText.length)"""
+        )
+        check(
+            "a heading written straight above its paragraph stays a heading",
+            all(n < 90 for n in headings),
+            str(headings),
+        )
         check("the page is marked as Bangla for screen readers", 'lang="bn"' in page.content())
         font = page.evaluate(
             "getComputedStyle(document.querySelector('.prose-article')).fontFamily"
@@ -908,8 +917,12 @@ def main():
         go(epage, f"{BASE}/inbox/{thread_id}")
         epage.fill("textarea", "Yes please. Send the notes over by Thursday.")
         epage.click('button:has-text("Send reply")')
+        # A `text=` selector can match the streamed RSC payload inside a script
+        # tag, so settle and read what is actually rendered.
         epage.wait_for_selector("text=Send the notes over by Thursday", timeout=20000)
-        check("an editor can reply in the thread", "by Thursday" in epage.content())
+        epage.wait_for_timeout(SETTLE_MS)
+        rendered = epage.inner_text("main")
+        check("an editor can reply in the thread", "by Thursday" in rendered, rendered[:200])
         go(epage, f"{BASE}/inbox")
         check(
             "answering clears the unread badge for the editor",
@@ -1034,6 +1047,109 @@ def main():
         )
         shot(wp, "33-article-wide.png")
         wide.close()
+
+        # --- 10e. published list, and corrections to what someone earned -----
+        adm2 = ctx.browser.new_context(viewport=DESKTOP, http_credentials=GATE)
+        ap2 = adm2.new_page()
+        sign_in(ap2, "admin@thedocument.test", "demo1234")
+
+        go(ap2, f"{BASE}/editorial?status=APPROVED")
+        check(
+            "the newsroom has a published list of its own",
+            "Published articles" in ap2.content() and "Newest first" in ap2.content(),
+        )
+        dates = ap2.evaluate(
+            """() => [...document.querySelectorAll('main ul > li')]
+                 .map((li) => li.innerText)
+                 .filter((t) => t.includes('published'))
+                 .length"""
+        )
+        check("published rows say when they went live", dates >= 1, str(dates))
+
+        # Searching has to survive a reload, so it is a real query string.
+        ap2.fill('input[name="q"]', "ferry")
+        ap2.click('button:has-text("Search")')
+        ap2.wait_for_url("**q=ferry**", timeout=20000)
+        ap2.wait_for_timeout(SETTLE_MS)
+        rows = ap2.inner_text("main")
+        check(
+            "the newsroom list can be searched by headline",
+            "ferry" in rows.lower() and "q=ferry" in ap2.url,
+        )
+        shot(ap2, "34-published-list.png")
+
+        # Earnings corrections. The figure on the contributor's own desk and the
+        # figure in the people list have to move together.
+        def listed_total():
+            """What the people list says this contributor is owed, in minor units."""
+            go(ap2, f"{BASE}/people")
+            ap2.fill('input[placeholder="Search by name, email or phone"]', NEW_EMAIL)
+            ap2.wait_for_timeout(SETTLE_MS)
+            cell = ap2.inner_text("tbody").replace("\u00a0", " ")
+            amounts = re.findall(r"BDT ([\d,]+\.\d{2})", cell)
+            return round(float(amounts[-1].replace(",", "")) * 100) if amounts else 0
+
+        owed_before = listed_total()
+
+        go(ap2, f"{BASE}/people/{NEW_USER_ID[0]}")
+        check("an admin sees an earnings panel on a contributor", "Total owed" in ap2.inner_text("main"))
+
+        ap2.click('button:has-text("Bonus +")')
+        ap2.fill('input[inputmode="decimal"]', "250")
+        ap2.fill('input[placeholder^="Bonus for"]', "Bonus for the flood investigation")
+        ap2.click('button:has-text("Add bonus")')
+        ap2.wait_for_selector("text=Bonus added to their total", timeout=20000)
+        ap2.wait_for_timeout(SETTLE_MS)
+        panel = ap2.inner_text("main")
+        check(
+            "a bonus lands on the ledger with its reason",
+            "flood investigation" in panel,
+            panel[:300],
+        )
+        shot(ap2, "35-earnings-panel.png")
+
+        owed_after = listed_total()
+        check(
+            "the bonus moves the total in the people list by exactly that much",
+            owed_after - owed_before == 25000,
+            f"{owed_before} -> {owed_after}",
+        )
+
+        # A deduction cannot invent a debt.
+        go(ap2, f"{BASE}/people/{NEW_USER_ID[0]}")
+        ap2.click('button:has-text("Deduct -")')
+        ap2.fill('input[inputmode="decimal"]', "999999")
+        ap2.fill('input[placeholder^="Payment void"]', "Too much on purpose")
+        ap2.click('button:has-text("Take off earnings")')
+        ap2.wait_for_selector("text=below zero", timeout=20000)
+        check("a deduction cannot take a total below zero", "below zero" in ap2.inner_text("main"))
+
+        # A real deduction, then take the bonus back out again.
+        ap2.fill('input[inputmode="decimal"]', "50")
+        ap2.fill('input[placeholder^="Payment void"]', "Payment void: unverified claim")
+        ap2.click('button:has-text("Take off earnings")')
+        ap2.wait_for_selector("text=Deduction taken off", timeout=20000)
+        check(
+            "a deduction lands on the ledger",
+            "unverified claim" in ap2.inner_text("main"),
+        )
+
+        # An editor must not be able to move money at all. (The editor context
+        # from the inbox section is closed by now, so this is a fresh one.)
+        ed2 = ctx.browser.new_context(viewport=DESKTOP, http_credentials=GATE)
+        ep3 = ed2.new_page()
+        sign_in(ep3, "editor@thedocument.test", "demo1234")
+        r = ep3.request.post(
+            f"{BASE}/api/admin/users/{NEW_USER_ID[0]}/earnings",
+            data={"amountCents": 10000, "reason": "Editors should not be able to do this"},
+        )
+        check("an editor cannot change what anybody earned", r.status == 403, f"got {r.status}")
+        ed2.close()
+
+        ap2.click('button:has-text("Remove") >> nth=0')
+        ap2.wait_for_selector("text=Entry removed", timeout=20000)
+        check("an entry can be taken back off", "Entry removed" in ap2.inner_text("main"))
+        adm2.close()
 
         # --- 11. mobile ------------------------------------------------------
         mob = ctx.browser.new_context(viewport=PHONE, device_scale_factor=2, http_credentials=GATE)

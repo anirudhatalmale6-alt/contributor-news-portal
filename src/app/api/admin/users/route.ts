@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { earningsByUser } from "@/lib/earnings";
 import { errorResponse, requireStaff } from "@/lib/rbac";
 
 /**
@@ -40,16 +41,11 @@ export async function GET(req: Request) {
       },
     });
 
-    // Lifetime payout per contributor, straight out of the published rows.
-    const sums = await prisma.article.groupBy({
-      by: ["authorId"],
-      where: { status: "APPROVED" },
-      _sum: { payoutCents: true },
-    });
-    const earned = new Map(sums.map((s) => [s.authorId, s._sum.payoutCents ?? 0]));
+    // Article payouts plus any bonuses or deductions, from the one resolver.
+    const earned = await earningsByUser();
 
     return Response.json({
-      users: users.map((u) => ({ ...u, earnedCents: earned.get(u.id) ?? 0 })),
+      users: users.map((u) => ({ ...u, earnedCents: earned.get(u.id)?.totalCents ?? 0 })),
     });
   } catch (err) {
     return errorResponse(err);
