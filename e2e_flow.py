@@ -394,9 +394,11 @@ def main():
         # --- 8b. the same piece on the Bangla side of the site ---------------
         go(page, BASE)
         bn_home = page.content()
-        # The owner removed the seeded demo pieces from his live site, so these
-        # three checks only mean something where the seed is present.
-        seeded = BN_HEADLINE in bn_home or "পুরোনো খালের ওপর নতুন সড়ক" in bn_home
+        # The owner removed the seeded demo pieces from his live site, so the
+        # checks that read them only mean something where the seed is present.
+        # Probe for the demo article itself - BN_HEADLINE is produced by this
+        # very run, so it would say "seeded" on any site at all.
+        seeded = page.request.get(f"{BASE}/article/notun-sorok-puratan-khaler-opore").status == 200
         check(
             "the Bangla front page is in Bangla",
             "সর্বশেষ" in bn_home and ("আজকের আরও খবর" in bn_home or "নির্বাচিত" in bn_home),
