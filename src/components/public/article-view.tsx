@@ -104,9 +104,12 @@ export async function ArticleView({ locale, slug }: { locale: Locale; slug: stri
   const site = await siteSettings();
   const copy = t(locale);
   const alt = other(locale);
-  // Readers see only what an editor put in the Evidence gallery.
+  // Readers see only what an editor put in the Evidence gallery, and never the
+  // cover photo - it is already at the top of the page, and showing it again as
+  // "evidence" is just the same picture twice. With nothing else attached the
+  // whole section disappears rather than standing there empty.
   const evidence = article.media
-    .filter((m) => m.isEvidence)
+    .filter((m) => m.isEvidence && m.url !== article.coverImage)
     .sort((a, b) => a.sortOrder - b.sortOrder);
   // The right panel wants more than the four that used to sit at the foot.
   const related = await relatedArticles(locale, article.id, article.category, 8);
@@ -145,14 +148,16 @@ export async function ArticleView({ locale, slug }: { locale: Locale; slug: stri
           <p className="text-xs font-semibold uppercase tracking-wide text-brand">
             {copy.sections[article.category] ?? article.category}
           </p>
-          <h1 className="balance mt-2 font-serif text-3xl font-bold leading-tight sm:text-4xl">
+          <h1 className="balance mt-2 font-serif text-[28px] font-bold leading-tight sm:text-4xl">
             {article.title}
           </h1>
           {article.dek ? (
-            <p className="mt-3 font-serif text-lg text-ink-soft sm:text-xl">{article.dek}</p>
+            <p className="mt-3 font-serif text-[19px] leading-snug text-ink-soft sm:text-xl">
+              {article.dek}
+            </p>
           ) : null}
 
-          <div className="mt-5 flex flex-wrap items-center gap-x-3 gap-y-2 border-y border-line py-3 text-sm">
+          <div className="mt-5 flex flex-wrap items-center gap-x-3 gap-y-2 border-y border-line py-3 text-[15px] sm:text-sm">
             {article.author.id ? (
               <Link
                 href={
@@ -181,7 +186,7 @@ export async function ArticleView({ locale, slug }: { locale: Locale; slug: stri
                 href={article.counterpartHref}
                 hrefLang={localeMeta[alt].htmlLang}
                 lang={localeMeta[alt].htmlLang}
-                className="ml-auto rounded-full border border-line px-3 py-1 text-xs font-medium text-navy hover:bg-paper-soft"
+                className="rounded-full border border-line px-3 py-1 text-xs font-medium text-navy hover:bg-paper-soft sm:ml-auto"
               >
                 {copy.readInOther}
               </Link>
@@ -208,6 +213,8 @@ export async function ArticleView({ locale, slug }: { locale: Locale; slug: stri
           ) : null}
 
           <div className="prose-article mt-6">{renderBody(article.body)}</div>
+
+          <AdSlot slot="banner" />
 
           {evidence.length > 0 ? (
             <section className="mt-10 rounded-xl border border-line bg-paper-soft p-4 sm:p-5">
@@ -264,6 +271,8 @@ export async function ArticleView({ locale, slug }: { locale: Locale; slug: stri
         {/* Other news, as rectangular blocks down the right. It sticks as you
             read, so there is always somewhere to go next. */}
         <aside className="lg:sticky lg:top-14 lg:self-start lg:border-l lg:border-line lg:pl-8">
+          <AdSlot slot="square" className="mt-6" />
+
           {related.length > 0 ? (
             <section className="pt-6">
               <h2 className="border-b-2 border-ink pb-2 text-xs font-bold uppercase tracking-widest">

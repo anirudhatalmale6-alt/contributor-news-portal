@@ -259,6 +259,10 @@ model SiteSettings {
   adHomeHtml    String  @default("")
   adArticleHtml String  @default("")
   adSectionHtml String  @default("")
+  /// A wide strip across the page, and a square block in a side column. Kept
+  /// separate because an ad network gives you different code for each shape.
+  adBannerHtml  String  @default("")
+  adSquareHtml  String  @default("")
   /// Which Bengali face readers get for article text.
   banglaFont    String  @default("hind-siliguri")
 }

@@ -13,6 +13,8 @@ const schema = z.object({
   logoUrl: z.string().trim().max(500).nullable().optional(),
   adsEnabled: z.boolean().optional(),
   adHomeHtml: z.string().max(4000).optional(),
+  adBannerHtml: z.string().max(4000).optional(),
+  adSquareHtml: z.string().max(4000).optional(),
   adArticleHtml: z.string().max(4000).optional(),
   adSectionHtml: z.string().max(4000).optional(),
   banglaFont: z.enum(["hind-siliguri", "anek-bangla", "tiro-bangla", "noto-serif-bengali"]).optional(),

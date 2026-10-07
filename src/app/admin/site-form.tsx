@@ -16,6 +16,8 @@ type Site = {
   adHomeHtml: string;
   adArticleHtml: string;
   adSectionHtml: string;
+  adBannerHtml: string;
+  adSquareHtml: string;
   banglaFont: string;
 };
 
@@ -222,6 +224,19 @@ export function SiteForm({ settings }: { settings: Site }) {
           <label className="grid gap-1 text-sm">
             <span className="text-xs font-medium text-ink-soft">Section page slot</span>
             <textarea name="adSectionHtml" value={form.adSectionHtml} onChange={set("adSectionHtml")} rows={3} className={`${field} font-mono text-xs`} />
+          </label>
+          <label className="grid gap-1 text-sm">
+            <span className="text-xs font-medium text-ink-soft">
+              Banner, wide strip (runs under the menu on the front and section pages, and
+              part-way down an article)
+            </span>
+            <textarea name="adBannerHtml" value={form.adBannerHtml} onChange={set("adBannerHtml")} rows={3} className={`${field} font-mono text-xs`} />
+          </label>
+          <label className="grid gap-1 text-sm">
+            <span className="text-xs font-medium text-ink-soft">
+              Square, 300x250 (sits in the right-hand column beside the news)
+            </span>
+            <textarea name="adSquareHtml" value={form.adSquareHtml} onChange={set("adSquareHtml")} rows={3} className={`${field} font-mono text-xs`} />
           </label>
         </div>
       </section>

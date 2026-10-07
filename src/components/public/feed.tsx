@@ -20,16 +20,16 @@ function RailItem({
 }) {
   const copy = t(locale);
   return (
-    <Link href={article.href} className="group block border-t border-line pt-3 first:border-t-0 first:pt-0">
+    <Link href={article.href} className="group block border-t border-line pt-4 first:border-t-0 first:pt-0">
       <span className="flex gap-3">
         <span className="min-w-0 flex-1">
-          <span className="block text-[11px] font-semibold uppercase tracking-wide text-brand">
+          <span className="block text-[12px] font-semibold uppercase tracking-wide text-brand lg:text-[11px]">
             {copy.sections[article.category] ?? article.category}
           </span>
-          <span className="mt-0.5 block font-serif text-[15px] font-bold leading-snug group-hover:underline">
+          <span className="mt-0.5 block font-serif text-[17px] font-bold leading-snug group-hover:underline lg:text-base">
             {article.title}
           </span>
-          <span className="mt-1 block text-xs text-ink-soft">{article.author.name}</span>
+          <span className="mt-1 block text-[13px] text-ink-soft">{article.author.name}</span>
         </span>
         {thumb && article.coverImage ? (
           // eslint-disable-next-line @next/next/no-img-element
@@ -37,7 +37,7 @@ function RailItem({
             src={article.coverImage}
             alt=""
             loading="lazy"
-            className="size-16 shrink-0 rounded object-cover"
+            className="size-24 shrink-0 rounded object-cover sm:size-28 lg:size-20"
           />
         ) : null}
       </span>
@@ -91,14 +91,15 @@ export async function Feed({ locale, category }: { locale: Locale; category: str
         teaserExclude={[...leftRail, ...rightRail, ...underLead].map((a) => a.href)}
       />
       <main className={`${SHELL} pb-16`}>
+        <AdSlot slot="banner" className="mb-0 mt-4" />
         {!lead ? (
           <p className="py-16 text-center text-ink-soft">{copy.nothingHere}</p>
         ) : (
           <div className="pt-6">
             <div className="grid gap-6 lg:grid-cols-[minmax(0,230px)_minmax(0,1fr)_minmax(0,300px)] lg:gap-7">
               {/* Left rail: what else is running today. */}
-              <aside className="order-2 grid content-start gap-3 lg:order-1">
-                <h2 className="text-[11px] font-bold uppercase tracking-widest text-ink-soft">
+              <aside className="order-2 grid content-start gap-3 pt-2 lg:order-1 lg:pt-0">
+                <h2 className="border-b-2 border-ink pb-1.5 text-xs font-bold uppercase tracking-widest">
                   {copy.alsoToday}
                 </h2>
                 {leftRail.map((a) => (
@@ -119,13 +120,14 @@ export async function Feed({ locale, category }: { locale: Locale; category: str
               </div>
 
               {/* Right rail: further reading, then the advertising slot. */}
-              <aside className="order-3 grid content-start gap-3">
-                <h2 className="text-[11px] font-bold uppercase tracking-widest text-ink-soft">
+              <aside className="order-3 grid content-start gap-3 pt-2 lg:pt-0">
+                <h2 className="border-b-2 border-ink pb-1.5 text-xs font-bold uppercase tracking-widest">
                   {featured.length > 1 ? copy.featured : copy.moreFromContributors}
                 </h2>
                 {rightRail.map((a) => (
                   <RailItem key={a.href} article={a} locale={locale} />
                 ))}
+                <AdSlot slot="square" />
                 <AdSlot slot="home" />
               </aside>
             </div>

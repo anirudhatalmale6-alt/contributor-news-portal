@@ -13,44 +13,54 @@ const ROLE_LABEL: Record<string, string> = {
 };
 
 /**
- * A quiet strip under the masthead telling whoever is signed in that they are,
+ * A dark strip across the very top telling whoever is signed in that they are,
  * and as whom. Sessions last 30 days, so without this a contributor on a shared
  * machine has no way of noticing they are still logged in as someone else.
+ *
+ * One line on every width. On a phone the wording shortens and the links scroll
+ * sideways rather than wrapping into a second and third row, which is what made
+ * it look like a box of loose parts.
  */
 export async function SignedInBar() {
   const user = await currentUser();
   if (!user) return null;
   const [unread, updates] = await Promise.all([unreadCount(user), unreadNotifications(user.id)]);
 
+  const badge = (n: number) =>
+    n ? (
+      <span className="ml-1 rounded-full bg-brand px-1.5 py-0.5 text-[10px] font-bold text-white">
+        {n}
+      </span>
+    ) : null;
+
+  const link = "shrink-0 whitespace-nowrap font-medium text-white/90 hover:text-white";
+
   return (
-    <div className="border-b border-line bg-paper-soft">
-      <div className={`${SHELL} flex flex-wrap items-center gap-x-3 gap-y-1 py-2 text-xs text-ink-soft`}>
-        <span>
-          You are logged in as <span className="font-semibold text-ink">{user.name}</span> (
-          {ROLE_LABEL[user.role] ?? user.role})
+    <div className="bg-navy text-white">
+      <div className={`${SHELL} flex h-9 items-center gap-3 text-xs sm:h-10 sm:gap-4 sm:text-[13px]`}>
+        <span className="min-w-0 truncate">
+          <span className="hidden sm:inline">You are logged in as </span>
+          <span className="sm:hidden">Signed in: </span>
+          <span className="font-semibold">{user.name}</span>
+          <span className="text-white/70"> ({ROLE_LABEL[user.role] ?? user.role})</span>
         </span>
-        <Link href="/dashboard" className="font-medium text-navy hover:underline">
-          Updates
-          {updates ? (
-            <span className="ml-1 rounded-full bg-brand px-1.5 py-0.5 text-[10px] font-bold text-white">
-              {updates}
-            </span>
-          ) : null}
-        </Link>
-        <Link href="/inbox" className="font-medium text-navy hover:underline">
-          Inbox
-          {unread ? (
-            <span className="ml-1 rounded-full bg-brand px-1.5 py-0.5 text-[10px] font-bold text-white">
-              {unread}
-            </span>
-          ) : null}
-        </Link>
-        <Link href="/dashboard/account" className="font-medium text-navy hover:underline">
-          Account
-        </Link>
-        <span className="ml-auto">
-          <SignOutButton label="Sign out" compact />
-        </span>
+
+        <nav className="ml-auto flex items-center gap-3 overflow-x-auto sm:gap-4">
+          <Link href="/dashboard" className={link}>
+            Updates
+            {badge(updates)}
+          </Link>
+          <Link href="/inbox" className={link}>
+            Inbox
+            {badge(unread)}
+          </Link>
+          <Link href="/dashboard/account" className={`${link} hidden sm:inline`}>
+            Account
+          </Link>
+          <span className="shrink-0 [&_button]:text-white/90 [&_button:hover]:text-white">
+            <SignOutButton label="Sign out" compact />
+          </span>
+        </nav>
       </div>
     </div>
   );

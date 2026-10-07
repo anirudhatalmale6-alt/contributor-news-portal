@@ -421,8 +421,31 @@ def main():
         )
         shot(page, "19-bangla-article.png")
 
-        check("readers get an Evidence gallery", "প্রমাণ" in page.content())
+        # A gallery appears only where there is a second picture to show. This
+        # piece has one, the one we are on has nothing but its cover.
+        check(
+            "a piece with nothing but a cover shows no Evidence section",
+            "প্রমাণ" not in page.content(),
+        )
+        bn_story = page.url
+        go(page, f"{BASE}/article/notun-sorok-puratan-khaler-opore")
+        wait_article(page)
+        check("readers get an Evidence gallery where there is evidence", "প্রমাণ" in page.content())
+        # The cover is already at the top of the page; showing it again as
+        # evidence is the same photo twice.
+        cover_twice = page.evaluate(
+            """() => {
+                 const cover = document.querySelector('article figure img');
+                 if (!cover) return false;
+                 const gallery = [...document.querySelectorAll('section img')]
+                   .map((i) => i.getAttribute('src'));
+                 return gallery.includes(cover.getAttribute('src'));
+               }"""
+        )
+        check("the cover photo is not repeated in the Evidence gallery", not cover_twice)
         shot(page, "28-evidence.png", scroll="section:has-text('প্রমাণ')")
+        go(page, bn_story)
+        wait_article(page)
 
         # the language switch returns to the English version of the same story
         page.click("text=Read in English")
@@ -1312,6 +1335,58 @@ def main():
             "demo1234 visible" if "demo1234" in r.text() else "hidden",
         )
         out.close()
+
+        # --- 10i. the shape of the page on a phone ---------------------------
+        # He reported the top of the page looking like loose parts on a phone:
+        # the section bar is sticky, and the signed-in strip used to sit under
+        # it, so scrolling slid one over the other.
+        ph = ctx.browser.new_context(
+            viewport=PHONE, device_scale_factor=2, http_credentials=GATE
+        )
+        php = ph.new_page()
+        sign_in(php, "admin@thedocument.test", "demo1234")
+        go(php, BASE)
+        php.evaluate("window.scrollTo(0, 400)")
+        php.wait_for_timeout(SETTLE_MS)
+        overlap = php.evaluate(
+            """() => {
+                 const strip = document.querySelector('header')?.previousElementSibling;
+                 const nav = document.querySelector('header + nav');
+                 if (!strip || !nav) return 'missing';
+                 const s = strip.getBoundingClientRect(), n = nav.getBoundingClientRect();
+                 // They overlap if one starts before the other ends, both ways.
+                 return s.bottom > n.top && n.bottom > s.top ? 'overlap' : 'clear';
+               }"""
+        )
+        check("the signed-in strip and the menu never sit on top of each other", overlap == "clear", overlap)
+
+        lines = php.evaluate(
+            """() => {
+                 const strip = document.querySelector('header')?.previousElementSibling;
+                 if (!strip) return 0;
+                 return Math.round(strip.getBoundingClientRect().height);
+               }"""
+        )
+        check("the signed-in strip is one line on a phone", lines <= 44, f"{lines}px")
+
+        go(php, BASE)
+        sizes = php.evaluate(
+            """() => {
+                 const logo = document.querySelector('header img');
+                 const lead = document.querySelector('main article h2');
+                 const thumb = document.querySelector('main aside a img');
+                 return {
+                   logo: logo ? Math.round(logo.getBoundingClientRect().height) : 0,
+                   lead: lead ? parseFloat(getComputedStyle(lead).fontSize) : 0,
+                   thumb: thumb ? Math.round(thumb.getBoundingClientRect().width) : 0,
+                 };
+               }"""
+        )
+        check("the masthead is a readable size on a phone", sizes["logo"] >= 40, str(sizes))
+        check("the lead headline is big enough to read", sizes["lead"] >= 28, str(sizes))
+        check("list thumbnails are big enough to see", sizes["thumb"] == 0 or sizes["thumb"] >= 88, str(sizes))
+        shot(php, "38-phone-front.png")
+        ph.close()
 
         # --- 11. mobile ------------------------------------------------------
         mob = ctx.browser.new_context(viewport=PHONE, device_scale_factor=2, http_credentials=GATE)

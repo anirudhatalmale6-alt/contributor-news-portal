@@ -106,6 +106,8 @@ export default async function AdminPage() {
             adHomeHtml: site.adHomeHtml,
             adArticleHtml: site.adArticleHtml,
             adSectionHtml: site.adSectionHtml,
+            adBannerHtml: site.adBannerHtml,
+            adSquareHtml: site.adSquareHtml,
             banglaFont: site.banglaFont,
           }}
         />

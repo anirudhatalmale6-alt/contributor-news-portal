@@ -242,7 +242,19 @@ The department publishes applications and completions. It does not publish withd
 - খাল পুনরুদ্ধারের প্রকল্প প্রস্তাব জমা পড়েছে, বরাদ্দ হয়নি
 - ঠিকাদারের বিরুদ্ধে কোনো ব্যবস্থা নেওয়া হয়নি
 - নতুন নকশায় কালভার্টের সংখ্যা বাড়ানোর কথা বলা হয়েছে`,
-      media: [{ kind: "IMAGE" as const, url: "/uploads/seed/politics.jpg", caption: "নতুন সড়কের নিচে পুরোনো খালের মুখ।" }],
+      // Two pictures: the cover, and a second one that is only ever seen in
+      // the Evidence gallery. A piece with nothing but a cover shows no
+      // gallery at all, which is the behaviour the owner asked for.
+      media: [
+        { kind: "IMAGE" as const, url: "/uploads/seed/politics.jpg", caption: "নতুন সড়কের নিচে পুরোনো খালের মুখ।" },
+        {
+          kind: "IMAGE" as const,
+          url: "/uploads/seed/climate.jpg",
+          caption: "কালভার্টের মুখে জমে থাকা পানি, গত বর্ষায়।",
+          // An editor ticked this one for the gallery; the cover never is.
+          isEvidence: true,
+        },
+      ],
     },
     {
       slug: "inside-the-permit-office-backlog",

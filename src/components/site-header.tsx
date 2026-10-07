@@ -49,6 +49,12 @@ export async function SiteHeader({
 
   return (
     <>
+      {/* The strip sits above the masthead. It used to sit below the section
+          bar, and because that bar is sticky it slid over the strip the moment
+          the reader scrolled - which is what made the top of the page look
+          like two things fighting for the same space on a phone. */}
+      <SignedInBar />
+
       <header lang={localeMeta[locale].htmlLang} className="border-b border-line bg-paper">
         {/* Masthead row: the logo on the left, and - as on the papers he sent -
             a strip of the newest headlines filling the space beside it. */}
@@ -64,7 +70,7 @@ export async function SiteHeader({
               width={1000}
               height={294}
               fetchPriority="high"
-              className="h-9 w-auto sm:h-14"
+              className="h-11 w-auto sm:h-16"
             />
           </Link>
 
@@ -149,11 +155,11 @@ export async function SiteHeader({
           sideways on a phone and sits inline on a desktop - never both, which
           is what made it look like two menus. */}
       <nav className="sticky top-0 z-40 border-b border-line bg-paper/95 backdrop-blur">
-        <div className={`${SHELL} flex gap-1 overflow-x-auto py-1.5 text-[15px] lg:gap-0`}>
+        <div className={`${SHELL} flex gap-1 overflow-x-auto py-2 text-base lg:gap-0 lg:text-[15px]`}>
           <Link
             href={base}
             aria-current={!activeCategory ? "page" : undefined}
-            className={`whitespace-nowrap rounded px-3 py-1.5 font-medium ${
+            className={`whitespace-nowrap rounded px-3 py-2 font-medium lg:py-1.5 ${
               !activeCategory ? "bg-navy text-white lg:bg-transparent lg:text-brand" : "text-ink-soft hover:text-ink"
             }`}
           >
@@ -164,7 +170,7 @@ export async function SiteHeader({
               key={s}
               href={sectionPath(locale, s)}
               aria-current={activeCategory === s ? "page" : undefined}
-              className={`whitespace-nowrap rounded px-3 py-1.5 font-medium ${
+              className={`whitespace-nowrap rounded px-3 py-2 font-medium lg:py-1.5 ${
                 activeCategory === s
                   ? "bg-navy text-white lg:bg-transparent lg:text-brand"
                   : "text-ink-soft hover:text-ink"
@@ -176,7 +182,6 @@ export async function SiteHeader({
         </div>
       </nav>
 
-      <SignedInBar />
     </>
   );
 }

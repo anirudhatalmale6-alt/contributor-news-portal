@@ -136,18 +136,22 @@ export function ArticleCard({
           </div>
         ) : null}
 
-        <p className="text-xs font-semibold uppercase tracking-wide text-brand">
+        <p className="text-[13px] font-semibold uppercase tracking-wide text-brand sm:text-xs">
           {copy.sections[article.category] ?? article.category}
         </p>
         <h2
           className={`balance mt-1 font-serif font-bold leading-tight group-hover:underline ${
-            lead ? "text-[26px] sm:text-[38px]" : compact ? "text-lg" : "text-[17px]"
+            lead
+              ? "text-[30px] sm:text-[38px]"
+              : compact
+                ? "text-xl sm:text-lg"
+                : "text-[20px] sm:text-[19px] lg:text-[17px]"
           }`}
         >
           {article.title}
         </h2>
         {article.dek ? (
-          <p className={`mt-2 text-ink-soft ${lead ? "text-base sm:text-lg" : "text-sm"}`}>
+          <p className={`mt-2 text-ink-soft ${lead ? "text-[17px] sm:text-lg" : "text-[15px] sm:text-sm"}`}>
             {article.dek}
           </p>
         ) : null}
