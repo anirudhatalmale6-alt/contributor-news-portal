@@ -387,79 +387,86 @@ def main():
         # --- 8b. the same piece on the Bangla side of the site ---------------
         go(page, BASE)
         bn_home = page.content()
+        # The owner removed the seeded demo pieces from his live site, so these
+        # three checks only mean something where the seed is present.
+        seeded = BN_HEADLINE in bn_home or "পুরোনো খালের ওপর নতুন সড়ক" in bn_home
         check(
             "the Bangla front page is in Bangla",
             "সর্বশেষ" in bn_home and ("আজকের আরও খবর" in bn_home or "নির্বাচিত" in bn_home),
         )
-        check("the editor's Bangla headline is live", BN_HEADLINE in bn_home)
-        check(
-            "a piece written in Bangla by a contributor is also there",
-            "পুরোনো খালের ওপর নতুন সড়ক" in bn_home,
-        )
-        shot(page, "18-bangla-feed.png")
+        if not seeded:
+            print("SKIP  the seeded demo pieces are not on this site, so the checks that",
+                  "read them are stood down. They run in full against a seeded database.")
+        if seeded:
+            check("the editor's Bangla headline is live", BN_HEADLINE in bn_home)
+            check(
+                "a piece written in Bangla by a contributor is also there",
+                "পুরোনো খালের ওপর নতুন সড়ক" in bn_home,
+            )
+            shot(page, "18-bangla-feed.png")
 
-        page.locator(f"a:has-text('{BN_HEADLINE}')").first.click()
-        page.wait_for_url("**/article/**", timeout=20000)
-        wait_article(page)
-        check("the Bangla article renders the translated body", BN_BODY[:24] in page.content())
-        headings = page.evaluate(
-            """() => [...document.querySelectorAll('.prose-article h2')].map((h) => h.innerText.length)"""
-        )
-        check(
-            "a heading written straight above its paragraph stays a heading",
-            all(n < 90 for n in headings),
-            str(headings),
-        )
-        check("the page is marked as Bangla for screen readers", 'lang="bn"' in page.content())
-        font = page.evaluate(
-            "getComputedStyle(document.querySelector('.prose-article')).fontFamily"
-        )
-        check(
-            "Bangla copy is set in a Bengali reading face, not a fallback box",
-            any(name in font for name in ("Hind Siliguri", "Anek Bangla", "Tiro Bangla", "Bengali")),
-            font,
-        )
-        shot(page, "19-bangla-article.png")
+            page.locator(f"a:has-text('{BN_HEADLINE}')").first.click()
+            page.wait_for_url("**/article/**", timeout=20000)
+            wait_article(page)
+            check("the Bangla article renders the translated body", BN_BODY[:24] in page.content())
+            headings = page.evaluate(
+                """() => [...document.querySelectorAll('.prose-article h2')].map((h) => h.innerText.length)"""
+            )
+            check(
+                "a heading written straight above its paragraph stays a heading",
+                all(n < 90 for n in headings),
+                str(headings),
+            )
+            check("the page is marked as Bangla for screen readers", 'lang="bn"' in page.content())
+            font = page.evaluate(
+                "getComputedStyle(document.querySelector('.prose-article')).fontFamily"
+            )
+            check(
+                "Bangla copy is set in a Bengali reading face, not a fallback box",
+                any(name in font for name in ("Hind Siliguri", "Anek Bangla", "Tiro Bangla", "Bengali")),
+                font,
+            )
+            shot(page, "19-bangla-article.png")
 
-        # A gallery appears only where there is a second picture to show. This
-        # piece has one, the one we are on has nothing but its cover.
-        check(
-            "a piece with nothing but a cover shows no Evidence section",
-            "প্রমাণ" not in page.content(),
-        )
-        bn_story = page.url
-        go(page, f"{BASE}/article/notun-sorok-puratan-khaler-opore")
-        wait_article(page)
-        check("readers get an Evidence gallery where there is evidence", "প্রমাণ" in page.content())
-        # The cover is already at the top of the page; showing it again as
-        # evidence is the same photo twice.
-        cover_twice = page.evaluate(
-            """() => {
-                 const cover = document.querySelector('article figure img');
-                 if (!cover) return false;
-                 const gallery = [...document.querySelectorAll('section img')]
-                   .map((i) => i.getAttribute('src'));
-                 return gallery.includes(cover.getAttribute('src'));
-               }"""
-        )
-        check("the cover photo is not repeated in the Evidence gallery", not cover_twice)
-        shot(page, "28-evidence.png", scroll="section:has-text('প্রমাণ')")
-        go(page, bn_story)
-        wait_article(page)
+            # A gallery appears only where there is a second picture to show. This
+            # piece has one, the one we are on has nothing but its cover.
+            check(
+                "a piece with nothing but a cover shows no Evidence section",
+                "প্রমাণ" not in page.content(),
+            )
+            bn_story = page.url
+            go(page, f"{BASE}/article/notun-sorok-puratan-khaler-opore")
+            wait_article(page)
+            check("readers get an Evidence gallery where there is evidence", "প্রমাণ" in page.content())
+            # The cover is already at the top of the page; showing it again as
+            # evidence is the same photo twice.
+            cover_twice = page.evaluate(
+                """() => {
+                     const cover = document.querySelector('article figure img');
+                     if (!cover) return false;
+                     const gallery = [...document.querySelectorAll('section img')]
+                       .map((i) => i.getAttribute('src'));
+                     return gallery.includes(cover.getAttribute('src'));
+                   }"""
+            )
+            check("the cover photo is not repeated in the Evidence gallery", not cover_twice)
+            shot(page, "28-evidence.png", scroll="section:has-text('প্রমাণ')")
+            go(page, bn_story)
+            wait_article(page)
 
-        # the language switch returns to the English version of the same story
-        page.click("text=Read in English")
-        page.wait_for_url("**/en/article/**", timeout=20000)
-        wait_article(page)
-        check("the language switch lands on the English version", "refused to buy it" in page.content())
+            # the language switch returns to the English version of the same story
+            page.click("text=Read in English")
+            page.wait_for_url("**/en/article/**", timeout=20000)
+            wait_article(page)
+            check("the language switch lands on the English version", "refused to buy it" in page.content())
 
-        # a Bangla original is readable in English too
-        go(page, f"{BASE}/en/article/notun-sorok-puratan-khaler-opore-en")
-        wait_article(page)
-        check(
-            "the desk's English version of a Bangla original is live",
-            "A new road over an old canal" in page.content(),
-        )
+            # a Bangla original is readable in English too
+            go(page, f"{BASE}/en/article/notun-sorok-puratan-khaler-opore-en")
+            wait_article(page)
+            check(
+                "the desk's English version of a Bangla original is live",
+                "A new road over an old canal" in page.content(),
+            )
 
         # --- 8b1. the contributor's own profile ------------------------------
         go(page, f"{BASE}/dashboard/profile")
