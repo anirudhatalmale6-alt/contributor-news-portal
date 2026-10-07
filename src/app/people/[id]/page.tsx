@@ -6,6 +6,8 @@ import { SiteHeader } from "@/components/site-header";
 import { StaffNav } from "@/components/staff-nav";
 import { ProfileForm } from "@/components/profile-form";
 import { SuspendPanel } from "./suspend-panel";
+import { RolePanel } from "./role-panel";
+import { MessageButton } from "./message-button";
 import { EarningsPanel } from "./earnings-panel";
 import { earningsFor } from "@/lib/earnings";
 import { paymentSettings } from "@/lib/settings";
@@ -100,6 +102,20 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
           </Link>
         </p>
 
+        {person.id !== me.id ? (
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            <MessageButton userId={person.id} name={person.name} />
+            {person.phone ? (
+              <a
+                href={`tel:${person.phone}`}
+                className="rounded-full border border-line px-4 py-2 text-sm font-medium hover:bg-paper-soft"
+              >
+                Call {person.phone}
+              </a>
+            ) : null}
+          </div>
+        ) : null}
+
         {!mayEdit ? (
           <p className="mt-6 rounded-xl border border-line bg-paper-soft p-4 text-sm text-ink-soft">
             {person.id === me.id
@@ -108,6 +124,14 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
           </p>
         ) : (
           <div className="mt-6 grid gap-6">
+            <RolePanel
+              userId={person.id}
+              name={person.name}
+              myRole={me.role}
+              initialRole={person.role}
+              initialTier={person.tier}
+            />
+
             {mayAdjust && totals && payment ? (
               <EarningsPanel
                 userId={person.id}

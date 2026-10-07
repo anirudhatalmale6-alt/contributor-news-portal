@@ -3,6 +3,7 @@ import { SHELL } from "@/components/ui";
 import { currentUser } from "@/lib/rbac";
 import { SignOutButton } from "@/components/auth-buttons";
 import { unreadCount } from "@/lib/inbox";
+import { unreadNotifications } from "@/lib/notify";
 
 const ROLE_LABEL: Record<string, string> = {
   SUPERADMIN: "Owner",
@@ -19,7 +20,7 @@ const ROLE_LABEL: Record<string, string> = {
 export async function SignedInBar() {
   const user = await currentUser();
   if (!user) return null;
-  const unread = await unreadCount(user);
+  const [unread, updates] = await Promise.all([unreadCount(user), unreadNotifications(user.id)]);
 
   return (
     <div className="border-b border-line bg-paper-soft">
@@ -28,6 +29,14 @@ export async function SignedInBar() {
           You are logged in as <span className="font-semibold text-ink">{user.name}</span> (
           {ROLE_LABEL[user.role] ?? user.role})
         </span>
+        <Link href="/dashboard" className="font-medium text-navy hover:underline">
+          Updates
+          {updates ? (
+            <span className="ml-1 rounded-full bg-brand px-1.5 py-0.5 text-[10px] font-bold text-white">
+              {updates}
+            </span>
+          ) : null}
+        </Link>
         <Link href="/inbox" className="font-medium text-navy hover:underline">
           Inbox
           {unread ? (

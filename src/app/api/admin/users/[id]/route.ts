@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { canChangeRole, errorResponse, HttpError, isOwner, requireStaff } from "@/lib/rbac";
+import { notifyRole } from "@/lib/notify";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -57,6 +58,13 @@ export async function PATCH(req: Request, { params }: Ctx) {
       data: parsed.data,
       select: { id: true, name: true, email: true, role: true, tier: true },
     });
+
+    // Somebody whose role changed under them should be told, not left to
+    // notice that new menu items appeared.
+    if (parsed.data.role && parsed.data.role !== target.role) {
+      await notifyRole(id, target.role, parsed.data.role);
+    }
+
     return Response.json({ user });
   } catch (err) {
     return errorResponse(err);

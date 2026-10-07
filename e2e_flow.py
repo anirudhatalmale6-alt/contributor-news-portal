@@ -25,6 +25,7 @@ NEW_EMAIL = f"rosa.{STAMP}@thedocument.test"
 NEW_PASS = "demo1234"
 NEW_PASS2 = "demo-changed-5678"
 INBOX_EMAIL = f"probe.inbox.{STAMP}@thedocument.test"
+REJECT_TITLE = "The minutes nobody has seen"
 NEW_NAME = "Rosa Delgado"
 HEADLINE = "The allotment that became a flood defence"
 BN_HEADLINE = "যে বরাদ্দ জমি বন্যা প্রতিরোধের বাঁধ হয়ে উঠল"
@@ -970,7 +971,7 @@ def main():
         sign_in(apg, "admin@thedocument.test", "demo1234")
         go(apg, f"{BASE}/people/{NEW_USER_ID[0]}")
         apg.check('input[name="phonePublic"]')
-        apg.click('button:has-text("Save")')
+        apg.click('button:has-text("Save profile")')
         apg.wait_for_selector("text=Profile saved", timeout=20000)
         go(apage, f"{BASE}/en/author/{NEW_USER_ID[0]}")
         check(
@@ -979,7 +980,7 @@ def main():
         )
         go(apg, f"{BASE}/people/{NEW_USER_ID[0]}")
         apg.uncheck('input[name="phonePublic"]')
-        apg.click('button:has-text("Save")')
+        apg.click('button:has-text("Save profile")')
         apg.wait_for_selector("text=Profile saved", timeout=20000)
         adm.close()
         go(apage, f"{BASE}/en/author/{NEW_USER_ID[0]}")
@@ -1152,6 +1153,157 @@ def main():
         ap2.wait_for_timeout(SETTLE_MS)
         check("an entry can be taken back off", "Entry removed" in ap2.inner_text("main"))
         adm2.close()
+
+        # --- 10f. saving a role, messaging a person, and being told ----------
+        adm3 = ctx.browser.new_context(viewport=DESKTOP, http_credentials=GATE)
+        ap3 = adm3.new_page()
+        sign_in(ap3, "admin@thedocument.test", "demo1234")
+        go(ap3, f"{BASE}/people/{NEW_USER_ID[0]}")
+
+        check(
+            "a contributor's page has a Save button for their role",
+            ap3.locator('button:has-text("Save changes")').count() == 1,
+        )
+        check(
+            "it starts disabled, because nothing has been changed yet",
+            ap3.locator('button:has-text("Save changes")').is_disabled(),
+        )
+
+        # Whatever they are now, move them to the other rank, so the run does
+        # not depend on where an earlier section left them.
+        was = ap3.locator('select[name="role"]').input_value()
+        want = "CONTRIBUTOR" if was == "EDITOR" else "EDITOR"
+        ap3.select_option('select[name="role"]', want)
+        check(
+            "choosing a different role enables Save",
+            not ap3.locator('button:has-text("Save changes")').is_disabled(),
+            f"{was} -> {want}",
+        )
+        ap3.click('button:has-text("Save changes")')
+        ap3.wait_for_selector("text=Saved.", timeout=20000)
+        ap3.wait_for_timeout(SETTLE_MS)
+        said = ap3.inner_text("main")
+        check(
+            "saving a role says so in words",
+            f"is now {want.capitalize()}" in said and "notified" in said,
+            said[:220],
+        )
+        shot(ap3, "36-role-save.png")
+
+        # Reload: the change really went to the server, not just React state.
+        go(ap3, f"{BASE}/people/{NEW_USER_ID[0]}")
+        check(
+            "the new role survives a reload",
+            ap3.locator('select[name="role"]').input_value() == want,
+            ap3.locator('select[name="role"]').input_value(),
+        )
+
+        check(
+            "a contributor's page has a button to message them",
+            ap3.locator('button:has-text("Send a message")').count() == 1,
+        )
+        ap3.click('button:has-text("Send a message")')
+        ap3.wait_for_url("**/inbox/**", timeout=20000)
+        ap3.wait_for_timeout(SETTLE_MS)
+        check(
+            "that button opens a thread with that person",
+            "A message for" in ap3.inner_text("main"),
+        )
+
+        # And back again, which is the second role notification.
+        go(ap3, f"{BASE}/people/{NEW_USER_ID[0]}")
+        ap3.select_option('select[name="role"]', was)
+        ap3.click('button:has-text("Save changes")')
+        ap3.wait_for_selector(f"text=is now {was.capitalize()}", timeout=20000)
+        adm3.close()
+
+        # --- 10g. the contributor is told what happened ----------------------
+        # Nothing in the run has been sent back yet, so file a piece and have an
+        # editor reject it - the notice is only worth asserting if the thing it
+        # reports actually happened.
+        told = ctx.browser.new_context(viewport=DESKTOP, http_credentials=GATE)
+        tp = told.new_page()
+        sign_in(tp, NEW_EMAIL, NEW_PASS2)
+        go(tp, f"{BASE}/dashboard")
+        tp.click('button:has-text("Start a new piece")')
+        tp.wait_for_url("**/dashboard/write/**", timeout=20000)
+        tp.fill('input[placeholder="Headline"]', REJECT_TITLE)
+        tp.fill(
+            "textarea",
+            "A short filing that an editor is going to send back, so the writer can be "
+            "told about it. It needs enough words to pass the length check on submission.",
+        )
+        tp.click('button:has-text("Save draft")')
+        tp.wait_for_selector("text=Draft saved", timeout=20000)
+        tp.click('button:has-text("Submit for review")')
+        tp.wait_for_selector("text=Submitted for review", timeout=20000)
+
+        ed3 = ctx.browser.new_context(viewport=DESKTOP, http_credentials=GATE)
+        ep4 = ed3.new_page()
+        sign_in(ep4, "editor@thedocument.test", "demo1234")
+        go(ep4, f"{BASE}/editorial?status=SUBMITTED&q={REJECT_TITLE.split(' ')[0]}")
+        ep4.locator(f'li:has-text("{REJECT_TITLE}") a:has-text("Review")').first.click()
+        ep4.wait_for_url("**/editorial/**", timeout=20000)
+        ep4.wait_for_timeout(SETTLE_MS)
+        # The editorial screen has several textareas; the note is the one the
+        # review panel owns.
+        ep4.fill('textarea[placeholder^="Required when sending"]', "Please name the committee and attach the minutes.")
+        ep4.click('button:has-text("Send back for changes")')
+        ep4.wait_for_timeout(SETTLE_MS * 2)
+        check(
+            "an editor can send a piece back with a note",
+            "Changes requested" in ep4.inner_text("main") or "Sent back" in ep4.inner_text("main"),
+            ep4.inner_text("main")[:200],
+        )
+        ed3.close()
+
+        go(tp, f"{BASE}/dashboard")
+        updates = tp.inner_text("main")
+        check(
+            "the contributor is told their article was published",
+            "Your article is published" in updates,
+            updates[:300],
+        )
+        check(
+            "the contributor is told an editor sent a piece back",
+            "sent your article back" in updates,
+        )
+        check(
+            "the contributor is told their role changed",
+            "role is now" in updates or "You are now" in updates,
+            updates[:300],
+        )
+        check(
+            "the published notice carries the payout the desk set",
+            "Payout set to" in updates,
+        )
+        shot(tp, "37-contributor-updates.png")
+
+        unread_before = tp.locator("text=new").count()
+        tp.click('button:has-text("Mark all as read")')
+        tp.wait_for_timeout(SETTLE_MS * 2)
+        check(
+            "marking them read clears the badge",
+            "Mark all as read" not in tp.inner_text("main"),
+            str(unread_before),
+        )
+        told.close()
+
+        # --- 10h. the sign-in page only offers what works --------------------
+        out = ctx.browser.new_context(viewport=DESKTOP, http_credentials=GATE)
+        op = out.new_page()
+        go(op, f"{BASE}/login")
+        buttons = op.inner_text("main")
+        check(
+            "Facebook is not offered while it is switched off",
+            "Continue with Facebook" not in buttons,
+            buttons[:200],
+        )
+        # A developer clone has no keys at all, so only assert Google where some
+        # social provider is actually configured.
+        if "Continue with" in buttons:
+            check("Google sign-in is still offered", "Continue with Google" in buttons)
+        out.close()
 
         # --- 11. mobile ------------------------------------------------------
         mob = ctx.browser.new_context(viewport=PHONE, device_scale_factor=2, http_credentials=GATE)

@@ -23,7 +23,14 @@ if (process.env.AUTH_GOOGLE_ID) {
     }),
   );
 }
-if (process.env.AUTH_FACEBOOK_ID) {
+// Facebook can be switched off without throwing the keys away: set
+// AUTH_FACEBOOK_ENABLED=false while the app itself is being sorted out, and the
+// button disappears from the sign-in page rather than failing in front of a
+// reader.
+const facebookOn =
+  Boolean(process.env.AUTH_FACEBOOK_ID) && process.env.AUTH_FACEBOOK_ENABLED !== "false";
+
+if (facebookOn) {
   social.push(
     Facebook({
       clientId: process.env.AUTH_FACEBOOK_ID,

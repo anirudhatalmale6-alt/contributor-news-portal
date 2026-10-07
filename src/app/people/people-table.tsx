@@ -58,6 +58,9 @@ export function PeopleTable({
   const [roleFilter, setRoleFilter] = useState("ALL");
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Changing a dropdown saves immediately here; without a word on screen that
+  // reads as nothing having happened.
+  const [saved, setSaved] = useState<string | null>(null);
   const [details, setDetails] = useState<Record<string, Record<string, string | null>>>({});
 
   // Full account numbers only when the owner asks for them, one person at a
@@ -93,6 +96,7 @@ export function PeopleTable({
   async function patch(id: string, body: { role?: string; tier?: string }) {
     setBusy(id);
     setError(null);
+    setSaved(null);
     const res = await fetch(`/api/admin/users/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -105,6 +109,13 @@ export function PeopleTable({
       return;
     }
     setRows((rs) => rs.map((r) => (r.id === id ? { ...r, role: data.user.role, tier: data.user.tier } : r)));
+    setSaved(
+      `Saved. ${data.user.name} is now ${ROLE_LABEL[data.user.role] ?? data.user.role}${
+        data.user.role === "CONTRIBUTOR"
+          ? ` (${data.user.tier === "VERIFIED" ? "verified" : "general"})`
+          : ""
+      }. They have been notified.`,
+    );
     router.refresh();
   }
 
@@ -150,6 +161,7 @@ export function PeopleTable({
       <p className="mt-2 text-xs text-ink-soft">
         {visible.length} of {rows.length} shown
         {error ? <span className="ml-2 text-rose-700">{error}</span> : null}
+        {saved ? <span className="ml-2 font-medium text-emerald-700">{saved}</span> : null}
       </p>
 
       <div className="mt-3 overflow-x-auto rounded-xl border border-line">

@@ -5,6 +5,7 @@ import { currentUser } from "@/lib/rbac";
 import { longDate, money, timeAgo } from "@/lib/format";
 import { paymentSettings } from "@/lib/settings";
 import { earningsFor } from "@/lib/earnings";
+import { Notifications } from "@/components/notifications";
 import { SiteHeader } from "@/components/site-header";
 import { StaffNav } from "@/components/staff-nav";
 import { StatCard, StatusPill, TierBadge } from "@/components/ui";
@@ -38,7 +39,23 @@ export default async function DashboardPage() {
   const published = articles.filter((a) => a.status === "APPROVED");
   // One resolver decides this figure, so the desk and the newsroom can never
   // disagree about what somebody is owed.
-  const earnings = await earningsFor(user.id);
+  const [earnings, notes] = await Promise.all([
+    earningsFor(user.id),
+    prisma.notification.findMany({
+      where: { userId: user.id },
+      orderBy: { createdAt: "desc" },
+      take: 12,
+      select: {
+        id: true,
+        kind: true,
+        title: true,
+        body: true,
+        href: true,
+        readAt: true,
+        createdAt: true,
+      },
+    }),
+  ]);
   const totalCents = earnings.totalCents;
   const inReview = articles.filter((a) => a.status === "SUBMITTED").length;
   const needsWork = articles.filter((a) => a.status === "REJECTED").length;
@@ -69,6 +86,18 @@ export default async function DashboardPage() {
           </div>
           <NewDraftButton />
         </div>
+
+        <Notifications
+          notes={notes.map((n) => ({
+            id: n.id,
+            kind: n.kind,
+            title: n.title,
+            body: n.body,
+            href: n.href,
+            read: Boolean(n.readAt),
+            createdAt: n.createdAt.toISOString(),
+          }))}
+        />
 
         <section className="grid gap-3 py-6 sm:grid-cols-2 lg:grid-cols-4">
           <StatCard

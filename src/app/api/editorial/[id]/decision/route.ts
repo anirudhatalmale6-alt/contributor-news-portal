@@ -2,6 +2,8 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { errorResponse, HttpError, requireStaff } from "@/lib/rbac";
 import { paymentSettings } from "@/lib/settings";
+import { notifyPublished, notifyRejected } from "@/lib/notify";
+import { money } from "@/lib/format";
 import { other } from "@/lib/i18n";
 
 type Ctx = { params: Promise<{ id: string }> };
@@ -85,6 +87,25 @@ export async function POST(req: Request, { params }: Ctx) {
         },
       }),
     ]);
+
+    // Told after the decision is safely written, never as part of it.
+    const href = article.slug
+      ? article.language === "BN"
+        ? `/article/${article.slug}`
+        : `/en/article/${article.slug}`
+      : "/dashboard";
+    if (decision === "APPROVE") {
+      const settings = await paymentSettings();
+      await notifyPublished(
+        article.authorId,
+        article.title,
+        href,
+        money(article.payoutCents, settings.currency),
+      );
+    } else {
+      await notifyRejected(article.authorId, article.title, `/dashboard/write/${article.id}`, note);
+    }
+
     return Response.json({ article });
   } catch (err) {
     return errorResponse(err);

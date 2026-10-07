@@ -95,6 +95,7 @@ model User {
   startedThreads  InboxThread[]        @relation("threadStarter")
   adjustments     EarningAdjustment[]  @relation("adjusted")
   adjustmentsMade EarningAdjustment[]  @relation("adjuster")
+  notifications   Notification[]
 }
 
 /// Where a contributor wants their payouts sent. Visible to the contributor
@@ -350,6 +351,31 @@ model EarningAdjustment {
   createdById String?
   createdBy   User?    @relation("adjuster", fields: [createdById], references: [id], onDelete: SetNull)
   createdAt   DateTime @default(now())
+
+  @@index([userId, createdAt])
+}
+
+/// What a contributor is told when something happens to their work or their
+/// account: a piece published, a piece sent back, a change of role.
+///
+/// Separate from the inbox on purpose. The inbox is a conversation somebody
+/// chose to start; this is the paper's own record of a decision, and a
+/// contributor should not have to read a thread to find out they were published.
+model Notification {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// PUBLISHED | REJECTED | ROLE | PAYOUT - kept as a string so adding a kind
+  /// never needs a migration.
+  kind  String
+  title String
+  body  String?
+  /// Where to go when it is clicked, if anywhere.
+  href  String?
+
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
 
   @@index([userId, createdAt])
 }
