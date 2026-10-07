@@ -68,11 +68,14 @@ export async function Feed({ locale, category }: { locale: Locale; category: str
   const featuredHrefs = new Set(featured.map((a) => a.href));
   const rest = latest.filter((a) => !featuredHrefs.has(a.href));
 
+  // Both rails are filled before the two pieces under the lead, so a young
+  // site with six stories still reads as three columns rather than one column
+  // with two empty gutters.
   const pool = [...featured.slice(1), ...rest];
   const lead = featured[0] ?? pool.shift() ?? null;
   const leftRail = pool.splice(0, 3);
-  const underLead = pool.splice(0, 2);
   const rightRail = pool.splice(0, 4);
+  const underLead = pool.splice(0, 2);
   const more = pool;
 
   return (
@@ -84,9 +87,9 @@ export async function Feed({ locale, category }: { locale: Locale; category: str
         locale={locale}
         activeCategory={category === "All" ? undefined : category}
         teasers
-        teaserExclude={[lead?.href, ...leftRail.map((a) => a.href), ...underLead.map((a) => a.href)].filter(
-          (h): h is string => Boolean(h),
-        )}
+        // Only the lead is held back. On a site with a handful of stories,
+        // excluding the rails as well would leave the strip empty.
+        teaserExclude={lead ? [lead.href] : []}
       />
       <main className={`${SHELL} pb-16`}>
         {!lead ? (
