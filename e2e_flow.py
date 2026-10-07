@@ -1540,14 +1540,17 @@ def main():
                  return first ? first.innerText : '';
                }"""
         )
-        # The board shows English titles, so check the English front page - and
-        # check it is the LEAD, not merely somewhere on the page.
-        go(np, f"{BASE}/en")
-        lead_now = np.locator("main article h2").first.inner_text()
+        # A piece pinned to the lead leads the front page of the language it
+        # was written in. A Bangla original has no English version until an
+        # editor writes one, so check both sides and require one of them.
+        leads = []
+        for side in (BASE, f"{BASE}/en"):
+            go(np, side)
+            leads.append(np.locator("main article h2").first.inner_text())
         check(
             "the pinned piece really leads the front page",
-            pinned_title[:24] in lead_now,
-            f"pinned {pinned_title[:40]!r} vs lead {lead_now[:40]!r}",
+            any(pinned_title[:24] in lead for lead in leads),
+            f"pinned {pinned_title[:40]!r} vs leads {[l[:40] for l in leads]}",
         )
 
         # And it can be taken off again.
