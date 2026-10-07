@@ -7,6 +7,8 @@
  * photographs want anyway.
  */
 
+import { srcSetFor } from "@/lib/image-sizes";
+
 /** The shapes a cover appears in, and what each one is for. */
 export const COVER_SHAPES = {
   home: { ratio: 16 / 9, label: "Front page", px: "1200 x 675" },
@@ -55,14 +57,20 @@ export function CoverImage({
   shape,
   className = "",
   eager,
+  sizes = "(min-width: 1024px) 760px, 100vw",
 }: {
   src: string;
   crop?: string | null;
   shape: CoverShape;
   className?: string;
   eager?: boolean;
+  /** How wide this picture is on the page, so the browser can pick a file. */
+  sizes?: string;
 }) {
   const parsed = parseCrop(crop);
+  // A crop shows only part of the picture, so the file has to be bigger than
+  // the frame by exactly that factor or the visible part goes soft.
+  const zoom = parsed ? 100 / parsed.w : 1;
   return (
     <div
       className={`relative overflow-hidden bg-paper-soft ${className}`}
@@ -70,9 +78,12 @@ export function CoverImage({
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
-        src={src}
+        src={`${src}?w=${eager ? 1200 : 800}`}
+        srcSet={srcSetFor(src)}
+        sizes={zoom > 1 ? `calc((${sizes}) * ${zoom.toFixed(2)})` : sizes}
         alt=""
         loading={eager ? "eager" : "lazy"}
+        fetchPriority={eager ? "high" : undefined}
         decoding="async"
         style={cropStyle(parsed)}
       />

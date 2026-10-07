@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { readUpload } from "@/lib/storage";
+import { isWidth, resizedUpload } from "@/lib/images";
 
 type Ctx = { params: Promise<{ path: string[] }> };
 
@@ -14,7 +15,16 @@ export async function GET(req: Request, { params }: Ctx) {
     return new Response("Not found", { status: 404 });
   }
 
-  const file = await readUpload(parts[0]);
+  // ?w=800 asks for a resized copy. A reader's phone takes one of these; the
+  // original is only ever sent when an editor downloads it.
+  const url = new URL(req.url);
+  const asked = Number(url.searchParams.get("w"));
+  const wantsResize = !url.searchParams.has("download") && Number.isFinite(asked) && asked > 0;
+
+  const file =
+    wantsResize && isWidth(asked)
+      ? ((await resizedUpload(parts[0], asked)) ?? (await readUpload(parts[0])))
+      : await readUpload(parts[0]);
   if (!file) return new Response("Not found", { status: 404 });
 
   if (req.headers.get("if-none-match") === file.etag) {
@@ -23,7 +33,7 @@ export async function GET(req: Request, { params }: Ctx) {
 
   // ?download=1 hands the original file over with the name the contributor gave
   // it, so an editor can open it in an image editor and re-attach it.
-  const download = new URL(req.url).searchParams.has("download");
+  const download = url.searchParams.has("download");
   let filename = parts[0];
   if (download) {
     const media = await prisma.media.findFirst({

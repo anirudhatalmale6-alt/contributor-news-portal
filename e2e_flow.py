@@ -1697,6 +1697,56 @@ def main():
             ip2.wait_for_timeout(SETTLE_MS)
         ic.close()
 
+        # --- 10l. photographs sized for a phone ------------------------------
+        # Contributors upload what their phone took - six or seven megabytes.
+        # Readers must never be sent that.
+        pc = ctx.browser.new_context(viewport=PHONE, device_scale_factor=2, http_credentials=GATE)
+        pp = pc.new_page()
+        go(pp, BASE)
+        pics = pp.evaluate(
+            """() => [...document.querySelectorAll('main img, header img')]
+                 .map((i) => ({ src: i.getAttribute('src') || '', set: i.getAttribute('srcset') || '' }))
+                 .filter((i) => i.src.includes('/media/'))"""
+        )
+        unsized = [p for p in pics if "?w=" not in p["src"] and "?w=" not in p["set"]]
+        check(
+            "every photograph on the front page asks for a size",
+            not unsized,
+            f"{len(pics)} pictures, unsized: {[u['src'] for u in unsized][:3]}",
+        )
+
+        if pics:
+            raw = pics[0]["src"].split("?")[0]
+            full = pp.request.get(f"{BASE}{raw}")
+            small = pp.request.get(f"{BASE}{raw}?w=480")
+            full_kb = len(full.body()) // 1024
+            small_kb = len(small.body()) // 1024
+            check(
+                "a phone-sized copy is served as WebP",
+                "webp" in (small.headers.get("content-type") or ""),
+                str(small.headers.get("content-type")),
+            )
+            check(
+                "and is a fraction of the original",
+                small_kb * 3 <= full_kb or full_kb < 60,
+                f"original {full_kb}kB, phone copy {small_kb}kB",
+            )
+            check(
+                "the resized copy is cached hard, so it is fetched once",
+                "immutable" in (small.headers.get("cache-control") or ""),
+                str(small.headers.get("cache-control")),
+            )
+
+        # An editor still gets the untouched original to work from.
+        if pics:
+            orig = pp.request.get(f"{BASE}{raw}?download=1")
+            check(
+                "an editor still downloads the full original",
+                orig.status == 200 and "webp" not in (orig.headers.get("content-type") or ""),
+                f"{orig.status} {orig.headers.get('content-type')}",
+            )
+        pc.close()
+
         # --- 11. mobile ------------------------------------------------------
         mob = ctx.browser.new_context(viewport=PHONE, device_scale_factor=2, http_credentials=GATE)
         mp = mob.new_page()

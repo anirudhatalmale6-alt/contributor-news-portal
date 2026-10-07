@@ -88,9 +88,10 @@ export async function SiteHeader({
                     {a.coverImage ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
-                        src={a.coverImage}
+                        src={`${a.coverImage}?w=320`}
                         alt=""
                         loading="lazy"
+                        decoding="async"
                         className="size-11 shrink-0 rounded object-cover"
                       />
                     ) : null}

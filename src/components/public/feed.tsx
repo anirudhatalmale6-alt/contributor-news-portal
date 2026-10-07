@@ -39,9 +39,10 @@ function RailItem({
         {thumb && article.coverImage ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
-            src={article.coverImage}
+            src={`${article.coverImage}?w=320`}
             alt=""
             loading="lazy"
+            decoding="async"
             className="size-24 shrink-0 rounded object-cover sm:size-28 lg:size-20"
           />
         ) : null}

@@ -261,9 +261,12 @@ export async function ArticleView({ locale, slug }: { locale: Locale; slug: stri
                     ) : (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
-                        src={m.url}
+                        src={`${m.url}?w=800`}
+                        srcSet={`${m.url}?w=480 480w, ${m.url}?w=800 800w, ${m.url}?w=1200 1200w`}
+                        sizes="(min-width: 640px) 360px, 100vw"
                         alt={m.caption ?? ""}
                         loading="lazy"
+                        decoding="async"
                         className="w-full rounded-lg object-cover"
                       />
                     )}
@@ -319,9 +322,10 @@ export async function ArticleView({ locale, slug }: { locale: Locale; slug: stri
                         <span className="block aspect-16/9 overflow-hidden bg-paper-soft">
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img
-                            src={r.coverImage}
+                            src={`${r.coverImage}?w=480`}
                             alt=""
                             loading="lazy"
+                            decoding="async"
                             className="size-full object-cover"
                           />
                         </span>
