@@ -87,9 +87,8 @@ export async function Feed({ locale, category }: { locale: Locale; category: str
         locale={locale}
         activeCategory={category === "All" ? undefined : category}
         teasers
-        // Only the lead is held back. On a site with a handful of stories,
-        // excluding the rails as well would leave the strip empty.
-        teaserExclude={lead ? [lead.href] : []}
+        teaserNever={lead?.href}
+        teaserExclude={[...leftRail, ...rightRail, ...underLead].map((a) => a.href)}
       />
       <main className={`${SHELL} pb-16`}>
         {!lead ? (

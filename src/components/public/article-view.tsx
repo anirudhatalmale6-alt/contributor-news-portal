@@ -69,7 +69,8 @@ export async function ArticleView({ locale, slug }: { locale: Locale; slug: stri
         switchHref={article.counterpartHref ?? localePath(alt)}
         activeCategory={article.category}
         teasers
-        teaserExclude={[article.href, ...related.map((r) => r.href)]}
+        teaserNever={article.href}
+        teaserExclude={related.map((r) => r.href)}
       />
       {/* The copy starts on the same left edge as the masthead, with the other
           news in a panel down the right. The reading column is still capped,

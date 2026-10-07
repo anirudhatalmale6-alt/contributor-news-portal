@@ -14,6 +14,7 @@ export async function SiteHeader({
   activeCategory,
   teasers = false,
   teaserExclude = [],
+  teaserNever,
 }: {
   locale?: Locale;
   /** Where the language toggle goes; defaults to the same page in the other language. */
@@ -23,17 +24,23 @@ export async function SiteHeader({
   /** The three headlines beside the masthead. Public pages only - the newsroom
       screens do not need them and should not pay for the query. */
   teasers?: boolean;
-  /** Hrefs the page is already showing prominently. Without this the strip
-      repeats the lead story back at the reader. */
+  /** Hrefs the page already shows below. The strip prefers anything else, but
+      falls back to these rather than standing empty on a young site. */
   teaserExclude?: string[];
+  /** The one piece the strip must never carry: the lead, directly beneath it. */
+  teaserNever?: string;
 }) {
   const [user, site, pool] = await Promise.all([
     currentUser(),
     siteSettings(),
     teasers ? feedArticles(locale, "All", 10) : Promise.resolve([]),
   ]);
-  const skip = new Set(teaserExclude);
-  const strip = pool.filter((a) => !skip.has(a.href)).slice(0, 3);
+  const shown = new Set(teaserExclude);
+  const allowed = pool.filter((a) => a.href !== teaserNever);
+  const strip = [
+    ...allowed.filter((a) => !shown.has(a.href)),
+    ...allowed.filter((a) => shown.has(a.href)),
+  ].slice(0, 3);
   const copy = t(locale);
   const siteName = locale === "BN" ? site.siteNameBn : site.siteNameEn;
   const alt = other(locale);
