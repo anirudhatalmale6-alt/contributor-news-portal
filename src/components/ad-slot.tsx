@@ -1,4 +1,5 @@
 import { siteSettings } from "@/lib/settings";
+import type { Locale } from "@/lib/i18n";
 
 type Slot = "home" | "article" | "section" | "banner" | "square";
 
@@ -14,17 +15,36 @@ type Slot = "home" | "article" | "section" | "banner" | "square";
  * code, and reserving the right amount of room stops the page jumping about as
  * the ad loads.
  */
-export async function AdSlot({ slot, className = "" }: { slot: Slot; className?: string }) {
+export async function AdSlot({
+  slot,
+  locale,
+  className = "",
+}: {
+  slot: Slot;
+  /** Which half of the paper this is. An advertiser who bought space on the
+      Bangla site has not bought the English one. */
+  locale: Locale;
+  className?: string;
+}) {
   const settings = await siteSettings();
   if (!settings.adsEnabled) return null;
 
-  const html = {
-    home: settings.adHomeHtml,
-    article: settings.adArticleHtml,
-    section: settings.adSectionHtml,
-    banner: settings.adBannerHtml,
-    square: settings.adSquareHtml,
-  }[slot];
+  const html =
+    locale === "EN"
+      ? {
+          home: settings.adHomeHtmlEn,
+          article: settings.adArticleHtmlEn,
+          section: settings.adSectionHtmlEn,
+          banner: settings.adBannerHtmlEn,
+          square: settings.adSquareHtmlEn,
+        }[slot]
+      : {
+          home: settings.adHomeHtml,
+          article: settings.adArticleHtml,
+          section: settings.adSectionHtml,
+          banner: settings.adBannerHtml,
+          square: settings.adSquareHtml,
+        }[slot];
 
   if (!html.trim()) return null;
 

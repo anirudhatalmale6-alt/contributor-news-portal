@@ -36,7 +36,7 @@ export async function SectionPage({ locale, category }: { locale: Locale; catego
               <ArticleCard article={lead} locale={locale} lead />
             </div>
 
-            <AdSlot slot="section" />
+            <AdSlot slot="section" locale={locale} />
 
             {rest.length > 0 ? (
               <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">

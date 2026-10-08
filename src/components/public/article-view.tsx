@@ -251,7 +251,7 @@ export async function ArticleView({ locale, slug }: { locale: Locale; slug: stri
 
           <div className="prose-article mt-6">{renderBody(article.body)}</div>
 
-          <AdSlot slot="banner" />
+          <AdSlot slot="banner" locale={locale} />
 
           {evidence.length > 0 ? (
             <section className="mt-10 rounded-xl border border-line bg-paper-soft p-4 sm:p-5">
@@ -283,6 +283,9 @@ export async function ArticleView({ locale, slug }: { locale: Locale; slug: stri
             </section>
           ) : null}
 
+          {/* A name the desk typed has no account behind it, so there is no
+              profile to introduce and no bio to print. */}
+          {article.author.id || article.author.bio ? (
           <aside className="mt-10 rounded-xl border border-line bg-paper-soft p-5">
             <p className="text-sm font-medium">
               {article.author.id ? (
@@ -302,8 +305,9 @@ export async function ArticleView({ locale, slug }: { locale: Locale; slug: stri
             </p>
             <p className="mt-1 text-sm text-ink-soft">{article.author.bio ?? copy.defaultBio}</p>
           </aside>
+          ) : null}
 
-          <AdSlot slot="article" />
+          <AdSlot slot="article" locale={locale} />
 
         </article>
         </div>
@@ -311,7 +315,7 @@ export async function ArticleView({ locale, slug }: { locale: Locale; slug: stri
         {/* Other news, as rectangular blocks down the right. It sticks as you
             read, so there is always somewhere to go next. */}
         <aside className="lg:sticky lg:top-14 lg:self-start lg:border-l lg:border-line lg:pl-8">
-          <AdSlot slot="square" className="mt-6" />
+          <AdSlot slot="square" locale={locale} className="mt-6" />
 
           {related.length > 0 ? (
             <section className="pt-6">

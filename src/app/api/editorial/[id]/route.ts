@@ -11,6 +11,7 @@ const patchSchema = z.object({
   body: z.string().max(200_000).optional(),
   category: z.string().trim().max(60).optional(),
   coverImage: z.string().trim().max(500).nullable().optional(),
+  bylineName: z.string().trim().max(120).nullable().optional(),
 });
 
 /** GET /api/editorial/:id - full article + audit trail, for the review screen. */

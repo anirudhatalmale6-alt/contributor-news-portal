@@ -15,6 +15,7 @@ type ArticleState = {
   dek: string;
   body: string;
   category: string;
+  bylineName: string;
   language: "EN" | "BN";
   status: string;
   coverImage: string | null;
@@ -22,6 +23,8 @@ type ArticleState = {
   media: MediaItem[];
   /** The desk writes for itself: no contact number, no witness box. */
   isStaff: boolean;
+  /** Whose account this is, shown as the default byline. */
+  authorName: string;
   contactPhone: string;
   contactWhatsapp: string;
   witnesses: string;
@@ -44,6 +47,7 @@ export function Composer({
     dek: article.dek,
     body: article.body,
     category: article.category,
+    bylineName: article.bylineName,
     language: article.language,
   });
   const [status, setStatus] = useState(article.status);
@@ -281,6 +285,25 @@ export function Composer({
         placeholder="One-line summary shown in the feed"
         className="w-full rounded-lg border border-line px-3 py-2.5 text-sm outline-none focus:border-navy"
       />
+
+      {/* The desk often files a piece on behalf of a correspondent. A
+          contributor never needs this: their own name is the byline. */}
+      {isStaff ? (
+        <label className="grid gap-1 text-sm">
+          <span className="font-medium">Set a contributor name for this article:</span>
+          <input
+            value={form.bylineName}
+            onChange={(e) => update("bylineName", e.target.value)}
+            disabled={locked}
+            placeholder={`Leave empty to publish under ${article.authorName}`}
+            maxLength={120}
+            className="w-full rounded-lg border border-line px-3 py-2.5 text-sm outline-none focus:border-navy sm:max-w-sm"
+          />
+          <span className="text-xs text-ink-soft">
+            Readers see this name on the front page and on the article.
+          </span>
+        </label>
+      ) : null}
 
       <div className="flex flex-wrap items-center gap-4 text-sm">
         <label className="flex flex-wrap items-center gap-2">

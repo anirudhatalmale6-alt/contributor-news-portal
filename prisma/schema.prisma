@@ -168,6 +168,11 @@ model Article {
   /// Order within a slot, lowest first.
   homeOrder Int     @default(0)
 
+  /// The name a reader sees. Empty for a contributor's own piece, where the
+  /// writer is the byline; set by the desk when it files something under a
+  /// correspondent's name rather than the editor's own account.
+  bylineName String?
+
   /// Who saw it happen, if the contributor knows. Names, addresses and phone
   /// numbers of witnesses: newsroom-only, never published, and never required.
   witnesses String?
@@ -262,27 +267,36 @@ model Review {
 /// Everything the owner can change without touching code: the masthead, the
 /// wording around the site, and the advertising slots. One row, id = 1.
 model SiteSettings {
-  id            Int     @id @default(1)
-  siteNameEn    String  @default("The Document")
-  siteNameBn    String  @default("দ্য ডকুমেন্ট")
-  taglineEn     String  @default("news written by its readers, checked by its editors.")
-  taglineBn     String  @default("পাঠকদের লেখা, সম্পাদকদের যাচাই করা সংবাদ।")
-  footerEn      String  @default("© The Document. All rights reserved.")
-  footerBn      String  @default("© দ্য ডকুমেন্ট। সর্বস্বত্ব সংরক্ষিত।")
+  id              Int     @id @default(1)
+  siteNameEn      String  @default("The Document")
+  siteNameBn      String  @default("দ্য ডকুমেন্ট")
+  taglineEn       String  @default("news written by its readers, checked by its editors.")
+  taglineBn       String  @default("পাঠকদের লেখা, সম্পাদকদের যাচাই করা সংবাদ।")
+  footerEn        String  @default("© The Document. All rights reserved.")
+  footerBn        String  @default("© দ্য ডকুমেন্ট। সর্বস্বত্ব সংরক্ষিত।")
   /// Uploaded masthead; falls back to the bundled artwork when empty.
-  logoUrl       String?
+  logoUrl         String?
   /// Ad slots. The HTML is pasted by an Admin and rendered as-is, which is what
   /// an ad network requires; nobody else can reach these fields.
-  adsEnabled    Boolean @default(false)
-  adHomeHtml    String  @default("")
-  adArticleHtml String  @default("")
-  adSectionHtml String  @default("")
+  ///
+  /// The unsuffixed fields are the BANGLA site. The `...En` ones are the
+  /// English site, and start empty: an advertiser who bought space on one half
+  /// of the paper has not bought the other.
+  adsEnabled      Boolean @default(false)
+  adHomeHtml      String  @default("")
+  adArticleHtml   String  @default("")
+  adSectionHtml   String  @default("")
   /// A wide strip across the page, and a square block in a side column. Kept
   /// separate because an ad network gives you different code for each shape.
-  adBannerHtml  String  @default("")
-  adSquareHtml  String  @default("")
+  adBannerHtml    String  @default("")
+  adSquareHtml    String  @default("")
+  adHomeHtmlEn    String  @default("")
+  adArticleHtmlEn String  @default("")
+  adSectionHtmlEn String  @default("")
+  adBannerHtmlEn  String  @default("")
+  adSquareHtmlEn  String  @default("")
   /// Which Bengali face readers get for article text.
-  banglaFont    String  @default("hind-siliguri")
+  banglaFont      String  @default("hind-siliguri")
 }
 
 // Single-row table the Admin edits under Payment settings

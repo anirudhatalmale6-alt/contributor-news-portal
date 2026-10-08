@@ -57,6 +57,8 @@ export default async function WritePage({ params }: { params: Promise<{ id: stri
             coverImage: article.coverImage,
             slug: article.slug,
             isStaff: user.role !== "CONTRIBUTOR",
+            authorName: user.name,
+            bylineName: article.bylineName ?? "",
             witnesses: article.witnesses ?? "",
             contactPhone: article.contactPhone ?? onFile?.phone ?? "",
             contactWhatsapp: article.contactWhatsapp ?? onFile?.whatsapp ?? "",

@@ -38,6 +38,7 @@ function pick(
     dek: string | null;
     body: string;
     category: string;
+    bylineName: string | null;
     coverImage: string | null;
     coverCropHome: string | null;
     coverCropArticle: string | null;
@@ -55,6 +56,13 @@ function pick(
   },
   locale: Locale,
 ): LocalisedArticle | null {
+  // A desk filing carries whatever name the editor put on it; a contributor's
+  // own piece always carries theirs. Deciding it here means every screen that
+  // shows a byline shows the same one.
+  const byline = article.bylineName?.trim()
+    ? { name: article.bylineName.trim(), tier: "GENERAL" as const }
+    : article.author;
+
   const base = {
     id: article.id,
     category: article.category,
@@ -62,7 +70,7 @@ function pick(
     coverCropHome: article.coverCropHome,
     coverCropArticle: article.coverCropArticle,
     publishedAt: article.publishedAt,
-    author: article.author,
+    author: byline,
   };
 
   if (article.language === locale) {

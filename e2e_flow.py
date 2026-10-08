@@ -27,6 +27,8 @@ NEW_PASS2 = "demo-changed-5678"
 INBOX_EMAIL = f"probe.inbox.{STAMP}@thedocument.test"
 REJECT_TITLE = "The minutes nobody has seen"
 WITNESS_TITLE = "The roadworks nobody signed off"
+BYLINE_TITLE = "The ferry terminal that opened twice"
+BYLINE_NAME = "Our Khulna correspondent"
 NEW_NAME = "Rosa Delgado"
 HEADLINE = "The allotment that became a flood defence"
 BN_HEADLINE = "যে বরাদ্দ জমি বন্যা প্রতিরোধের বাঁধ হয়ে উঠল"
@@ -762,7 +764,10 @@ def main():
         # picture instead; open it the way a person would.
         page.click('summary:has-text("Or paste code from an ad network")')
         page.wait_for_timeout(300)
-        page.fill('#site-settings textarea[name="adHomeHtml"]', '<div id="ad-home-test">HOUSE AD</div>')
+        page.fill(
+            '#site-settings textarea[name="adHomeHtmlEn"]',
+            '<div id="ad-home-test">HOUSE AD</div>',
+        )
         page.click('button:has-text("Save site settings")')
         page.wait_for_selector("text=Refresh the public site", timeout=20000)
         check("site settings save", "Refresh the public site" in page.content())
@@ -1871,6 +1876,93 @@ def main():
         check("an editor can write the missing version themselves", True)
         shot(ep5, "42-translation-desk.png")
         ec.close()
+
+        # --- 10n. a desk byline, and ads that stay on their own side --------
+        bl = ctx.browser.new_context(viewport=DESKTOP, http_credentials=GATE)
+        bp = bl.new_page()
+        sign_in(bp, "admin@thedocument.test", STAFF_PASS)
+
+        # The desk files a piece under a correspondent's name.
+        go(bp, f"{BASE}/dashboard")
+        bp.click('button:has-text("Start a new piece")')
+        bp.wait_for_url("**/dashboard/write/**", timeout=20000)
+        bp.wait_for_timeout(SETTLE_MS)
+        check(
+            "the desk is offered a contributor name for the piece",
+            "Set a contributor name for this article" in bp.inner_text("main"),
+        )
+        bp.fill('input[placeholder="Headline"]', BYLINE_TITLE)
+        bp.fill(
+            "textarea >> nth=0",
+            "Filed from the newsroom under a correspondent's name, the way a desk runs copy "
+            "from a stringer who has no account on the site.",
+        )
+        bp.fill('input[placeholder^="Leave empty to publish under"]', BYLINE_NAME)
+        bp.click('button:has-text("Save draft")')
+        bp.wait_for_selector("text=Draft saved", timeout=20000)
+        bp.click('button:has-text("Submit for review")')
+        bp.wait_for_selector("text=Submitted for review", timeout=20000)
+
+        # Publish it, then look at what a reader sees.
+        go(bp, f"{BASE}/editorial?status=SUBMITTED&q={BYLINE_TITLE.split(' ')[1]}")
+        bp.locator(f'li:has-text("{BYLINE_TITLE}") a:has-text("Review")').first.click()
+        bp.wait_for_url("**/editorial/**", timeout=20000)
+        bp.wait_for_timeout(SETTLE_MS)
+        check(
+            "and the review screen offers the same field",
+            bp.locator('input[name="bylineName"]').count() == 1,
+        )
+        tr_title = f"{BYLINE_TITLE} (Bangla)"
+        bp.fill("section#translation input >> nth=0", tr_title)
+        bp.fill("section#translation textarea", "বাংলা সংস্করণ, ডেস্কের লেখা।")
+        bp.click('section#translation button:has-text("translation")')
+        bp.wait_for_selector("text=version saved", timeout=20000)
+        bp.wait_for_timeout(SETTLE_MS)
+        bp.click('button:has-text("Approve and publish")')
+        bp.wait_for_selector("text=Published", timeout=20000)
+        bp.wait_for_timeout(SETTLE_MS)
+
+        live = bp.locator('a:has-text("View live")').first.get_attribute("href")
+        go(bp, f"{BASE}{live}")
+        wait_article(bp)
+        reader = bp.inner_text("main")
+        check(
+            "the reader sees the name the desk set, not the editor's account",
+            BYLINE_NAME in reader and "Nadia Okoro" not in reader,
+            reader[:220],
+        )
+        check(
+            "a made-up byline is not linked to a profile that does not exist",
+            bp.locator(f'main a:has-text("{BYLINE_NAME}")').count() == 0,
+        )
+        shot(bp, "43-desk-byline.png")
+
+        # Advertising: each half of the paper keeps its own.
+        go(bp, f"{BASE}/admin")
+        bp.check('#site-settings input[name="adsEnabled"]')
+        bp.click('summary:has-text("Or paste code from an ad network")')
+        bp.wait_for_timeout(300)
+        bp.fill('#site-settings textarea[name="adBannerHtml"]', '<div id="ad-bn">BANGLA BANNER</div>')
+        bp.fill('#site-settings textarea[name="adBannerHtmlEn"]', '<div id="ad-en">ENGLISH BANNER</div>')
+        bp.click('button:has-text("Save site settings")')
+        bp.wait_for_selector("text=Refresh the public site", timeout=20000)
+
+        go(bp, BASE)
+        bn_home = bp.inner_text("main")
+        go(bp, f"{BASE}/en")
+        en_home = bp.inner_text("main")
+        check(
+            "the Bangla banner runs on the Bangla site only",
+            "BANGLA BANNER" in bn_home and "BANGLA BANNER" not in en_home,
+            f"bn={'yes' if 'BANGLA BANNER' in bn_home else 'no'} en={'yes' if 'BANGLA BANNER' in en_home else 'no'}",
+        )
+        check(
+            "and the English banner on the English site only",
+            "ENGLISH BANNER" in en_home and "ENGLISH BANNER" not in bn_home,
+            f"en={'yes' if 'ENGLISH BANNER' in en_home else 'no'} bn={'yes' if 'ENGLISH BANNER' in bn_home else 'no'}",
+        )
+        shot(bp, "44-ads-by-language.png")
+        bl.close()
 
         # --- 11. mobile ------------------------------------------------------
         mob = ctx.browser.new_context(viewport=PHONE, device_scale_factor=2, http_credentials=GATE)

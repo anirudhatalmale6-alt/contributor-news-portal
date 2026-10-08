@@ -19,6 +19,11 @@ type Site = {
   adSectionHtml: string;
   adBannerHtml: string;
   adSquareHtml: string;
+  adHomeHtmlEn: string;
+  adArticleHtmlEn: string;
+  adSectionHtmlEn: string;
+  adBannerHtmlEn: string;
+  adSquareHtmlEn: string;
   banglaFont: string;
 };
 
@@ -207,18 +212,49 @@ export function SiteForm({ settings }: { settings: Site }) {
           <span>
             <span className="font-medium">Show advertising</span>
             <span className="mt-0.5 block text-xs text-ink-soft">
-              Paste the code your ad network gives you. An empty box shows nothing at all, so the
-              page never has a blank gap in it.
+              Each half of the paper sells its own space. What you put under বাংলা appears only on
+              the Bangla site, and what you put under English appears only on the English one. An
+              empty box shows nothing at all, so the page never has a blank gap in it.
             </span>
           </span>
         </label>
 
         {/* The picture route first: most advertisers send an image, not code. */}
-        <div className="grid gap-3 sm:grid-cols-2">
-          <AdUploader slot="banner" label="Banner" size="970 x 90 (phones 320 x 100)" current={form.adBannerHtml} />
-          <AdUploader slot="square" label="Square" size="300 x 250" current={form.adSquareHtml} />
-          <AdUploader slot="home" label="Home page extra" size="300 x 250 or taller" current={form.adHomeHtml} />
-          <AdUploader slot="article" label="Article page" size="728 x 90 or 300 x 250" current={form.adArticleHtml} />
+        <div className="grid gap-5 lg:grid-cols-2">
+          {([
+            { suffix: "", heading: "বাংলা site", note: "thedocument.net" },
+            { suffix: "En", heading: "English site", note: "thedocument.net/en" },
+          ] as const).map(({ suffix, heading, note }) => (
+            <div key={heading} className="grid gap-3 rounded-xl border border-line p-3">
+              <p className="text-sm font-semibold">
+                {heading} <span className="font-normal text-xs text-ink-soft">{note}</span>
+              </p>
+              <AdUploader
+                slot={`banner${suffix}`}
+                label="Banner"
+                size="970 x 90 (phones 320 x 100)"
+                current={suffix ? form.adBannerHtmlEn : form.adBannerHtml}
+              />
+              <AdUploader
+                slot={`square${suffix}`}
+                label="Square"
+                size="300 x 250"
+                current={suffix ? form.adSquareHtmlEn : form.adSquareHtml}
+              />
+              <AdUploader
+                slot={`home${suffix}`}
+                label="Home page extra"
+                size="300 x 250 or taller"
+                current={suffix ? form.adHomeHtmlEn : form.adHomeHtml}
+              />
+              <AdUploader
+                slot={`article${suffix}`}
+                label="Article page"
+                size="728 x 90 or 300 x 250"
+                current={suffix ? form.adArticleHtmlEn : form.adArticleHtml}
+              />
+            </div>
+          ))}
         </div>
 
         <details className="rounded-lg border border-line p-3">
@@ -252,6 +288,26 @@ export function SiteForm({ settings }: { settings: Site }) {
             </span>
             <textarea name="adSquareHtml" value={form.adSquareHtml} onChange={set("adSquareHtml")} rows={3} className={`${field} font-mono text-xs`} />
           </label>
+
+          <p className="mt-2 border-t border-line pt-3 text-sm font-semibold">English site</p>
+          {([
+            ["adBannerHtmlEn", "Banner, 970 x 90"],
+            ["adSquareHtmlEn", "Square, 300 x 250"],
+            ["adHomeHtmlEn", "Home page slot"],
+            ["adArticleHtmlEn", "Article page slot"],
+            ["adSectionHtmlEn", "Section page slot"],
+          ] as const).map(([name, label]) => (
+            <label key={name} className="grid gap-1 text-sm">
+              <span className="text-xs font-medium text-ink-soft">{label}</span>
+              <textarea
+                name={name}
+                value={form[name]}
+                onChange={set(name)}
+                rows={3}
+                className={`${field} font-mono text-xs`}
+              />
+            </label>
+          ))}
         </div>
         </details>
       </section>

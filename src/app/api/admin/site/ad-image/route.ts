@@ -4,12 +4,18 @@ import { saveUpload } from "@/lib/storage";
 
 const TYPES = ["image/png", "image/jpeg", "image/webp", "image/gif"];
 
+/** Each half of the paper has its own boxes; "...En" is the English site. */
 const FIELD = {
   banner: "adBannerHtml",
   square: "adSquareHtml",
   home: "adHomeHtml",
   article: "adArticleHtml",
   section: "adSectionHtml",
+  bannerEn: "adBannerHtmlEn",
+  squareEn: "adSquareHtmlEn",
+  homeEn: "adHomeHtmlEn",
+  articleEn: "adArticleHtmlEn",
+  sectionEn: "adSectionHtmlEn",
 } as const;
 
 /** Keeps a pasted link out of the markup it is dropped into. */

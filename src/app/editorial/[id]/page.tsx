@@ -112,6 +112,8 @@ export default async function ReviewPage({ params }: { params: Promise<{ id: str
               language: article.language,
               coverImage: article.coverImage,
               homeSlot: article.homeSlot,
+              bylineName: article.bylineName ?? "",
+              authorName: article.author.name,
               payoutCents: article.payoutCents,
               media: article.media.map((m) => ({
                 id: m.id,

@@ -111,7 +111,7 @@ export async function Feed({ locale, category }: { locale: Locale; category: str
         teaserExclude={[...leftRail, ...rightRail, ...underLead].map((a) => a.href)}
       />
       <main className={`${SHELL} pb-16`}>
-        <AdSlot slot="banner" className="mb-0 mt-4" />
+        <AdSlot slot="banner" locale={locale} className="mb-0 mt-4" />
         {!lead ? (
           <p className="py-16 text-center text-ink-soft">{copy.nothingHere}</p>
         ) : (
@@ -147,8 +147,8 @@ export async function Feed({ locale, category }: { locale: Locale; category: str
                 {rightRail.map((a) => (
                   <RailItem key={a.href} article={a} locale={locale} />
                 ))}
-                <AdSlot slot="square" />
-                <AdSlot slot="home" />
+                <AdSlot slot="square" locale={locale} />
+                <AdSlot slot="home" locale={locale} />
               </aside>
             </div>
 

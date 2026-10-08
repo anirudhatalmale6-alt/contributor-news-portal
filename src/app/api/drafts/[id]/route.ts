@@ -10,6 +10,7 @@ const patchSchema = z.object({
   category: z.string().trim().max(60).optional(),
   coverImage: z.string().trim().max(500).nullable().optional(),
   language: z.enum(["EN", "BN"]).optional(),
+  bylineName: z.string().trim().max(120).nullable().optional(),
 });
 
 type Ctx = { params: Promise<{ id: string }> };
@@ -61,6 +62,12 @@ export async function PATCH(req: Request, { params }: Ctx) {
       );
     }
     const data = parsed.data;
+
+    // A byline is the desk's to set. A contributor writes under their own name
+    // and may not file something under somebody else's.
+    if (data.bylineName !== undefined && user.role === "CONTRIBUTOR") {
+      delete data.bylineName;
+    }
 
     const article = await prisma.article.update({
       where: { id },

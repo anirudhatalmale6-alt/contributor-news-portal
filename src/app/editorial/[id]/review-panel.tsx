@@ -29,6 +29,9 @@ type ArticleState = {
   language: string;
   coverImage: string | null;
   homeSlot: string | null;
+  bylineName: string;
+  /** Whose account filed it, shown as the default byline. */
+  authorName: string;
   payoutCents: number;
   media: MediaItem[];
 };
@@ -49,6 +52,7 @@ export function ReviewPanel({
     dek: article.dek,
     body: article.body,
     category: article.category,
+    bylineName: article.bylineName,
   });
   const [payout, setPayout] = useState((settings.suggestedCents / 100).toFixed(2));
   const [note, setNote] = useState("");
@@ -249,6 +253,21 @@ export function ReviewPanel({
             Suggested from payment settings
             {authorTier === "VERIFIED" ? ` incl. +${settings.verifiedBonusPct}% verified bonus` : ""}
             . The writer sees this figure the moment you approve.
+          </span>
+        </label>
+
+        <label className="grid gap-1 text-sm">
+          <span className="font-medium">Set a contributor name for this article:</span>
+          <input
+            name="bylineName"
+            value={form.bylineName}
+            onChange={(e) => update("bylineName", e.target.value)}
+            placeholder={`Leave empty to publish under ${article.authorName}`}
+            maxLength={120}
+            className="w-full rounded-lg border border-line px-3 py-2 text-sm outline-none focus:border-navy sm:w-72"
+          />
+          <span className="text-xs text-ink-soft">
+            Readers see this name instead. Saved with the copy, above.
           </span>
         </label>
 
