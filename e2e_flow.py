@@ -29,6 +29,9 @@ REJECT_TITLE = "The minutes nobody has seen"
 WITNESS_TITLE = "The roadworks nobody signed off"
 BYLINE_TITLE = "The ferry terminal that opened twice"
 BYLINE_NAME = "Our Khulna correspondent"
+
+# Whatever advertising the site already carries, so the run can put it back.
+ADS_BEFORE: dict[str, str] = {}
 NEW_NAME = "Rosa Delgado"
 HEADLINE = "The allotment that became a flood defence"
 BN_HEADLINE = "যে বরাদ্দ জমি বন্যা প্রতিরোধের বাঁধ হয়ে উঠল"
@@ -758,12 +761,23 @@ def main():
         shot(page, "11-admin.png")
 
         # site settings: wording and advertising, no developer needed
-        page.fill('#site-settings input[name="siteNameEn"]', "The Document Daily")
-        page.check('#site-settings input[name="adsEnabled"]')
-        # The code boxes now sit behind a fold, because most owners upload a
-        # picture instead; open it the way a person would.
+        AD_FIELDS = [
+            "adHomeHtml",
+            "adBannerHtml",
+            "adSquareHtml",
+            "adHomeHtmlEn",
+            "adBannerHtmlEn",
+            "adSquareHtmlEn",
+        ]
         page.click('summary:has-text("Or paste code from an ad network")')
         page.wait_for_timeout(300)
+        ADS_BEFORE.update(
+            {f: page.input_value(f'#site-settings textarea[name="{f}"]') for f in AD_FIELDS}
+        )
+        ADS_BEFORE["siteNameEn"] = page.input_value('#site-settings input[name="siteNameEn"]')
+
+        page.fill('#site-settings input[name="siteNameEn"]', "The Document Daily")
+        page.check('#site-settings input[name="adsEnabled"]')
         page.fill(
             '#site-settings textarea[name="adHomeHtmlEn"]',
             '<div id="ad-home-test">HOUSE AD</div>',
@@ -1931,9 +1945,11 @@ def main():
             BYLINE_NAME in reader and "Nadia Okoro" not in reader,
             reader[:220],
         )
+        # The name may well appear inside a card link elsewhere on the page;
+        # what matters is that it is not offered as a profile to visit.
         check(
             "a made-up byline is not linked to a profile that does not exist",
-            bp.locator(f'main a:has-text("{BYLINE_NAME}")').count() == 0,
+            bp.locator(f'main a[href*="/author/"]:has-text("{BYLINE_NAME}")').count() == 0,
         )
         shot(bp, "43-desk-byline.png")
 
@@ -2018,6 +2034,40 @@ def main():
             str(rejected),
         )
         check("no uncaught JS errors anywhere in the run", not real_errors, str(real_errors[:3]))
+
+        # Hand the site back exactly as it was found: the owner's own
+        # advertising, not the markup this run pasted over it.
+        if ADS_BEFORE:
+            restore = ctx.browser.new_context(viewport=DESKTOP, http_credentials=GATE)
+            rp = restore.new_page()
+            sign_in(rp, "admin@thedocument.test", STAFF_PASS)
+            go(rp, f"{BASE}/admin")
+            rp.click('summary:has-text("Or paste code from an ad network")')
+            rp.wait_for_timeout(300)
+            for field, value in ADS_BEFORE.items():
+                sel = (
+                    f'#site-settings input[name="{field}"]'
+                    if field == "siteNameEn"
+                    else f'#site-settings textarea[name="{field}"]'
+                )
+                rp.fill(sel, value)
+            rp.click('button:has-text("Save site settings")')
+            rp.wait_for_selector("text=Refresh the public site", timeout=20000)
+            rp.wait_for_timeout(SETTLE_MS)
+            back = {
+                f: rp.input_value(
+                    f'#site-settings input[name="{f}"]'
+                    if f == "siteNameEn"
+                    else f'#site-settings textarea[name="{f}"]'
+                )
+                for f in ADS_BEFORE
+            }
+            check(
+                "the run hands the advertising settings back as it found them",
+                back == ADS_BEFORE,
+                str({k: v[:30] for k, v in back.items() if v != ADS_BEFORE[k]}),
+            )
+            restore.close()
 
         browser.close()
 
