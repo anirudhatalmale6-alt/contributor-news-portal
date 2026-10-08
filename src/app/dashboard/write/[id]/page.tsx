@@ -1,9 +1,13 @@
 import Link from "next/link";
+import { textGroups } from "@/lib/ui-text";
 import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { currentUser } from "@/lib/rbac";
 import { SiteHeader } from "@/components/site-header";
 import { Composer } from "./composer";
+
+/** The two groups of wording this screen uses. */
+const COMPOSER_GROUPS = ["Writing a piece", "Sending it in"];
 
 export const metadata = { title: "Write" };
 
@@ -46,6 +50,12 @@ export default async function WritePage({ params }: { params: Promise<{ id: stri
           &larr; Back to my desk
         </Link>
         <Composer
+          // The form speaks the language the piece is being written in, using
+          // whatever wording the owner has set in Settings - Wording.
+          labels={{
+            BN: textGroups(COMPOSER_GROUPS, "BN"),
+            EN: textGroups(COMPOSER_GROUPS, "EN"),
+          }}
           article={{
             id: article.id,
             title: article.title,

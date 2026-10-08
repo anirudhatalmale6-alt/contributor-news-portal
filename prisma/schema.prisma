@@ -415,3 +415,16 @@ model Notification {
 
   @@index([userId, createdAt])
 }
+
+/// One line of wording the owner has changed, for one language.
+///
+/// Absent means "use what the site shipped with", which is why resetting a line
+/// deletes the row rather than storing the default back again.
+model UiText {
+  key       String
+  locale    String
+  value     String
+  updatedAt DateTime @updatedAt
+
+  @@id([key, locale])
+}

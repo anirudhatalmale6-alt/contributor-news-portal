@@ -15,7 +15,15 @@ export async function StaffNav({
   current,
 }: {
   user: SessionUser;
-  current: "desk" | "newsroom" | "published" | "frontpage" | "inbox" | "people" | "settings";
+  current:
+    | "desk"
+    | "newsroom"
+    | "published"
+    | "frontpage"
+    | "inbox"
+    | "people"
+    | "settings"
+    | "wording";
 }) {
   const staff = isStaff(user.role);
   const [waiting, unread, updates] = await Promise.all([
@@ -39,7 +47,12 @@ export async function StaffNav({
           { key: "people" as const, href: "/people", label: "People" },
         ]
       : []),
-    ...(isOwner(user.role) ? [{ key: "settings" as const, href: "/admin", label: "Settings" }] : []),
+    ...(isOwner(user.role)
+      ? [
+          { key: "settings" as const, href: "/admin", label: "Settings" },
+          { key: "wording" as const, href: "/admin/wording", label: "Wording" },
+        ]
+      : []),
   ];
 
   return (

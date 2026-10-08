@@ -239,13 +239,13 @@ def main():
         article_url = page.url
         check(
             "a new piece opens in Bangla, not English",
-            page.locator("select").nth(1).input_value() == "BN",
-            page.locator("select").nth(1).input_value(),
+            page.locator('select[name="language"]').input_value() == "BN",
+            page.locator('select[name="language"]').input_value(),
         )
-        page.select_option("select >> nth=1", "EN")
-        page.fill('input[placeholder="Headline"]', HEADLINE)
+        page.select_option('select[name="language"]', "EN")
+        page.fill('input[name="title"]', HEADLINE)
         page.fill(
-            'input[placeholder="One-line summary shown in the feed"]',
+            'input[name="dek"]',
             "The council spent eleven years refusing to buy it. Then the water came.",
         )
         page.select_option("select", "Culture")
@@ -263,13 +263,18 @@ def main():
             "- No flood model submitted with the application mentions the site at all",
         )
         with page.expect_file_chooser() as fc:
-            page.click('button:has-text("Attach media")')
+            page.click('button[name="attach-media"]')
         fc.value.set_files(photo)
         page.wait_for_selector("li img", timeout=20000)
         check("image upload attaches to the draft", page.locator("section li img").count() >= 1)
-        page.click('button:has-text("Save draft")')
+        page.click('button[name="save-draft"]')
         page.wait_for_selector("text=Draft saved", timeout=20000)
-        check("saving a draft confirms it in words", "come back to it any time" in page.content())
+        # Visible text: the wording for both languages is handed to this screen
+        # as a prop, so the confirmation's words are in the page source already.
+        check(
+            "saving a draft confirms it in words",
+            "come back to it any time" in page.inner_text("body"),
+        )
         shot(page, "04-composer.png", scroll="top")
 
         # reload proves the copy really persisted, not just sat in React state
@@ -277,27 +282,33 @@ def main():
         page.wait_for_timeout(SETTLE_MS)
         check(
             "draft survives a reload (saved server-side, not in the browser)",
-            HEADLINE in page.content() and "attenuation basin" in page.content(),
+            # Form fields, so read their values: inner_text does not see them
+            # and page.content() would also match the wording shipped as props.
+            page.input_value('input[name="title"]') == HEADLINE
+            and "attenuation basin" in page.input_value("textarea >> nth=0"),
         )
 
         # --- 5. submit ------------------------------------------------------
         # The desk cannot chase a story it has no number for, so a submission
         # without one has to be refused rather than quietly accepted.
-        page.click('button:has-text("Submit for review")')
+        page.click('button[name="submit-article"]')
         page.wait_for_timeout(SETTLE_MS * 3)
         check(
             "a submission with no contact number is refused",
             "contact number" in page.inner_text("body").lower()
-            and "Submitted for review" not in page.content(),
+            # Visible text only: the composer is handed the wording for both
+            # languages, so the confirmation's words are in the page source
+            # whether or not anything was submitted.
+            and "Submitted for review" not in page.inner_text("body"),
         )
         page.fill('input[placeholder="01XXXXXXXXX"] >> nth=0', "01712345678")
         page.fill('input[placeholder="01XXXXXXXXX"] >> nth=1', "01812345678")
         shot(page, "28-submission-contact.png", scroll="section:has-text('reach you about this piece')")
-        page.click('button:has-text("Submit for review")')
+        page.click('button[name="submit-article"]')
         page.wait_for_selector("text=Submitted for review", timeout=20000)
         check(
             "submitting shows a confirmation with a way back",
-            "Back to my desk" in page.content(),
+            "Back to my desk" in page.inner_text("body"),
         )
         page.click('a:has-text("Back to my desk")')
         page.wait_for_url("**/dashboard", timeout=20000)
@@ -575,10 +586,10 @@ def main():
         page.click('button:has-text("Start a new piece")')
         page.wait_for_url("**/dashboard/write/**", timeout=20000)
         # written in English here, so the second version the writer adds is Bangla
-        page.select_option("select >> nth=1", "EN")
-        page.fill('input[placeholder="Headline"]', BOTH_EN_TITLE)
+        page.select_option('select[name="language"]', "EN")
+        page.fill('input[name="title"]', BOTH_EN_TITLE)
         page.fill(
-            'input[placeholder="One-line summary shown in the feed"]',
+            'input[name="dek"]',
             "Two years of minutes, and not one of them mentions the cost.",
         )
         page.fill(
@@ -608,7 +619,7 @@ def main():
         )
         shot(page, "22-contributor-both-languages.png", scroll="section:has-text('Also submit in')")
         page.fill('input[placeholder="01XXXXXXXXX"] >> nth=0', "01712345678")
-        page.click('button:has-text("Submit for review")')
+        page.click('button[name="submit-article"]')
         page.wait_for_selector("text=Submitted for review", timeout=20000)
 
         sign_out(page)
@@ -1493,15 +1504,17 @@ def main():
         go(tp, f"{BASE}/dashboard")
         tp.click('button:has-text("Start a new piece")')
         tp.wait_for_url("**/dashboard/write/**", timeout=20000)
-        tp.fill('input[placeholder="Headline"]', REJECT_TITLE)
+        # The form speaks the language of the piece, and this one is English.
+        tp.select_option('select[name="language"]', "EN")
+        tp.fill('input[name="title"]', REJECT_TITLE)
         tp.fill(
             "textarea",
             "A short filing that an editor is going to send back, so the writer can be "
             "told about it. It needs enough words to pass the length check on submission.",
         )
-        tp.click('button:has-text("Save draft")')
+        tp.click('button[name="save-draft"]')
         tp.wait_for_selector("text=Draft saved", timeout=20000)
-        tp.click('button:has-text("Submit for review")')
+        tp.click('button[name="submit-article"]')
         tp.wait_for_selector("text=Submitted for review", timeout=20000)
 
         ed3 = ctx.browser.new_context(viewport=DESKTOP, http_credentials=GATE)
@@ -1873,11 +1886,70 @@ def main():
         )
         shot(np, "45-front-page-automatic.png")
 
+        # --- 10f2. the wording the owner controls ----------------------------
+        # Labels are his to change, in both languages, without a developer.
+        go(np, f"{BASE}/admin/wording")
+        if "/admin/wording" not in np.url:
+            print("NOTE this account is not the owner, so the wording screen was not opened")
+        else:
+            boxes = np.locator("textarea").count()
+            check("the wording screen lists every line of the site", boxes > 100, str(boxes))
+            before_bn = np.input_value('textarea[name="BN:feed.alsoToday"]')
+            np.fill('textarea[name="BN:feed.alsoToday"]', "আজকের নির্বাচিত খবর")
+            np.click('button:has-text("Save wording")')
+            np.wait_for_selector("text=Saved", timeout=20000)
+            np.wait_for_timeout(SETTLE_MS)
+
+            go(np, f"{BASE}/")
+            check(
+                "a changed Bangla label shows on the site at once",
+                "আজকের নির্বাচিত খবর" in np.content(),
+            )
+            go(np, f"{BASE}/en")
+            check(
+                "and the English site keeps its own wording",
+                "Also today" in np.content() and "আজকের নির্বাচিত খবর" not in np.content(),
+            )
+
+            # Emptying the box is how a change is undone.
+            go(np, f"{BASE}/admin/wording")
+            np.fill('textarea[name="BN:feed.alsoToday"]', before_bn)
+            np.click('button:has-text("Save wording")')
+            np.wait_for_selector("text=Saved", timeout=20000)
+            np.wait_for_timeout(SETTLE_MS)
+            go(np, f"{BASE}/")
+            check(
+                "the run hands the wording back as it found it",
+                "আজকের আরও খবর" in np.content() and "আজকের নির্বাচিত খবর" not in np.content(),
+            )
+            shot(np, "46-wording.png")
+
+        # The summary sells the piece in a list; it is not repeated on the
+        # article, where the reader has already read it.
+        go(np, f"{BASE}/")
+        np.locator('main div.grid > div a[href*="/article/"]').first.click()
+        np.wait_for_url("**/article/**", timeout=20000)
+        np.wait_for_timeout(SETTLE_MS)
+        after_headline = np.evaluate(
+            """() => {
+                 const h1 = document.querySelector('main h1');
+                 const next = h1 && h1.nextElementSibling;
+                 return next ? next.tagName : 'NONE';
+               }"""
+        )
+        check(
+            "the one-line summary is not repeated under the headline",
+            after_headline != "P",
+            after_headline,
+        )
+
         # Formatting toolbar, and what it writes.
         go(np, f"{BASE}/dashboard")
         np.click('button:has-text("Start a new piece")')
         np.wait_for_url("**/dashboard/write/**", timeout=20000)
         np.wait_for_timeout(SETTLE_MS)
+        np.select_option('select[name="language"]', "EN")
+        np.wait_for_timeout(300)
         check("the writing desk has a formatting toolbar", np.locator('button[title^="Bold"]').count() == 1)
         np.fill("textarea >> nth=0", "The committee met twice")
         np.evaluate(
@@ -2085,21 +2157,23 @@ def main():
         sp.click('button:has-text("Start a new piece")')
         sp.wait_for_url("**/dashboard/write/**", timeout=20000)
         sp.wait_for_timeout(SETTLE_MS)
+        sp.select_option('select[name="language"]', "EN")
+        sp.wait_for_timeout(300)
         desk = sp.inner_text("main")
         check(
             "the desk is not asked how to reach itself",
             "How the desk can reach you" not in desk,
             desk[:200],
         )
-        sp.fill('input[placeholder="Headline"]', "A piece filed by the desk itself")
+        sp.fill('input[name="title"]', "A piece filed by the desk itself")
         sp.fill(
             "textarea >> nth=0",
             "Written in the newsroom rather than sent in, so there is nobody to telephone "
             "about it and no witness to name. It still has to publish like anything else.",
         )
-        sp.click('button:has-text("Save draft")')
+        sp.click('button[name="save-draft"]')
         sp.wait_for_selector("text=Draft saved", timeout=20000)
-        sp.click('button:has-text("Submit for review")')
+        sp.click('button[name="submit-article"]')
         sp.wait_for_selector("text=Submitted for review", timeout=20000)
         check("and can still submit without one", True)
         sb.close()
@@ -2118,7 +2192,7 @@ def main():
             "a contributor is asked who saw it happen, in Bangla",
             "প্রত্যক্ষদর্শী" in wp.inner_text("main"),
         )
-        wp.fill('input[placeholder="Headline"]', WITNESS_TITLE)
+        wp.fill('input[name="title"]', WITNESS_TITLE)
         wp.fill(
             "textarea >> nth=0",
             "A filing that names somebody who was standing there, so the desk can ring them "
@@ -2127,10 +2201,18 @@ def main():
         witness_text = "মোঃ রফিকুল ইসলাম, বাগেরহাট সদর, ০১৭১১২২৩৩৪৪"
         wp.fill("textarea >> nth=1", witness_text)
         wp.fill('input[placeholder="01XXXXXXXXX"] >> nth=0', "01711000111")
-        wp.click('button:has-text("Save draft")')
-        wp.wait_for_selector("text=Draft saved", timeout=20000)
-        wp.click('button:has-text("Submit for review")')
-        wp.wait_for_selector("text=Submitted for review", timeout=20000)
+        # This piece stays in Bangla, so the whole form - including the two
+        # confirmations - has to come back in Bangla.
+        wp.click('button[name="save-draft"]')
+        wp.wait_for_selector("text=খসড়া সংরক্ষিত", timeout=20000)
+        check("a Bangla piece is told its draft was saved, in Bangla", True)
+        wp.click('button[name="submit-article"]')
+        wp.wait_for_selector("text=যাচাইয়ের জন্য জমা দেওয়া হয়েছে", timeout=20000)
+        check(
+            "and the submission is confirmed in Bangla",
+            "আমার ডেস্কে ফিরুন" in wp.inner_text("main"),
+            wp.inner_text("main")[:120].replace("\n", " "),
+        )
         wc.close()
 
         ec = ctx.browser.new_context(viewport=DESKTOP, http_credentials=GATE)
@@ -2172,20 +2254,22 @@ def main():
         bp.click('button:has-text("Start a new piece")')
         bp.wait_for_url("**/dashboard/write/**", timeout=20000)
         bp.wait_for_timeout(SETTLE_MS)
+        bp.select_option('select[name="language"]', "EN")
+        bp.wait_for_timeout(300)
         check(
             "the desk is offered a contributor name for the piece",
             "Set a contributor name for this article" in bp.inner_text("main"),
         )
-        bp.fill('input[placeholder="Headline"]', BYLINE_TITLE)
+        bp.fill('input[name="title"]', BYLINE_TITLE)
         bp.fill(
             "textarea >> nth=0",
             "Filed from the newsroom under a correspondent's name, the way a desk runs copy "
             "from a stringer who has no account on the site.",
         )
         bp.fill('input[placeholder^="Leave empty to publish under"]', BYLINE_NAME)
-        bp.click('button:has-text("Save draft")')
+        bp.click('button[name="save-draft"]')
         bp.wait_for_selector("text=Draft saved", timeout=20000)
-        bp.click('button:has-text("Submit for review")')
+        bp.click('button[name="submit-article"]')
         bp.wait_for_selector("text=Submitted for review", timeout=20000)
 
         # Publish it, then look at what a reader sees.

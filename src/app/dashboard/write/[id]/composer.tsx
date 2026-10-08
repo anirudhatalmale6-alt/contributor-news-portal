@@ -35,11 +35,15 @@ export function Composer({
   article,
   lastNote,
   secondVersion,
+  labels,
 }: {
   article: ArticleState;
   lastNote: { action: string; note: string; editor: string } | null;
   /** The other-language version, if one already exists for this piece. */
   secondVersion: { title: string; dek: string; body: string; byEditor: boolean } | null;
+  /** The owner's wording for this screen, in both languages. A writer working
+      in Bangla gets a Bangla form; switching the language switches the form. */
+  labels: Record<"EN" | "BN", Record<string, string>>;
 }) {
   const router = useRouter();
   const [form, setForm] = useState({
@@ -68,6 +72,8 @@ export function Composer({
   const dirty = useRef(false);
 
   const locked = status === "SUBMITTED" || status === "APPROVED";
+  /** A label in the language this piece is being written in. */
+  const w = (key: string) => labels[form.language][key] ?? key;
 
   const save = useCallback(
     async (silent = false) => {
@@ -84,7 +90,7 @@ export function Composer({
       }
       dirty.current = false;
       setSaveState("saved");
-      if (!silent) setMessage("Draft saved. You can close this and come back to it any time.");
+      if (!silent) setMessage(w("compose.saved"));
       if (status === "REJECTED") setStatus("DRAFT");
     },
     [article.id, form, locked, status],
@@ -162,7 +168,7 @@ export function Composer({
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-      setMessage(data.error ?? "Could not submit this piece.");
+      setMessage(data.error ?? w("submit.failed"));
       return;
     }
     setStatus("SUBMITTED");
@@ -182,7 +188,7 @@ export function Composer({
           <path d="m8 12.5 2.5 2.5L16 9.5" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
         <h2 className="mt-3 font-serif text-2xl font-bold text-emerald-900">
-          Submitted for review
+          {w("submit.done")}
         </h2>
         <p className="mx-auto mt-2 max-w-md text-sm text-emerald-900">
           An editor will read <span className="font-medium">{form.title}</span>, make any changes
@@ -194,14 +200,14 @@ export function Composer({
             href="/dashboard"
             className="rounded-full bg-navy px-5 py-2.5 text-sm font-medium text-white hover:bg-navy-dark"
           >
-            Back to my desk
+            {w("submit.backToDesk")}
           </Link>
           <button
             type="button"
             onClick={() => setSubmitted(false)}
             className="rounded-full border border-emerald-300 px-5 py-2.5 text-sm font-medium text-emerald-900 hover:bg-emerald-100"
           >
-            View the piece
+            {w("submit.viewPiece")}
           </button>
         </div>
       </div>
@@ -226,24 +232,24 @@ export function Composer({
             <>
               <button
                 type="button"
+                name="save-draft"
                 onClick={() => void save()}
                 className="rounded-full border border-line px-4 py-2 text-sm font-medium hover:bg-paper-soft"
               >
-                Save draft
+                {w("compose.saveDraft")}
               </button>
               <button
                 type="button"
+                name="submit-article"
                 onClick={() => void submit()}
                 className="rounded-full bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand-dark"
               >
-                {status === "REJECTED" ? "Resubmit" : "Submit for review"}
+                {status === "REJECTED" ? w("submit.resubmit") : w("submit.button")}
               </button>
             </>
           ) : (
             <span className="rounded-full border border-line bg-paper-soft px-4 py-2 text-xs text-ink-soft">
-              {status === "SUBMITTED"
-                ? "Locked while an editor reviews it"
-                : "Published - edits go through the desk"}
+              {status === "SUBMITTED" ? w("submit.locked") : w("submit.published")}
             </span>
           )}
         </div>
@@ -262,7 +268,7 @@ export function Composer({
           }`}
         >
           <p className="text-xs font-semibold uppercase tracking-wide">
-            {lastNote.action === "REJECTED" ? "Changes requested" : "Editor note"} ·{" "}
+            {lastNote.action === "REJECTED" ? w("submit.changesRequested") : w("submit.editorNote")} ·{" "}
             {lastNote.editor}
           </p>
           <p className="mt-1">{lastNote.note}</p>
@@ -270,19 +276,21 @@ export function Composer({
       ) : null}
 
       <input
+        name="title"
         value={form.title}
         onChange={(e) => update("title", e.target.value)}
         disabled={locked}
         lang={form.language === "BN" ? "bn" : "en"}
-        placeholder="Headline"
+        placeholder={w("compose.headline")}
         className="w-full border-b border-line pb-2 font-serif text-2xl font-bold outline-none placeholder:text-ink-soft/50 focus:border-navy disabled:bg-transparent sm:text-3xl"
       />
 
       <input
+        name="dek"
         value={form.dek}
         onChange={(e) => update("dek", e.target.value)}
         disabled={locked}
-        placeholder="One-line summary shown in the feed"
+        placeholder={w("compose.dek")}
         className="w-full rounded-lg border border-line px-3 py-2.5 text-sm outline-none focus:border-navy"
       />
 
@@ -290,7 +298,7 @@ export function Composer({
           contributor never needs this: their own name is the byline. */}
       {isStaff ? (
         <label className="grid gap-1 text-sm">
-          <span className="font-medium">Set a contributor name for this article:</span>
+          <span className="font-medium">{w("compose.bylineLabel")}</span>
           <input
             value={form.bylineName}
             onChange={(e) => update("bylineName", e.target.value)}
@@ -300,15 +308,16 @@ export function Composer({
             className="w-full rounded-lg border border-line px-3 py-2.5 text-sm outline-none focus:border-navy sm:max-w-sm"
           />
           <span className="text-xs text-ink-soft">
-            Readers see this name on the front page and on the article.
+            {w("compose.bylineNote")}
           </span>
         </label>
       ) : null}
 
       <div className="flex flex-wrap items-center gap-4 text-sm">
         <label className="flex flex-wrap items-center gap-2">
-          <span className="font-medium">Section</span>
+          <span className="font-medium">{w("compose.section")}</span>
           <select
+            name="category"
             value={form.category}
             onChange={(e) => update("category", e.target.value)}
             disabled={locked}
@@ -323,8 +332,9 @@ export function Composer({
         </label>
 
         <label className="flex flex-wrap items-center gap-2">
-          <span className="font-medium">Writing in</span>
+          <span className="font-medium">{w("compose.writingIn")}</span>
           <select
+            name="language"
             value={form.language}
             onChange={(e) => update("language", e.target.value)}
             disabled={locked}
@@ -334,7 +344,10 @@ export function Composer({
             <option value="EN">English</option>
           </select>
           <span className="text-xs text-ink-soft">
-            An editor writes the {form.language === "EN" ? "Bangla" : "English"} version.
+            {labels[form.language]["compose.editorWritesOther"].replace(
+              "{other}",
+              form.language === "EN" ? "বাংলা" : "English",
+            )}
           </span>
         </label>
       </div>
@@ -371,7 +384,7 @@ export function Composer({
           disabled={locked}
           lang={form.language === "BN" ? "bn" : "en"}
           rows={18}
-          placeholder={"Write your piece here.\n\nBlank line starts a new paragraph. Use the buttons above for bold, italics and subtitles."}
+          placeholder={w("compose.body")}
           className="prose-article w-full rounded-b-xl border border-line p-4 outline-none focus:border-navy"
         />
       </div>
@@ -379,9 +392,9 @@ export function Composer({
       <section className="rounded-xl border border-line p-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h2 className="text-sm font-medium">Photos and video</h2>
+            <h2 className="text-sm font-medium">{w("compose.mediaTitle")}</h2>
             <p className="text-xs text-ink-soft">
-              Images up to 8 MB, clips up to 128 MB. The first photo becomes the cover.
+              {w("compose.mediaNote")}
             </p>
           </div>
           {!locked ? (
@@ -396,11 +409,12 @@ export function Composer({
               />
               <button
                 type="button"
+                name="attach-media"
                 onClick={() => fileRef.current?.click()}
                 disabled={uploading}
                 className="rounded-full border border-line px-4 py-2 text-sm font-medium hover:bg-paper-soft disabled:opacity-60"
               >
-                {uploading ? "Uploading..." : "Attach media"}
+                {uploading ? w("compose.uploading") : w("compose.attach")}
               </button>
             </>
           ) : null}
@@ -434,21 +448,18 @@ export function Composer({
           </ul>
         ) : (
           <p className="mt-4 rounded-lg border border-dashed border-line p-4 text-center text-xs text-ink-soft">
-            No media attached yet.
+            {w("compose.mediaEmpty")}
           </p>
         )}
       </section>
 
       {!locked && !isStaff ? (
         <section className="rounded-xl border border-line p-4">
-          <h2 className="text-sm font-medium">How the desk can reach you about this piece</h2>
-          <p className="mt-0.5 text-xs text-ink-soft">
-            Required before you submit. Editors often need one question answered before a story can
-            run. Readers never see these numbers.
-          </p>
+          <h2 className="text-sm font-medium">{w("submit.contactTitle")}</h2>
+          <p className="mt-0.5 text-xs text-ink-soft">{w("submit.contactNote")}</p>
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
             <label className="grid gap-1 text-sm">
-              <span className="font-medium">Phone</span>
+              <span className="font-medium">{w("submit.phone")}</span>
               <input
                 value={contact.phone}
                 onChange={(e) => setContact({ ...contact, phone: e.target.value })}
@@ -458,7 +469,7 @@ export function Composer({
               />
             </label>
             <label className="grid gap-1 text-sm">
-              <span className="font-medium">WhatsApp (optional)</span>
+              <span className="font-medium">{w("submit.whatsapp")}</span>
               <input
                 value={contact.whatsapp}
                 onChange={(e) => setContact({ ...contact, whatsapp: e.target.value })}
@@ -471,11 +482,8 @@ export function Composer({
 
           {/* Optional, and in the contributor's own language: the desk may want
               to speak to somebody who was there. */}
-          <label className="mt-4 grid gap-1 text-sm" lang="bn">
-            <span className="font-medium">
-              বর্ণিত সংবাদ বা ঘটনার কোনো প্রত্যক্ষদর্শী ও সাক্ষীর পরিচয় জানা থাকলে তাদের নাম,
-              ঠিকানা, ও ফোন নাম্বার লিখুন:
-            </span>
+          <label className="mt-4 grid gap-1 text-sm" lang={form.language === "BN" ? "bn" : "en"}>
+            <span className="font-medium">{w("submit.witnessLabel")}</span>
             <textarea
               value={witnesses}
               onChange={(e) => setWitnesses(e.target.value)}
@@ -483,9 +491,7 @@ export function Composer({
               maxLength={2000}
               className="rounded-lg border border-line px-3 py-2 outline-none focus:border-navy"
             />
-            <span lang="en" className="text-xs text-ink-soft">
-              Optional. Seen by the newsroom only, never published.
-            </span>
+            <span className="text-xs text-ink-soft">{w("submit.witnessNote")}</span>
           </label>
         </section>
       ) : null}
@@ -505,7 +511,7 @@ export function Composer({
           href={`/article/${article.slug}`}
           className="text-sm font-medium text-brand hover:underline"
         >
-          View the published article &rarr;
+          {w("submit.viewPublished")} &rarr;
         </Link>
       ) : null}
     </div>

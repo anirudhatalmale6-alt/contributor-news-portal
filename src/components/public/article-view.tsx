@@ -187,11 +187,12 @@ export async function ArticleView({ locale, slug }: { locale: Locale; slug: stri
           <h1 className="balance mt-2 font-serif text-[28px] font-bold leading-tight sm:text-4xl">
             {article.title}
           </h1>
-          {article.dek ? (
-            <p className="mt-3 font-serif text-[19px] leading-snug text-ink-soft sm:text-xl">
-              {article.dek}
-            </p>
-          ) : null}
+          {/* The standfirst is the one-line summary that sells the piece in a
+              list. It is deliberately not repeated here: a reader who has
+              clicked through has already read it, and seeing it again above
+              the first paragraph reads as the article repeating itself. It is
+              still used for the feed, for search results and for the preview
+              a shared link shows. */}
 
           <div className="mt-5 flex flex-wrap items-center gap-x-3 gap-y-2 border-y border-line py-3 text-[15px] sm:text-sm">
             {article.author.id ? (

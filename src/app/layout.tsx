@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { Suspense } from "react";
 import { RouteProgress } from "@/components/route-progress";
+import { primeUiText } from "@/lib/ui-text-store";
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.SITE_URL ?? "http://localhost:3300"),
@@ -14,7 +15,11 @@ export const metadata: Metadata = {
   openGraph: { type: "website", siteName: "The Document" },
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  // The owner's own wording, loaded before anything below it renders. t() is
+  // called from components that cannot await, so this is where it has to happen.
+  await primeUiText();
+
   return (
     <html lang="en">
       <body>
