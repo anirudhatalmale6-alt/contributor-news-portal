@@ -1808,6 +1808,37 @@ def main():
         np.wait_for_selector("text=Taken off the front page", timeout=20000)
         check("and taken off again", True)
 
+        # --- 10e9. the machine first draft ----------------------------------
+        # Deliberately never calls the provider: a test must not spend the
+        # owner's money. It checks the two states instead - switched on means
+        # the button is offered, switched off means it is absent and the
+        # endpoint says so rather than erroring.
+        go(np, f"{BASE}/editorial?status=APPROVED")
+        np.wait_for_timeout(SETTLE_MS)
+        np.locator('main a:has-text("Open")').first.click()
+        np.wait_for_url("**/editorial/**", timeout=20000)
+        np.wait_for_timeout(SETTLE_MS)
+        offered = np.locator('button[name="draft-translation"]').count() == 1
+        check(
+            "the translation desk is there either way",
+            np.locator("#translation").count() == 1,
+        )
+        if offered:
+            check(
+                "an AI first draft is offered, and says the editor still saves it",
+                "You still read it and press Save" in np.inner_text("#translation"),
+            )
+            print("NOTE a translation key is configured, so the draft button is live. The "
+                  "provider was not called - that would spend the owner's money.")
+        else:
+            art_id = np.url.rstrip("/").rsplit("/", 1)[-1]
+            r = np.request.post(f"{BASE}/api/editorial/{art_id}/translation/draft")
+            check(
+                "with no key the feature is absent and says so rather than erroring",
+                r.status == 503 and "not switched on" in r.text(),
+                f"{r.status} {r.text()[:80]}",
+            )
+
         # --- 10f1. the positions nobody pinned ------------------------------
         # With an empty board the page has to be today's paper: the newest
         # piece leads, the next two sit under it, and the rails come after. It

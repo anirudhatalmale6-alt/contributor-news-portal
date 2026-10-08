@@ -18,10 +18,13 @@ export function TranslationPanel({
   sourceLocale,
   source,
   existing,
+  aiReady,
 }: {
   articleId: string;
   sourceLocale: Locale;
   source: { title: string; dek: string; body: string };
+  /** Whether the site has a translation key configured. No key, no button. */
+  aiReady: boolean;
   existing: {
     title: string;
     dek: string;
@@ -40,7 +43,38 @@ export function TranslationPanel({
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
   const [saved, setSaved] = useState(Boolean(existing));
+  const [drafting, setDrafting] = useState(false);
   const bodyRef = useRef<HTMLTextAreaElement>(null);
+
+  /**
+   * Fills the boxes with a machine translation. It saves nothing: the editor
+   * reads it, changes what they want, and presses Save themselves.
+   */
+  async function draft() {
+    if (
+      (form.title.trim() || form.body.trim()) &&
+      !window.confirm("This replaces what is in the boxes below. Continue?")
+    ) {
+      return;
+    }
+    setDrafting(true);
+    setMessage(null);
+    const res = await fetch(`/api/editorial/${articleId}/translation/draft`, { method: "POST" });
+    const data = (await res.json().catch(() => ({}))) as {
+      draft?: { title: string; dek: string; body: string };
+      error?: string;
+    };
+    setDrafting(false);
+    if (!res.ok || !data.draft) {
+      setMessage({ kind: "err", text: data.error ?? "Could not draft the translation." });
+      return;
+    }
+    setForm(data.draft);
+    setMessage({
+      kind: "ok",
+      text: "Draft ready. Read it, change anything you want, then press Save - nothing is saved or published until you do.",
+    });
+  }
 
   async function save() {
     setBusy(true);
@@ -164,14 +198,33 @@ export function TranslationPanel({
         </div>
       </div>
 
-      <button
-        type="button"
-        onClick={() => void save()}
-        disabled={busy || !form.title.trim() || !form.body.trim()}
-        className="justify-self-start rounded-full bg-navy px-4 py-2 text-sm font-medium text-white hover:bg-navy-dark disabled:opacity-50"
-      >
-        {busy ? "Saving..." : saved ? "Update translation" : "Save translation"}
-      </button>
+      <div className="flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          onClick={() => void save()}
+          disabled={busy || drafting || !form.title.trim() || !form.body.trim()}
+          className="rounded-full bg-navy px-4 py-2 text-sm font-medium text-white hover:bg-navy-dark disabled:opacity-50"
+        >
+          {busy ? "Saving..." : saved ? "Update translation" : "Save translation"}
+        </button>
+
+        {aiReady ? (
+          <>
+            <button
+              type="button"
+              name="draft-translation"
+              onClick={() => void draft()}
+              disabled={busy || drafting}
+              className="rounded-full border border-navy px-4 py-2 text-sm font-medium text-navy hover:bg-navy hover:text-white disabled:opacity-50"
+            >
+              {drafting ? "Translating..." : `Draft the ${NAME[target]} version with AI`}
+            </button>
+            <span className="text-xs text-ink-soft">
+              Writes a first draft into the boxes above. You still read it and press Save.
+            </span>
+          </>
+        ) : null}
+      </div>
     </section>
   );
 }

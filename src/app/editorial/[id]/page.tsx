@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { aiTranslationReady } from "@/lib/translate";
 import { WriterContact } from "./writer-contact";
 import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
@@ -193,6 +194,7 @@ export default async function ReviewPage({ params }: { params: Promise<{ id: str
 
           <div className="lg:col-span-2">
             <TranslationPanel
+              aiReady={aiTranslationReady()}
               articleId={article.id}
               sourceLocale={article.language}
               source={{
