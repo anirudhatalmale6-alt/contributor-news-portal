@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { HttpError, errorResponse, requireOwner } from "@/lib/rbac";
+import { refreshPublicPages } from "@/lib/revalidate";
 import { saveUpload } from "@/lib/storage";
 
 const TYPES = ["image/png", "image/svg+xml", "image/jpeg", "image/webp"];
@@ -27,6 +28,7 @@ export async function POST(req: Request) {
       update: { logoUrl: url },
     });
 
+    refreshPublicPages();
     return Response.json({ settings }, { status: 201 });
   } catch (err) {
     return errorResponse(err);

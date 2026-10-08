@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { HttpError, errorResponse, requireOwner } from "@/lib/rbac";
+import { refreshPublicPages } from "@/lib/revalidate";
 import { saveUpload } from "@/lib/storage";
 import { adLink, escapeAttr as escape, isPictureAd, withAdLink } from "@/lib/ad-markup";
 
@@ -73,6 +74,7 @@ export async function POST(req: Request) {
       update: { [column]: html },
     });
 
+    refreshPublicPages();
     return Response.json({ settings, url, link, html }, { status: 201 });
   } catch (err) {
     return errorResponse(err);
@@ -115,6 +117,7 @@ export async function PATCH(req: Request) {
       where: { id: 1 },
       data: { [column]: html },
     });
+    refreshPublicPages();
     return Response.json({ settings, link, html });
   } catch (err) {
     return errorResponse(err);
@@ -131,6 +134,7 @@ export async function DELETE(req: Request) {
       create: { id: 1, [column]: "" },
       update: { [column]: "" },
     });
+    refreshPublicPages();
     return Response.json({ settings, html: "" });
   } catch (err) {
     return errorResponse(err);

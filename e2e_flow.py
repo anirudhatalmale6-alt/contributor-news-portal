@@ -1757,8 +1757,8 @@ def main():
             check(f"the front page board has a {slot} position", slot in board)
         # Start from an empty board, so an earlier run cannot change what the
         # first "Add" button does.
-        while np.locator('button:has-text("Remove")').count():
-            np.locator('button:has-text("Remove")').first.click()
+        while np.locator('button:text-is("Remove")').count():
+            np.locator('button:text-is("Remove")').first.click()
             np.wait_for_timeout(SETTLE_MS)
 
         np.locator('button:has-text("Add an article")').first.click()
@@ -1791,9 +1791,87 @@ def main():
 
         # And it can be taken off again.
         go(np, f"{BASE}/editorial/front-page")
-        np.locator('button:has-text("Remove")').first.click()
+        np.locator('button:text-is("Remove")').first.click()
         np.wait_for_selector("text=Taken off the front page", timeout=20000)
         check("and taken off again", True)
+
+        # --- 10f1. the positions nobody pinned ------------------------------
+        # With an empty board the page has to be today's paper: the newest
+        # piece leads, the next two sit under it, and the rails come after. It
+        # used to fill the rails first, which put the eighth and ninth stories
+        # in the middle of the page under the main headline.
+        while np.locator('button:text-is("Remove")').count():
+            np.locator('button:text-is("Remove")').first.click()
+            np.wait_for_timeout(SETTLE_MS)
+
+        def middle_column(pg):
+            go(pg, f"{BASE}/")
+            return pg.evaluate(
+                """() => {
+                     const cols = [...(document.querySelector('main div.grid')?.children ?? [])];
+                     return cols[1]
+                       ? [...cols[1].querySelectorAll('a[href*="/article/"]')]
+                           .map((a) => a.getAttribute('href'))
+                       : [];
+                   }"""
+            )
+
+        empty_board = middle_column(np)
+        check(
+            "with nothing pinned the page still leads with something",
+            len(empty_board) >= 1,
+            str(empty_board[:1]),
+        )
+
+        go(np, f"{BASE}/editorial/front-page")
+        np.wait_for_timeout(SETTLE_MS)
+        preview = np.evaluate(
+            """() => {
+                 const out = {};
+                 for (const s of document.querySelectorAll('main section')) {
+                   const h = s.querySelector('h2');
+                   if (!h) continue;
+                   out[h.innerText.trim()] = [...s.querySelectorAll('li')]
+                     .filter((li) => li.innerText.includes('Filled automatically')).length;
+                 }
+                 return out;
+               }"""
+        )
+        check(
+            "the board shows what will fill the main headline",
+            preview.get("Main headline") == 1,
+            str(preview),
+        )
+        check(
+            "and what will fill both places under it",
+            preview.get("Under the headline") == 2,
+            str(preview),
+        )
+
+        # A change on the board has to show on the next load, not a minute
+        # later: the public pages are cached, so every write clears them.
+        go(np, f"{BASE}/editorial/front-page")
+        np.locator('section:has(h2:text-is("Main headline")) button:has-text("Add an article")').first.click()
+        np.wait_for_timeout(SETTLE_MS)
+        np.locator('section:has(input[placeholder^="Search published"]) ul button').last.click()
+        np.wait_for_selector("text=Placed.", timeout=20000)
+        np.wait_for_timeout(SETTLE_MS)
+        check(
+            "pinning a lead shows on the very next load, with no wait for the cache",
+            middle_column(np)[:1] != empty_board[:1],
+            f"{middle_column(np)[:1]} was {empty_board[:1]}",
+        )
+
+        go(np, f"{BASE}/editorial/front-page")
+        np.locator('section:has(h2:text-is("Main headline")) button:text-is("Remove")').first.click()
+        np.wait_for_selector("text=Taken off the front page", timeout=20000)
+        np.wait_for_timeout(SETTLE_MS)
+        check(
+            "and taking it off hands the page straight back to the newest work",
+            middle_column(np) == empty_board,
+            f"{middle_column(np)[:3]} vs {empty_board[:3]}",
+        )
+        shot(np, "45-front-page-automatic.png")
 
         # Formatting toolbar, and what it writes.
         go(np, f"{BASE}/dashboard")

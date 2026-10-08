@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { errorResponse, HttpError, requireStaff } from "@/lib/rbac";
+import { refreshPublicPages } from "@/lib/revalidate";
 
 /** Four percentages: left, top, width, height, of the original picture. */
 const crop = z
@@ -44,6 +45,7 @@ export async function PATCH(req: Request, { params }: Ctx) {
       data: parsed.data,
       select: { id: true, coverCropHome: true, coverCropArticle: true },
     });
+    refreshPublicPages();
     return Response.json({ article: updated });
   } catch (err) {
     return errorResponse(err);

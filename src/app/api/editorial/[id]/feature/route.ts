@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { errorResponse, HttpError, requireStaff } from "@/lib/rbac";
+import { refreshPublicPages } from "@/lib/revalidate";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -47,6 +48,7 @@ export async function PATCH(req: Request, { params }: Ctx) {
       }),
     ]);
 
+    refreshPublicPages();
     return Response.json({ article });
   } catch (err) {
     return errorResponse(err);

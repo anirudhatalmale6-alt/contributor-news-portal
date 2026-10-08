@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { errorResponse, requireOwner, requireStaff } from "@/lib/rbac";
+import { refreshPublicPages } from "@/lib/revalidate";
 import { siteSettings } from "@/lib/settings";
 
 const schema = z.object({
@@ -51,6 +52,7 @@ export async function PATCH(req: Request) {
       create: { id: 1, ...parsed.data },
       update: parsed.data,
     });
+    refreshPublicPages();
     return Response.json({ settings });
   } catch (err) {
     return errorResponse(err);

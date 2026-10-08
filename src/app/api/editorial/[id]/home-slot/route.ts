@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { errorResponse, HttpError, requireStaff } from "@/lib/rbac";
+import { refreshPublicPages } from "@/lib/revalidate";
 
 export const HOME_SLOTS = ["LEAD", "STRIP", "LEFT", "MIDDLE", "RIGHT"] as const;
 
@@ -50,6 +51,7 @@ export async function PATCH(req: Request, { params }: Ctx) {
       data: { homeSlot, homeOrder: homeOrder ?? 0 },
       select: { id: true, homeSlot: true, homeOrder: true },
     });
+    refreshPublicPages();
     return Response.json({ article: updated });
   } catch (err) {
     return errorResponse(err);

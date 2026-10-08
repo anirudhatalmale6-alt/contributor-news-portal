@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { errorResponse, HttpError, requireStaff } from "@/lib/rbac";
+import { refreshPublicPages } from "@/lib/revalidate";
 import { paymentSettings } from "@/lib/settings";
 import { notifyPublished, notifyRejected } from "@/lib/notify";
 import { money } from "@/lib/format";
@@ -106,6 +107,7 @@ export async function POST(req: Request, { params }: Ctx) {
       await notifyRejected(article.authorId, article.title, `/dashboard/write/${article.id}`, note);
     }
 
+    refreshPublicPages();
     return Response.json({ article });
   } catch (err) {
     return errorResponse(err);

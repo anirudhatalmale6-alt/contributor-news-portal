@@ -12,6 +12,7 @@ import { SiteFooter } from "@/components/site-footer";
 import { AdSlot } from "@/components/ad-slot";
 import { ArticleCard, SHELL } from "@/components/ui";
 import { type Locale, localeMeta, t } from "@/lib/i18n";
+import { planFrontPage } from "@/lib/front-page";
 
 /** A headline with a thumbnail, the unit both side rails are built from. */
 function RailItem({
@@ -59,9 +60,9 @@ function RailItem({
  * further reading plus the advertising slot on the right. Everything starts on
  * the same left edge as the masthead.
  *
- * An editor decides what leads by featuring it. Only if nothing is featured
- * does the page fall back to the newest piece, so a fresh install still looks
- * like a newspaper rather than an empty shelf.
+ * An editor decides what leads by pinning it on the Front page screen. Every
+ * position left alone fills itself with the newest published work, so a page
+ * nobody has arranged today still reads as today's paper.
  */
 export async function Feed({ locale, category }: { locale: Locale; category: string }) {
   const copy = t(locale);
@@ -73,29 +74,14 @@ export async function Feed({ locale, category }: { locale: Locale; category: str
     home ? pinnedArticles(locale) : Promise.resolve(new Map<string, LocalisedArticle[]>()),
   ]);
 
-  // Anything an editor pinned is spoken for; the automatic fill never repeats it.
-  const spoken = new Set<string>();
-  for (const list of pinned.values()) for (const a of list) spoken.add(a.href);
-
-  const featuredHrefs = new Set(featured.map((a) => a.href));
-  const rest = latest.filter((a) => !featuredHrefs.has(a.href) && !spoken.has(a.href));
-
-  // Both rails are filled before the two pieces under the lead, so a young
-  // site with six stories still reads as three columns rather than one column
-  // with two empty gutters.
-  const pool = [...featured.filter((a) => !spoken.has(a.href)), ...rest];
-  const take = (slot: string, n: number) => {
-    const chosen = (pinned.get(slot) ?? []).slice(0, n);
-    while (chosen.length < n && pool.length) chosen.push(pool.shift()!);
-    return chosen;
-  };
-
-  const lead = (pinned.get("LEAD") ?? [])[0] ?? pool.shift() ?? null;
-  const leftRail = take("LEFT", 3);
-  const rightRail = take("RIGHT", 4);
-  const underLead = take("MIDDLE", 2);
-  const strip = pinned.get("STRIP") ?? [];
-  const more = pool;
+  // Who goes where is decided in one place, shared with the board the desk
+  // arranges the page on, so the two can never disagree.
+  const { lead, underLead, leftRail, rightRail, strip, more } = planFrontPage({
+    featured,
+    latest,
+    pinned,
+    key: (a) => a.href,
+  });
 
   return (
     <div

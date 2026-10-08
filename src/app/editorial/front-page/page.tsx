@@ -5,6 +5,7 @@ import { currentUser, isStaff } from "@/lib/rbac";
 import { SiteHeader } from "@/components/site-header";
 import { StaffNav } from "@/components/staff-nav";
 import { FrontPageBoard } from "./front-page-board";
+import { planFrontPage } from "@/lib/front-page";
 
 export const metadata = { title: "Front page" };
 export const dynamic = "force-dynamic";
@@ -26,6 +27,11 @@ export default async function FrontPagePage() {
       coverImage: true,
       publishedAt: true,
       homeSlot: true,
+      homeOrder: true,
+      featured: true,
+      featuredAt: true,
+      language: true,
+      translations: { select: { locale: true } },
       author: { select: { name: true } },
     },
   });
@@ -40,6 +46,29 @@ export default async function FrontPagePage() {
     homeSlot: a.homeSlot,
   });
 
+  // What the Bangla front page will do with the positions nobody pinned,
+  // worked out with the same function the page itself uses. Shown on the board
+  // so the desk can see the automatic fill without going and looking at it.
+  const onBanglaPage = published.filter(
+    (a) => a.language === "BN" || a.translations.some((t) => t.locale === "BN"),
+  );
+  const pinnedBySlot = new Map<string, ReturnType<typeof shape>[]>();
+  for (const a of onBanglaPage
+    .filter((a) => a.homeSlot)
+    .sort((x, y) => x.homeOrder - y.homeOrder)) {
+    const slot = a.homeSlot as string;
+    pinnedBySlot.set(slot, [...(pinnedBySlot.get(slot) ?? []), shape(a)]);
+  }
+  const { automatic } = planFrontPage({
+    featured: onBanglaPage
+      .filter((a) => a.featured)
+      .sort((x, y) => (y.featuredAt?.getTime() ?? 0) - (x.featuredAt?.getTime() ?? 0))
+      .map(shape),
+    latest: onBanglaPage.map(shape),
+    pinned: pinnedBySlot,
+    key: (p) => p.id,
+  });
+
   return (
     <>
       <SiteHeader />
@@ -51,7 +80,7 @@ export default async function FrontPagePage() {
         <h1 className="font-serif text-2xl font-bold sm:text-3xl">Front page</h1>
         <p className="mt-1 max-w-2xl text-sm text-ink-soft">
           Choose what sits where. Anything you leave empty fills itself with the newest published
-          work, so you can plan the top of the page and let the rest look after itself.{" "}
+          work - and each position below shows you exactly which pieces that will be, in order.{" "}
           <Link href="/" className="font-medium text-brand hover:underline">
             See the front page
           </Link>
@@ -61,6 +90,7 @@ export default async function FrontPagePage() {
           <FrontPageBoard
             pinned={published.filter((a) => a.homeSlot).map(shape)}
             pool={published.map(shape)}
+            automatic={automatic}
           />
         </div>
       </main>

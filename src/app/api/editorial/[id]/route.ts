@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { errorResponse, HttpError, requireStaff } from "@/lib/rbac";
+import { refreshPublicPages } from "@/lib/revalidate";
 import { uniqueSlug } from "@/lib/settings";
 import { formComplaint } from "@/lib/zod-message";
 
@@ -104,6 +105,7 @@ export async function PATCH(req: Request, { params }: Ctx) {
       },
       include: { media: true },
     });
+    refreshPublicPages();
     return Response.json({ article });
   } catch (err) {
     return errorResponse(err);

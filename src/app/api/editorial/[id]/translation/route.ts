@@ -2,6 +2,7 @@ import { z } from "zod";
 import { formComplaint } from "@/lib/zod-message";
 import { prisma } from "@/lib/prisma";
 import { errorResponse, HttpError, requireStaff } from "@/lib/rbac";
+import { refreshPublicPages } from "@/lib/revalidate";
 import { translationSlug } from "@/lib/articles";
 
 type Ctx = { params: Promise<{ id: string }> };
@@ -105,6 +106,7 @@ export async function PUT(req: Request, { params }: Ctx) {
       },
     });
 
+    refreshPublicPages();
     return Response.json({ translation });
   } catch (err) {
     return errorResponse(err);
@@ -121,6 +123,7 @@ export async function DELETE(req: Request, { params }: Ctx) {
       throw new HttpError(422, "locale must be EN or BN");
     }
     await prisma.articleTranslation.deleteMany({ where: { articleId: id, locale } });
+    refreshPublicPages();
     return Response.json({ ok: true });
   } catch (err) {
     return errorResponse(err);

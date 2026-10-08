@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { errorResponse, HttpError, requireAdmin } from "@/lib/rbac";
+import { refreshPublicPages } from "@/lib/revalidate";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -30,6 +31,7 @@ export async function DELETE(_req: Request, { params }: Ctx) {
       prisma.article.delete({ where: { id } }),
     ]);
 
+    refreshPublicPages();
     return Response.json({ deleted: { id: article.id, title: article.title } });
   } catch (err) {
     return errorResponse(err);

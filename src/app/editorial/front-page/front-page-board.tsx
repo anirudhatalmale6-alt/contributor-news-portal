@@ -13,12 +13,14 @@ type Piece = {
   homeSlot: string | null;
 };
 
+// Listed in the order the page gives the positions away, which is also the
+// order the automatic fill works down - so the board reads like the page.
 const SLOTS = [
   { key: "LEAD", label: "Main headline", hint: "The big story in the middle, with the large picture.", max: 1 },
-  { key: "STRIP", label: "Beside the masthead", hint: "The three small headlines to the right of the logo.", max: 3 },
-  { key: "LEFT", label: "Left column", hint: "Also today, down the left-hand side.", max: 3 },
   { key: "MIDDLE", label: "Under the headline", hint: "The two pieces directly beneath the main story.", max: 2 },
+  { key: "LEFT", label: "Left column", hint: "Also today, down the left-hand side.", max: 3 },
   { key: "RIGHT", label: "Right column", hint: "More from our contributors, down the right-hand side.", max: 4 },
+  { key: "STRIP", label: "Beside the masthead", hint: "The three small headlines to the right of the logo.", max: 3 },
 ] as const;
 
 /**
@@ -28,7 +30,16 @@ const SLOTS = [
  * position left empty is not a hole: the page fills it with the newest work,
  * which is why an editor can plan the top of the page and ignore the rest.
  */
-export function FrontPageBoard({ pinned, pool }: { pinned: Piece[]; pool: Piece[] }) {
+export function FrontPageBoard({
+  pinned,
+  pool,
+  automatic,
+}: {
+  pinned: Piece[];
+  pool: Piece[];
+  /** What each position will fill itself with, newest first. */
+  automatic: Record<string, Piece[]>;
+}) {
   const router = useRouter();
   const [busy, setBusy] = useState<string | null>(null);
   const [message, setMessage] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
@@ -100,9 +111,11 @@ export function FrontPageBoard({ pinned, pool }: { pinned: Piece[]; pool: Piece[
             </div>
 
             <ul className="divide-y divide-line">
-              {here.length === 0 ? (
+              {here.length === 0 && (automatic[slot.key] ?? []).length === 0 ? (
                 <li className="px-4 py-3 text-sm text-ink-soft">
-                  Empty. The front page fills this with the newest published work.
+                  {slot.key === "STRIP"
+                    ? "Empty. The strip beside the logo shows the newest headlines the page is not already carrying."
+                    : "Empty, and there is nothing published to fill it with yet."}
                 </li>
               ) : null}
               {here.map((p) => (
@@ -125,6 +138,30 @@ export function FrontPageBoard({ pinned, pool }: { pinned: Piece[]; pool: Piece[
                   >
                     {busy === p.id ? "Removing..." : "Remove"}
                   </button>
+                </li>
+              ))}
+
+              {/* What the page will put here on its own. Not pinned, so it
+                  changes as new work is published - which is the point. */}
+              {(automatic[slot.key] ?? []).map((p) => (
+                <li key={p.id} className="flex flex-wrap items-center gap-3 bg-paper-soft/50 px-4 py-3">
+                  {p.coverImage ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={p.coverImage}
+                      alt=""
+                      className="size-12 shrink-0 rounded object-cover opacity-80"
+                    />
+                  ) : null}
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-sm text-ink-soft">{p.title}</span>
+                    <span className="block text-xs text-ink-soft">
+                      {p.category} · {p.author}
+                    </span>
+                  </span>
+                  <span className="rounded-full bg-paper px-2.5 py-1 text-[11px] font-medium text-ink-soft">
+                    Filled automatically
+                  </span>
                 </li>
               ))}
             </ul>
