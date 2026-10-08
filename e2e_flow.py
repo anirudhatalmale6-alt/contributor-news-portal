@@ -238,6 +238,11 @@ def main():
         page.wait_for_url("**/dashboard/write/**", timeout=20000)
         article_url = page.url
         check(
+            "a new piece opens with an empty headline, not placeholder words",
+            page.input_value('input[name="title"]') == "",
+            page.input_value('input[name="title"]'),
+        )
+        check(
             "a new piece opens in Bangla, not English",
             page.locator('select[name="language"]').input_value() == "BN",
             page.locator('select[name="language"]').input_value(),
@@ -1425,6 +1430,101 @@ def main():
         check("an editor cannot change what anybody earned", r.status == 403, f"got {r.status}")
         ed2.close()
 
+        # --- 10e5. asking to be paid ----------------------------------------
+        # The money path, end to end. Worth the length: a bug here either pays
+        # somebody twice or refuses to pay them at all.
+        pc = ctx.browser.new_context(viewport=DESKTOP, http_credentials=GATE)
+        pp = pc.new_page()
+        sign_in(pp, NEW_EMAIL, NEW_PASS2)
+        go(pp, f"{BASE}/dashboard")
+        desk = pp.inner_text("main")
+        check(
+            "the threshold is stated on the contributor's own desk",
+            "at least" in desk and "500" in desk,
+            desk[:160].replace("\n", " "),
+        )
+        check(
+            "under the threshold the button is there but cannot be pressed",
+            pp.locator('button[name="request-payout"]').is_disabled(),
+        )
+        under = pp.request.post(f"{BASE}/api/payouts")
+        check(
+            "and the server refuses it too, saying what is needed",
+            under.status == 422,
+            f"{under.status} {under.text()[:90]}",
+        )
+
+        # Put them over the line, then walk the whole path.
+        go(ap2, f"{BASE}/people/{NEW_USER_ID[0]}")
+        ap2.click('button:has-text("Bonus +")')
+        ap2.fill('input[inputmode="decimal"]', "600")
+        ap2.fill('input[placeholder^="Bonus for"]', "Bonus to cross the payout threshold")
+        ap2.click('button:has-text("Add bonus")')
+        ap2.wait_for_selector("text=Bonus added to their total", timeout=20000)
+        ap2.wait_for_timeout(SETTLE_MS)
+
+        go(pp, f"{BASE}/dashboard")
+        check(
+            "over the threshold the button comes alive",
+            not pp.locator('button[name="request-payout"]').is_disabled(),
+        )
+        pp.click('button[name="request-payout"]')
+        pp.wait_for_timeout(SETTLE_MS)
+        with pp.expect_response(lambda r: r.url.endswith("/api/payouts")) as got:
+            pp.click('button[name="confirm-payout"]')
+        check("the request is accepted", got.value.status == 201, str(got.value.status))
+        pp.wait_for_timeout(SETTLE_MS)
+        check(
+            "the desk tells them it is waiting",
+            "You have asked for" in pp.inner_text("main"),
+        )
+        twice = pp.request.post(f"{BASE}/api/payouts")
+        check(
+            "a second request while one is waiting is refused",
+            twice.status == 409,
+            f"{twice.status} {twice.text()[:80]}",
+        )
+
+        go(ap2, f"{BASE}/payouts")
+        queue = ap2.inner_text("main")
+        check(
+            "an admin sees the request with the account to send it to",
+            NEW_NAME in queue and "01819445203" in queue,
+            queue[:200].replace("\n", " "),
+        )
+        shot(ap2, "47-payout-queue.png")
+        ap2.on("dialog", lambda d: d.accept())
+        with ap2.expect_response(lambda r: "/api/payouts/" in r.url) as got:
+            ap2.click('button[name="mark-paid"]')
+        check("marking it paid is accepted", got.value.status == 200, str(got.value.status))
+        ap2.wait_for_timeout(SETTLE_MS)
+
+        go(pp, f"{BASE}/dashboard")
+        paid_desk = norm(pp.inner_text("main"))
+        check(
+            "what was paid comes off what they can ask for",
+            "Available to withdraw: BDT 0.00" in paid_desk,
+            paid_desk[:200].replace("\n", " "),
+        )
+        check(
+            "and they cannot ask for it a second time",
+            pp.locator('button[name="request-payout"]').is_disabled(),
+        )
+        pc.close()
+
+        # An editor must never see where anybody's money goes.
+        ed3 = ctx.browser.new_context(viewport=DESKTOP, http_credentials=GATE)
+        ep4 = ed3.new_page()
+        sign_in(ep4, "editor@thedocument.test", STAFF_PASS)
+        go(ep4, f"{BASE}/payouts")
+        check("an editor is kept out of the payouts screen", "/payouts" not in ep4.url, ep4.url)
+        ed3.close()
+
+        # This section walked the admin page over to the payouts screen; the
+        # ledger checks that follow expect it back on the person it was on.
+        go(ap2, f"{BASE}/people/{NEW_USER_ID[0]}")
+        ap2.wait_for_timeout(SETTLE_MS)
+
         ap2.click('button:has-text("Remove") >> nth=0')
         ap2.wait_for_selector("text=Entry removed", timeout=20000)
         ap2.wait_for_timeout(SETTLE_MS)
@@ -1916,6 +2016,27 @@ def main():
             f"{middle_column(np)[:3]} vs {empty_board[:3]}",
         )
         shot(np, "45-front-page-automatic.png")
+
+        # --- 10f15. the English half is set in the face he asked for --------
+        go(np, f"{BASE}/en")
+        faces = np.evaluate(
+            """() => {
+                 const h = document.querySelector('main .balance');
+                 return h
+                   ? { family: getComputedStyle(h).fontFamily, weight: getComputedStyle(h).fontWeight }
+                   : null;
+               }"""
+        )
+        check("English headlines are set in Inter", "Inter" in str(faces and faces["family"]), str(faces))
+        check("at the heavy weight the reference paper uses", faces and faces["weight"] == "900", str(faces))
+        go(np, f"{BASE}/")
+        bn_face = np.evaluate(
+            """() => {
+                 const h = document.querySelector('main .balance');
+                 return h ? getComputedStyle(h).fontFamily : '';
+               }"""
+        )
+        check("and the Bangla half keeps its own face", "Inter" not in str(bn_face), str(bn_face)[:90])
 
         # --- 10f2. the wording the owner controls ----------------------------
         # Labels are his to change, in both languages, without a developer.

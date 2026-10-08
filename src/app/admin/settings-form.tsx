@@ -8,6 +8,7 @@ type Settings = {
   defaultPayout: number;
   verifiedBonusPct: number;
   payoutNote: string;
+  minPayoutCents: number;
   requireTranslation: boolean;
 };
 
@@ -18,6 +19,7 @@ export function SettingsForm({ settings }: { settings: Settings }) {
     defaultPayout: (settings.defaultPayout / 100).toFixed(2),
     verifiedBonusPct: String(settings.verifiedBonusPct),
     payoutNote: settings.payoutNote,
+    minPayout: (settings.minPayoutCents / 100).toFixed(2),
   });
   const [requireTranslation, setRequireTranslation] = useState(settings.requireTranslation);
   const [busy, setBusy] = useState(false);
@@ -35,6 +37,7 @@ export function SettingsForm({ settings }: { settings: Settings }) {
         defaultPayout: Math.round(Number(form.defaultPayout) * 100),
         verifiedBonusPct: Number(form.verifiedBonusPct),
         payoutNote: form.payoutNote,
+        minPayoutCents: Math.round(Number(form.minPayout) * 100),
         requireTranslation,
       }),
     });
@@ -52,7 +55,7 @@ export function SettingsForm({ settings }: { settings: Settings }) {
         {saved ? <span className="text-xs text-emerald-700">Saved</span> : null}
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <label className="grid gap-1 text-sm">
           <span className="font-medium">Currency</span>
           <input
@@ -71,6 +74,19 @@ export function SettingsForm({ settings }: { settings: Settings }) {
             className="rounded-lg border border-line px-3 py-2 tabular-nums outline-none focus:border-navy"
           />
           <span className="text-xs text-ink-soft">Pre-fills the editor&rsquo;s payout box.</span>
+        </label>
+        <label className="grid gap-1 text-sm">
+          <span className="font-medium">Minimum before a payout</span>
+          <input
+            name="minPayout"
+            value={form.minPayout}
+            inputMode="decimal"
+            onChange={(e) => setForm({ ...form, minPayout: e.target.value })}
+            className="rounded-lg border border-line px-3 py-2 tabular-nums outline-none focus:border-navy"
+          />
+          <span className="text-xs text-ink-soft">
+            What a contributor must have earned before they can ask to be paid.
+          </span>
         </label>
         <label className="grid gap-1 text-sm">
           <span className="font-medium">Verified bonus %</span>

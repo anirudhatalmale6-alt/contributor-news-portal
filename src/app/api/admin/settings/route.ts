@@ -8,6 +8,9 @@ const schema = z.object({
   defaultPayout: z.coerce.number().int().min(0).max(100_000_00).optional(),
   verifiedBonusPct: z.coerce.number().int().min(0).max(500).optional(),
   payoutNote: z.string().trim().max(400).optional(),
+  // Money: a sane floor and ceiling, so a mistyped figure cannot lock every
+  // contributor out of being paid or let them ask for a single poisha.
+  minPayoutCents: z.coerce.number().int().min(0).max(100_000_000).optional(),
   requireTranslation: z.boolean().optional(),
 });
 

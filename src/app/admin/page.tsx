@@ -89,6 +89,7 @@ export default async function AdminPage() {
             defaultPayout: settings.defaultPayout,
             verifiedBonusPct: settings.verifiedBonusPct,
             payoutNote: settings.payoutNote,
+            minPayoutCents: settings.minPayoutCents,
             requireTranslation: settings.requireTranslation,
           }}
         />

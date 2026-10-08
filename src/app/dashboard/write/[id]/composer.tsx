@@ -277,6 +277,9 @@ export function Composer({
 
       <input
         name="title"
+        // A new piece opens with the cursor already in the headline, so the
+        // writer can type the moment the screen appears.
+        autoFocus={!article.title.trim() && !article.body.trim()}
         value={form.title}
         onChange={(e) => update("title", e.target.value)}
         disabled={locked}

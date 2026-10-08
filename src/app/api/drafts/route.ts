@@ -4,7 +4,11 @@ import { errorResponse, requireUser } from "@/lib/rbac";
 import { uniqueSlug } from "@/lib/settings";
 
 const createSchema = z.object({
-  title: z.string().trim().min(1).max(400).default("Untitled draft"),
+  // A new draft starts with no headline. Filling the box with placeholder
+  // words means the writer has to delete them first, and anyone who forgets
+  // publishes a piece called "Untitled draft". Submitting still requires a
+  // real title - that guard is in the submit route.
+  title: z.string().trim().max(400).default(""),
   dek: z.string().trim().max(800).optional(),
   body: z.string().max(200_000).default(""),
   category: z.string().trim().max(60).default("General"),

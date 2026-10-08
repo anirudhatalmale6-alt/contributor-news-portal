@@ -12,7 +12,9 @@ export function NewDraftButton() {
     const res = await fetch("/api/drafts", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title: "Untitled draft", language: "BN" }),
+      // No title: the editor opens with an empty headline box and the cursor
+      // already in it.
+      body: JSON.stringify({ language: "BN" }),
     });
     if (!res.ok) {
       setBusy(false);

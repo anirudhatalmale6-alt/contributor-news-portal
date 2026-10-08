@@ -65,3 +65,50 @@ export async function earningsTotal(): Promise<Earnings> {
   const adjustmentCents = adjustments._sum.amountCents ?? 0;
   return { articleCents, adjustmentCents, totalCents: articleCents + adjustmentCents };
 }
+
+/** What a contributor has earned, less what is already asked for or paid. */
+export type Payable = {
+  /** Everything they have ever earned. */
+  totalCents: number;
+  /** Sitting in a request the desk has not answered yet. */
+  pendingCents: number;
+  /** Already paid out against earlier requests. */
+  paidCents: number;
+  /** What they could ask for right now. */
+  availableCents: number;
+};
+
+/**
+ * The money question: how much can this person ask to be paid?
+ *
+ * Total earnings on its own is the wrong answer. A contributor paid once would
+ * still show the same total and could ask for it again, and the desk would have
+ * no way of noticing. So anything already paid, and anything already asked for
+ * and not yet answered, comes off the top.
+ *
+ * A declined request is not deducted - the money is still theirs to ask for.
+ */
+export async function payableFor(userId: string): Promise<Payable> {
+  const [earnings, byStatus] = await Promise.all([
+    earningsFor(userId),
+    prisma.payoutRequest.groupBy({
+      by: ["status"],
+      where: { userId, status: { in: ["PENDING", "PAID"] } },
+      _sum: { amountCents: true },
+    }),
+  ]);
+
+  const sum = (status: string) =>
+    byStatus.find((row) => row.status === status)?._sum.amountCents ?? 0;
+  const pendingCents = sum("PENDING");
+  const paidCents = sum("PAID");
+
+  return {
+    totalCents: earnings.totalCents,
+    pendingCents,
+    paidCents,
+    // A deduction by the desk can in principle take the total below what has
+    // already been paid; never offer a negative figure.
+    availableCents: Math.max(0, earnings.totalCents - pendingCents - paidCents),
+  };
+}

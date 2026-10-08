@@ -4,7 +4,9 @@ import { prisma } from "@/lib/prisma";
 import { currentUser } from "@/lib/rbac";
 import { longDate, money, timeAgo } from "@/lib/format";
 import { paymentSettings } from "@/lib/settings";
-import { earningsFor } from "@/lib/earnings";
+import { earningsFor, payableFor } from "@/lib/earnings";
+import { localeDate } from "@/lib/i18n";
+import { RequestPayout } from "./request-payout";
 import { Notifications } from "@/components/notifications";
 import { SiteHeader } from "@/components/site-header";
 import { StaffNav } from "@/components/staff-nav";
@@ -39,8 +41,13 @@ export default async function DashboardPage() {
   const published = articles.filter((a) => a.status === "APPROVED");
   // One resolver decides this figure, so the desk and the newsroom can never
   // disagree about what somebody is owed.
-  const [earnings, notes] = await Promise.all([
+  const [earnings, payable, pendingRequest, notes] = await Promise.all([
     earningsFor(user.id),
+    payableFor(user.id),
+    prisma.payoutRequest.findFirst({
+      where: { userId: user.id, status: "PENDING" },
+      orderBy: { createdAt: "desc" },
+    }),
     prisma.notification.findMany({
       where: { userId: user.id },
       orderBy: { createdAt: "desc" },
@@ -124,6 +131,25 @@ export default async function DashboardPage() {
         </section>
 
         <p className="-mt-2 mb-4 text-xs text-ink-soft">{settings.payoutNote}</p>
+
+        <div className="mb-4">
+          <RequestPayout
+            available={money(payable.availableCents, settings.currency)}
+            minimum={money(settings.minPayoutCents, settings.currency)}
+            hasDetails={Boolean(payout)}
+            canRequest={
+              Boolean(payout) && !pendingRequest && payable.availableCents >= settings.minPayoutCents
+            }
+            pending={
+              pendingRequest
+                ? {
+                    amount: money(pendingRequest.amountCents, settings.currency),
+                    since: localeDate(pendingRequest.createdAt, "EN"),
+                  }
+                : null
+            }
+          />
+        </div>
 
         <section
           className={`mb-8 flex flex-wrap items-center justify-between gap-3 rounded-xl border p-4 ${

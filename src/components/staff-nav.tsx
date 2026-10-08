@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import { isOwner, isStaff, type SessionUser } from "@/lib/rbac";
+import { isAdmin, isOwner, isStaff, type SessionUser } from "@/lib/rbac";
 import { unreadCount } from "@/lib/inbox";
 import { unreadNotifications } from "@/lib/notify";
 
@@ -23,13 +23,16 @@ export async function StaffNav({
     | "inbox"
     | "people"
     | "settings"
-    | "wording";
+    | "wording"
+    | "payouts";
 }) {
   const staff = isStaff(user.role);
-  const [waiting, unread, updates] = await Promise.all([
+  const [waiting, unread, updates, payouts] = await Promise.all([
     staff ? prisma.article.count({ where: { status: "SUBMITTED" } }) : 0,
     unreadCount(user),
     unreadNotifications(user.id),
+    // Money waiting on somebody is worth a number in the bar.
+    isAdmin(user.role) ? prisma.payoutRequest.count({ where: { status: "PENDING" } }) : 0,
   ]);
 
   const items: { key: typeof current; href: string; label: string; badge?: number }[] = [
@@ -46,6 +49,9 @@ export async function StaffNav({
           { key: "frontpage" as const, href: "/editorial/front-page", label: "Front page" },
           { key: "people" as const, href: "/people", label: "People" },
         ]
+      : []),
+    ...(isAdmin(user.role)
+      ? [{ key: "payouts" as const, href: "/payouts", label: "Payouts", badge: payouts }]
       : []),
     ...(isOwner(user.role)
       ? [

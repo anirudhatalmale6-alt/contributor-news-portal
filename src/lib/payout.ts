@@ -82,3 +82,25 @@ export function maskedDestination(profile: Pick<PayoutProfile, "method" | "walle
   }
   return "";
 }
+
+/**
+ * The full destination, in one line, for a payout request.
+ *
+ * Unmasked on purpose: this is copied onto the request so that an admin paying
+ * it can actually send the money, and so the desk keeps a record of what it was
+ * asked to pay. It must never reach a screen an editor can open - payout detail
+ * is Admin and above, the same rule as the profile it came from.
+ */
+export function destinationOf(
+  profile: Pick<
+    PayoutProfile,
+    "method" | "walletNumber" | "accountNumber" | "bankName" | "branch" | "routingNumber" | "email"
+  >,
+) {
+  const kind = methodKind(profile.method);
+  if (kind === "wallet") return profile.walletNumber ?? "";
+  if (kind === "email") return profile.email ?? "";
+  return [profile.bankName, profile.branch, profile.accountNumber, profile.routingNumber]
+    .filter((part) => part && String(part).trim())
+    .join(" · ");
+}

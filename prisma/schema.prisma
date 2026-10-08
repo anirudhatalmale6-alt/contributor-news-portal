@@ -96,6 +96,8 @@ model User {
   adjustments     EarningAdjustment[]  @relation("adjusted")
   adjustmentsMade EarningAdjustment[]  @relation("adjuster")
   notifications   Notification[]
+  payoutRequests  PayoutRequest[]      @relation("requester")
+  payoutsDecided  PayoutRequest[]      @relation("payoutDecider")
 }
 
 /// Where a contributor wants their payouts sent. Visible to the contributor
@@ -309,6 +311,10 @@ model PaymentSettings {
 
   /// When on, an editor cannot publish a piece until the translation exists.
   requireTranslation Boolean @default(true)
+
+  /// What a contributor has to have earned before they can ask to be paid,
+  /// in minor units. 50000 poisha is BDT 500.
+  minPayoutCents Int @default(50000)
 }
 
 /// A conversation between the newsroom and a contributor, or between two
@@ -427,4 +433,44 @@ model UiText {
   updatedAt DateTime @updatedAt
 
   @@id([key, locale])
+}
+
+
+enum PayoutRequestStatus {
+  PENDING
+  PAID
+  DECLINED
+}
+
+/// A contributor asking to be paid what they have earned.
+///
+/// The destination is COPIED onto the request rather than read from the
+/// contributor's profile when an admin looks at it. If they change their bKash
+/// number after asking, the desk must still be able to see what it was asked
+/// to pay - and be told the two no longer agree before sending money.
+model PayoutRequest {
+  id     String              @id @default(cuid())
+  userId String
+  user   User                @relation("requester", fields: [userId], references: [id], onDelete: Cascade)
+  status PayoutRequestStatus @default(PENDING)
+
+  /// What was owed at the moment of asking, in minor units.
+  amountCents Int
+
+  /// Where it was to be sent, as it read when the request was made.
+  method      String
+  accountName String
+  destination String
+
+  /// What the contributor wrote, and what the desk wrote back.
+  note        String?
+  decidedNote String?
+
+  decidedById String?
+  decidedBy   User?     @relation("payoutDecider", fields: [decidedById], references: [id])
+  decidedAt   DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([status, createdAt])
+  @@index([userId, createdAt])
 }
