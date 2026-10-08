@@ -7,8 +7,8 @@ import { other } from "@/lib/i18n";
 type Ctx = { params: Promise<{ id: string }> };
 
 const schema = z.object({
-  title: z.string().trim().min(1).max(180),
-  dek: z.string().trim().max(300).optional(),
+  title: z.string().trim().min(1).max(400),
+  dek: z.string().trim().max(800).optional(),
   body: z.string().trim().min(1).max(200_000),
 });
 

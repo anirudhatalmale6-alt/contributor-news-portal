@@ -4,8 +4,8 @@ import { errorResponse, HttpError, requireUser } from "@/lib/rbac";
 import { uniqueSlug } from "@/lib/settings";
 
 const patchSchema = z.object({
-  title: z.string().trim().min(1).max(180).optional(),
-  dek: z.string().trim().max(300).nullable().optional(),
+  title: z.string().trim().min(1).max(400).optional(),
+  dek: z.string().trim().max(800).nullable().optional(),
   body: z.string().max(200_000).optional(),
   category: z.string().trim().max(60).optional(),
   coverImage: z.string().trim().max(500).nullable().optional(),

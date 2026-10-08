@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { formComplaint } from "@/lib/zod-message";
 import { prisma } from "@/lib/prisma";
 import { errorResponse, HttpError, requireStaff } from "@/lib/rbac";
 import { translationSlug } from "@/lib/articles";
@@ -7,8 +8,8 @@ type Ctx = { params: Promise<{ id: string }> };
 
 const schema = z.object({
   locale: z.enum(["EN", "BN"]),
-  title: z.string().trim().min(1).max(180),
-  dek: z.string().trim().max(300).optional(),
+  title: z.string().trim().min(1).max(400),
+  dek: z.string().trim().max(800).optional(),
   body: z.string().trim().min(1).max(200_000),
 });
 
@@ -49,8 +50,17 @@ export async function PUT(req: Request, { params }: Ctx) {
 
     const parsed = schema.safeParse(await req.json());
     if (!parsed.success) {
+      const issues = parsed.error.flatten().fieldErrors;
       return Response.json(
-        { error: "Check the translation", issues: parsed.error.flatten().fieldErrors },
+        {
+          error:
+            formComplaint(issues, {
+              title: "English headline",
+              dek: "English standfirst",
+              body: "English text",
+            }) || "Check the translation",
+          issues,
+        },
         { status: 422 },
       );
     }

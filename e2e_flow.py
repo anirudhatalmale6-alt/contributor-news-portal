@@ -30,6 +30,10 @@ WITNESS_TITLE = "The roadworks nobody signed off"
 BYLINE_TITLE = "The ferry terminal that opened twice"
 BYLINE_NAME = "Our Khulna correspondent"
 
+# Writing a test advertisement onto a page is fine locally and wrong on a site
+# that sells the space, so the write checks are opt-in away from localhost.
+AD_WRITES = os.environ.get("AD_WRITES", "") == "1" or "127.0.0.1" in BASE or "localhost" in BASE
+
 # Whatever advertising the site already carries, so the run can put it back.
 ADS_BEFORE: dict[str, str] = {}
 NEW_NAME = "Rosa Delgado"
@@ -417,9 +421,13 @@ def main():
                   "read them are stood down. They run in full against a seeded database.")
         if seeded:
             check("the editor's Bangla headline is live", BN_HEADLINE in bn_home)
+            # Checked on the piece's own page rather than on the front page:
+            # once a site has more than a screenful of news, whether a given
+            # older story is still above the fold says nothing about the code.
+            bn_piece = page.request.get(f"{BASE}/article/notun-sorok-puratan-khaler-opore").text()
             check(
-                "a piece written in Bangla by a contributor is also there",
-                "পুরোনো খালের ওপর নতুন সড়ক" in bn_home,
+                "a piece written in Bangla by a contributor reads in Bangla",
+                "পুরোনো খালের ওপর নতুন সড়ক" in bn_piece,
             )
             shot(page, "18-bangla-feed.png")
 
@@ -765,9 +773,11 @@ def main():
             "adHomeHtml",
             "adBannerHtml",
             "adSquareHtml",
+            "adArticleHtml",
             "adHomeHtmlEn",
             "adBannerHtmlEn",
             "adSquareHtmlEn",
+            "adArticleHtmlEn",
         ]
         page.click('summary:has-text("Or paste code from an ad network")')
         page.wait_for_timeout(300)
@@ -796,6 +806,145 @@ def main():
         page.fill('#site-settings input[name="siteNameEn"]', "The Document")
         page.click('button:has-text("Save site settings")')
         page.wait_for_selector("text=Refresh the public site", timeout=20000)
+
+        # --- 9a1. where an advertisement sends its clicks ---------------------
+        # Changing the link must not mean uploading the picture again, and the
+        # field must show the link the box actually has.
+        go(page, f"{BASE}/admin")
+        page.wait_for_timeout(800)
+        PICTURE_SLOTS = [
+            ("square", "Square", "adSquareHtml"),
+            ("home", "Home page extra", "adHomeHtml"),
+            ("article", "Article page", "adArticleHtml"),
+            ("squareEn", "Square", "adSquareHtmlEn"),
+            ("homeEn", "Home page extra", "adHomeHtmlEn"),
+        ]
+
+        def ad_box(label, english=False):
+            """The English column repeats the same four labels, in order."""
+            boxes = page.locator(f'div:has(> div > span:text-is("{label}"))')
+            return boxes.nth(1) if english else boxes.first
+
+        # Only a box that really carries a click-through can prove the field is
+        # pre-filled; an image with no link would pass that check vacuously.
+        sold = [
+            s_
+            for s_ in PICTURE_SLOTS + [("banner", "Banner", "adBannerHtml")]
+            if "<img" in ADS_BEFORE.get(s_[2], "") and 'href="' in ADS_BEFORE.get(s_[2], "")
+        ]
+        if sold:
+            _, label, column = sold[0]
+            stored = ADS_BEFORE[column]
+            # The href lives in an HTML attribute, so & arrives as &amp;; the
+            # input box holds the plain address.
+            href = (
+                stored.split('href="', 1)[1].split('"', 1)[0].replace("&amp;", "&")
+                if 'href="' in stored
+                else ""
+            )
+            sold_box = ad_box(label, english=column.endswith("En"))
+            field_ = sold_box.locator('input[placeholder="https://advertiser.example.com"]')
+            check(
+                "an advertisement that is already sold shows the link it has",
+                field_.input_value() == href,
+                f"{field_.input_value()} vs {href}",
+            )
+            check(
+                "and offers nothing to save until the address is changed",
+                sold_box.locator('button:has-text("Saved")').is_disabled(),
+            )
+        else:
+            print("NOTE no picture advertisement with a link is in place, so the "
+                  "pre-filled link check was not run")
+
+        # The write side runs against an EMPTY slot, and only where writing an
+        # advertisement onto the page is harmless: a live site sells this space.
+        # It runs on the English side because this run has already proved
+        # the English front page carries advertising, and the Bangla front page
+        # may legitimately have no lead yet, which hides the rail slots. The
+        # current value of the box decides whether it is free, not the snapshot.
+        free = next(
+            (
+                x
+                for x in PICTURE_SLOTS[3:]
+                if not page.input_value(f'textarea[name="{x[2]}"]').strip()
+            ),
+            None,
+        )
+        if AD_WRITES and free:
+            slot, label, column = free
+            box = ad_box(label, english=True)
+            box.locator('input[placeholder="https://advertiser.example.com"]').fill(
+                "https://first-advertiser.example.com"
+            )
+            with page.expect_response(lambda r: "/api/admin/site/ad-image" in r.url) as got:
+                box.locator('input[type="file"]').set_input_files("sample-upload.jpg")
+            check("a picture advertisement uploads", got.value.status == 201, str(got.value.status))
+            page.wait_for_timeout(2000)
+            check(
+                "the markup it writes carries the link given with it",
+                'href="https://first-advertiser.example.com"'
+                in page.input_value(f'textarea[name="{column}"]'),
+            )
+
+            go(page, f"{BASE}/admin")
+            page.wait_for_timeout(800)
+            box = ad_box(label, english=True)
+            field_ = box.locator('input[placeholder="https://advertiser.example.com"]')
+            check(
+                "re-opening Settings shows that link rather than an empty box",
+                field_.input_value() == "https://first-advertiser.example.com",
+                field_.input_value(),
+            )
+
+            field_.fill("https://second-advertiser.example.com/offer?id=7&ref=a")
+            with page.expect_response(lambda r: "/api/admin/site/ad-image" in r.url) as got:
+                box.locator('button:has-text("Save link")').click()
+            check("the link saves on its own", got.value.status == 200, str(got.value.status))
+            page.wait_for_timeout(1500)
+            check(
+                "it confirms in words where the clicks now go",
+                "second-advertiser.example.com" in box.inner_text(),
+                box.inner_text()[-120:].replace("\n", " "),
+            )
+            check(
+                "the picture is left exactly as it was",
+                page.input_value(f'textarea[name="{column}"]').count("<img") == 1,
+            )
+            go(page, f"{BASE}/en")
+            check(
+                "a reader clicking it lands on the new address",
+                'href="https://second-advertiser.example.com/offer?id=7&amp;ref=a"'
+                in page.content(),
+            )
+            check(
+                "and the Bangla site is not carrying the English advertisement",
+                "second-advertiser.example.com" not in page.request.get(f"{BASE}/").text(),
+            )
+
+            go(page, f"{BASE}/admin")
+            page.wait_for_timeout(800)
+            box = ad_box(label, english=True)
+            box.locator('input[placeholder="https://advertiser.example.com"]').fill(
+                "advertiser.example.com"
+            )
+            box.locator('button:has-text("Save link")').click()
+            page.wait_for_timeout(1200)
+            check(
+                "an address without http:// is refused with a reason",
+                "must start with http" in box.inner_text(),
+                box.inner_text()[-110:].replace("\n", " "),
+            )
+
+            box.locator('button:has-text("Remove and hide")').click()
+            page.wait_for_timeout(1500)
+            check(
+                "and the test advertisement is taken back off the page",
+                page.input_value(f'textarea[name="{column}"]').strip() == "",
+            )
+        elif AD_WRITES:
+            print("NOTE every English picture slot is already sold, so the upload "
+                  "checks were not run")
 
         # payment details: the owner can see them, an editor never can
         go(page, f"{BASE}/people")
@@ -1551,6 +1700,50 @@ def main():
         check("the View live link goes to a real page", r.status == 200, f"{live} -> {r.status}")
         shot(np, "39-editorial-controls.png")
 
+        # Editing a live piece: a long Bangla headline has to be accepted, the
+        # address must not move under the readers, and a refusal has to say
+        # which field it is about.
+        headline = np.locator("section input").first
+        was = headline.input_value()
+        long_headline = was + " " + "যুক্ত বাক্যাংশ সহ দীর্ঘ শিরোনাম" * 6
+        headline.fill(long_headline)
+        with np.expect_response(
+            lambda r_: "/api/editorial/" in r_.url and r_.request.method == "PATCH"
+        ) as got:
+            np.click('button:has-text("Save and update the live article")')
+        check(
+            "a headline longer than 180 characters saves",
+            got.value.status == 200,
+            f"{len(long_headline)} chars -> {got.value.status}",
+        )
+        np.wait_for_timeout(SETTLE_MS)
+        check(
+            "and says the live article was updated",
+            "Updated" in np.locator('p[role="status"]').first.inner_text(),
+            np.locator('p[role="status"]').first.inner_text(),
+        )
+        check(
+            "a published piece keeps the address it was published at",
+            np.locator('a:has-text("View live")').first.get_attribute("href") == live,
+            str(np.locator('a:has-text("View live")').first.get_attribute("href")),
+        )
+
+        np.locator("section input").first.fill("")
+        np.click('button:has-text("Save and update the live article")')
+        np.wait_for_timeout(SETTLE_MS)
+        refusal = np.locator('p[role="status"]').first.inner_text()
+        check("a refused save names the field it is about", "Headline" in refusal, refusal)
+
+        np.locator("section input").first.fill(was)
+        np.click('button:has-text("Save and update the live article")')
+        np.wait_for_selector("text=Updated", timeout=20000)
+        np.reload(wait_until="domcontentloaded")
+        np.wait_for_timeout(SETTLE_MS)
+        check(
+            "the run hands the headline back as it found it",
+            np.locator("section input").first.input_value() == was,
+        )
+
         # Deleting asks first, and then really deletes.
         np.click('button:has-text("Delete this article")')
         check("deleting asks for confirmation first", "Yes, delete it" in np.inner_text("main"))
@@ -2028,9 +2221,11 @@ def main():
         check(
             "every deliberate bad request really was rejected by the server",
             # a submission with no contact number, a bad wallet number,
-            # publish-before-translating, a malformed website (422s) and the
-            # wrong current password (403)
-            len(rejected) == 5,
+            # publish-before-translating, a malformed website, an advertising
+            # link with no http:// (422s) and the wrong current password (403).
+            # The refused empty headline is not counted: it happens in the
+            # newsroom context, whose console is not collected here.
+            len(rejected) == 6,
             str(rejected),
         )
         check("no uncaught JS errors anywhere in the run", not real_errors, str(real_errors[:3]))

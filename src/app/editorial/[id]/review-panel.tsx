@@ -76,7 +76,17 @@ export function ReviewPanel({
     });
     setBusy(null);
     if (!res.ok) {
-      setMessage({ kind: "err", text: "Could not save the edits." });
+      // Show what the server actually objected to. "Could not save the edits"
+      // on its own gave an editor nothing to act on.
+      const data = (await res.json().catch(() => ({}))) as { error?: string };
+      setMessage({
+        kind: "err",
+        text:
+          data.error ??
+          (res.status === 401 || res.status === 403
+            ? "Your session has expired. Sign in again and the text below is still here."
+            : `Could not save the edits (error ${res.status}).`),
+      });
       return;
     }
     setMessage({
@@ -96,12 +106,22 @@ export function ReviewPanel({
     setBusy(decision);
     setMessage(null);
 
-    // Always persist the editor's wording changes before the decision lands.
-    await fetch(`/api/editorial/${article.id}`, {
+    // Always persist the editor's wording changes before the decision lands -
+    // and stop if they would not save, rather than publishing the old copy.
+    const saved = await fetch(`/api/editorial/${article.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(form),
     });
+    if (!saved.ok) {
+      const data = (await saved.json().catch(() => ({}))) as { error?: string };
+      setBusy(null);
+      setMessage({
+        kind: "err",
+        text: `${data.error ?? `Could not save the edits (error ${saved.status})`}. Nothing was published.`,
+      });
+      return;
+    }
 
     const cents = Math.round(Number(payout.replace(/[^0-9.]/g, "")) * 100);
     const res = await fetch(`/api/editorial/${article.id}/decision`, {

@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { HttpError, errorResponse, requireOwner } from "@/lib/rbac";
 import { saveUpload } from "@/lib/storage";
+import { adLink, escapeAttr as escape, isPictureAd, withAdLink } from "@/lib/ad-markup";
 
 const TYPES = ["image/png", "image/jpeg", "image/webp", "image/gif"];
 
@@ -18,9 +19,16 @@ const FIELD = {
   sectionEn: "adSectionHtmlEn",
 } as const;
 
-/** Keeps a pasted link out of the markup it is dropped into. */
-const escape = (s: string) =>
-  s.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+const field = (slot: string) => {
+  if (!(slot in FIELD)) throw new HttpError(422, "Unknown advertising slot");
+  return FIELD[slot as keyof typeof FIELD];
+};
+
+const checkLink = (link: string) => {
+  if (link && !/^https?:\/\//i.test(link)) {
+    throw new HttpError(422, "The click-through address must start with http:// or https://");
+  }
+};
 
 /**
  * POST /api/admin/site/ad-image (multipart: file, slot, link?)
@@ -40,13 +48,11 @@ export async function POST(req: Request) {
     const link = String(form.get("link") ?? "").trim();
     const alt = String(form.get("alt") ?? "Advertisement").slice(0, 120);
 
-    if (!(slot in FIELD)) throw new HttpError(422, "Unknown advertising slot");
+    const column = field(slot);
     if (!(file instanceof File)) throw new HttpError(422, "No image received");
     if (!TYPES.includes(file.type)) throw new HttpError(415, "Use a PNG, JPEG, WebP or GIF");
     if (file.size > 4 * 1024 * 1024) throw new HttpError(413, "Keep the image under 4 MB");
-    if (link && !/^https?:\/\//i.test(link)) {
-      throw new HttpError(422, "The click-through address must start with http:// or https://");
-    }
+    checkLink(link);
 
     const { url } = await saveUpload(file);
     // Served at a sensible width like every other picture on the site, with a
@@ -61,14 +67,55 @@ export async function POST(req: Request) {
       ? `<a href="${escape(link)}" target="_blank" rel="noopener sponsored">${img}</a>`
       : img;
 
-    const field = FIELD[slot as keyof typeof FIELD];
     const settings = await prisma.siteSettings.upsert({
       where: { id: 1 },
-      create: { id: 1, [field]: html },
-      update: { [field]: html },
+      create: { id: 1, [column]: html },
+      update: { [column]: html },
     });
 
-    return Response.json({ settings, url }, { status: 201 });
+    return Response.json({ settings, url, link, html }, { status: 201 });
+  } catch (err) {
+    return errorResponse(err);
+  }
+}
+
+/**
+ * PATCH /api/admin/site/ad-image  { slot, link }
+ *
+ * Changes only where a click goes, leaving the picture alone. Selling the same
+ * space to a new advertiser's page, or correcting a mistyped address, should not
+ * mean finding and uploading the image a second time.
+ */
+export async function PATCH(req: Request) {
+  try {
+    await requireOwner();
+
+    const body = (await req.json().catch(() => ({}))) as { slot?: string; link?: string };
+    const column = field(String(body.slot ?? ""));
+    const link = String(body.link ?? "").trim();
+    checkLink(link);
+
+    const site = await prisma.siteSettings.findUnique({ where: { id: 1 } });
+    const current = (site?.[column] ?? "") as string;
+    if (!current.trim()) {
+      throw new HttpError(422, "This box is empty - upload an image first, then set the link");
+    }
+    if (!isPictureAd(current)) {
+      throw new HttpError(
+        422,
+        "This box holds code from an ad network, so the link lives inside that code",
+      );
+    }
+    if (adLink(current) === link) {
+      throw new HttpError(422, link ? "That is already the link" : "This image has no link to remove");
+    }
+
+    const html = withAdLink(current, link);
+    const settings = await prisma.siteSettings.update({
+      where: { id: 1 },
+      data: { [column]: html },
+    });
+    return Response.json({ settings, link, html });
   } catch (err) {
     return errorResponse(err);
   }
@@ -78,16 +125,13 @@ export async function POST(req: Request) {
 export async function DELETE(req: Request) {
   try {
     await requireOwner();
-    const slot = new URL(req.url).searchParams.get("slot") ?? "";
-    if (!(slot in FIELD)) throw new HttpError(422, "Unknown advertising slot");
-
-    const field = FIELD[slot as keyof typeof FIELD];
+    const column = field(new URL(req.url).searchParams.get("slot") ?? "");
     const settings = await prisma.siteSettings.upsert({
       where: { id: 1 },
-      create: { id: 1, [field]: "" },
-      update: { [field]: "" },
+      create: { id: 1, [column]: "" },
+      update: { [column]: "" },
     });
-    return Response.json({ settings });
+    return Response.json({ settings, html: "" });
   } catch (err) {
     return errorResponse(err);
   }

@@ -229,30 +229,27 @@ export function SiteForm({ settings }: { settings: Site }) {
               <p className="text-sm font-semibold">
                 {heading} <span className="font-normal text-xs text-ink-soft">{note}</span>
               </p>
-              <AdUploader
-                slot={`banner${suffix}`}
-                label="Banner"
-                size="970 x 90 (phones 320 x 100)"
-                current={suffix ? form.adBannerHtmlEn : form.adBannerHtml}
-              />
-              <AdUploader
-                slot={`square${suffix}`}
-                label="Square"
-                size="300 x 250"
-                current={suffix ? form.adSquareHtmlEn : form.adSquareHtml}
-              />
-              <AdUploader
-                slot={`home${suffix}`}
-                label="Home page extra"
-                size="300 x 250 or taller"
-                current={suffix ? form.adHomeHtmlEn : form.adHomeHtml}
-              />
-              <AdUploader
-                slot={`article${suffix}`}
-                label="Article page"
-                size="728 x 90 or 300 x 250"
-                current={suffix ? form.adArticleHtmlEn : form.adArticleHtml}
-              />
+              {([
+                ["banner", "Banner", "970 x 90 (phones 320 x 100)", "adBannerHtml"],
+                ["square", "Square", "300 x 250", "adSquareHtml"],
+                ["home", "Home page extra", "300 x 250 or taller", "adHomeHtml"],
+                ["article", "Article page", "728 x 90 or 300 x 250", "adArticleHtml"],
+              ] as const).map(([slot, label, size, column]) => {
+                // The uploader saves on its own, so the markup it writes has to
+                // land in this form too. Otherwise the box below still holds the
+                // old code and pressing Save settings would put it back.
+                const key = `${column}${suffix}` as keyof Site;
+                return (
+                  <AdUploader
+                    key={slot}
+                    slot={`${slot}${suffix}`}
+                    label={label}
+                    size={size}
+                    current={String(form[key] ?? "")}
+                    onSaved={(html) => setForm((f) => ({ ...f, [key]: html }))}
+                  />
+                );
+              })}
             </div>
           ))}
         </div>
