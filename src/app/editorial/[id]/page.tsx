@@ -108,6 +108,7 @@ export default async function ReviewPage({ params }: { params: Promise<{ id: str
               dek: article.dek ?? "",
               body: article.body,
               category: article.category,
+              sectionLead: article.sectionLead,
               status: article.status,
               slug: article.slug,
               language: article.language,

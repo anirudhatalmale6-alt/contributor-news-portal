@@ -28,6 +28,7 @@ export const TEXT_GROUPS = [
   "Article page",
   "Writer pages",
   "Footer and invitation",
+  "The writing desk",
   "Writing a piece",
   "Sending it in",
   "The other language",
@@ -76,6 +77,12 @@ export const TEXT_DEFAULTS: Record<string, TextEntry> = {
   // --- Front page ---------------------------------------------------------
   "feed.alsoToday": { group: "Front page", en: "Also today", bn: "আজকের আরও খবর", note: "Heading over the left-hand column" },
   "feed.featured": { group: "Front page", en: "Featured", bn: "নির্বাচিত", note: "Heading over the right-hand column" },
+  "feed.moreInSection": {
+    group: "Front page",
+    en: "More in {name}",
+    bn: "{name} বিভাগের আরও",
+    note: "Above the grid at the foot of a section page. {name} is the section",
+  },
   "feed.moreFromContributors": {
     group: "Front page",
     en: "More from our contributors",
@@ -177,6 +184,240 @@ export const TEXT_DEFAULTS: Record<string, TextEntry> = {
     en: "Originally written in Bangla",
     bn: "মূল লেখা ইংরেজিতে",
     note: "Shown on a translated piece",
+  },
+
+  // --- The writing desk ---------------------------------------------------
+  "desk.updates": {
+    group: "The writing desk",
+    en: "Updates",
+    bn: "হালনাগাদ",
+    note: "Heading over the list of what the desk has told this contributor",
+  },
+  "desk.unreadNew": {
+    group: "The writing desk",
+    en: "{n} new",
+    bn: "{n}টি নতুন",
+  },
+  "desk.markAllRead": {
+    group: "The writing desk",
+    en: "Mark all as read",
+    bn: "সব পড়া হয়েছে",
+  },
+  "desk.marking": {
+    group: "The writing desk",
+    en: "Marking...",
+    bn: "চিহ্নিত করা হচ্ছে...",
+  },
+  "desk.title": {
+    group: "The writing desk",
+    en: "{name}'s desk",
+    bn: "{name}-এর ডেস্ক",
+    note: "Heading at the top of a contributor's own desk",
+  },
+  "desk.editProfile": {
+    group: "The writing desk",
+    en: "Edit my profile",
+    bn: "আমার প্রোফাইল সম্পাদনা",
+  },
+  "desk.newPiece": {
+    group: "The writing desk",
+    en: "Start a new piece",
+    bn: "নতুন লেখা শুরু করুন",
+    note: "The red button that opens a blank editor",
+  },
+  "desk.opening": {
+    group: "The writing desk",
+    en: "Opening editor...",
+    bn: "এডিটর খোলা হচ্ছে...",
+    note: "While that button is working",
+  },
+  "desk.totalEarnings": {
+    group: "The writing desk",
+    en: "Total earnings",
+    bn: "মোট সম্মানী",
+  },
+  "desk.acrossEvery": {
+    group: "The writing desk",
+    en: "Across every published piece",
+    bn: "প্রকাশিত সব লেখা মিলিয়ে",
+  },
+  "desk.published": {
+    group: "The writing desk",
+    en: "Published",
+    bn: "প্রকাশিত",
+  },
+  "desk.liveOnSite": {
+    group: "The writing desk",
+    en: "Live on the site",
+    bn: "সাইটে প্রকাশিত",
+  },
+  "desk.inReview": {
+    group: "The writing desk",
+    en: "In review",
+    bn: "পর্যালোচনায়",
+  },
+  "desk.waitingEditor": {
+    group: "The writing desk",
+    en: "Waiting on an editor",
+    bn: "সম্পাদকের অপেক্ষায়",
+  },
+  "desk.changesRequested": {
+    group: "The writing desk",
+    en: "Changes requested",
+    bn: "সংশোধন চাওয়া হয়েছে",
+  },
+  "desk.editResubmit": {
+    group: "The writing desk",
+    en: "Edit and resubmit",
+    bn: "সংশোধন করে আবার পাঠান",
+  },
+  "desk.nothingToFix": {
+    group: "The writing desk",
+    en: "Nothing to fix",
+    bn: "সংশোধনের কিছু নেই",
+  },
+  "desk.paymentDetails": {
+    group: "The writing desk",
+    en: "Payment details",
+    bn: "পেমেন্টের তথ্য",
+  },
+  "desk.addPaymentTitle": {
+    group: "The writing desk",
+    en: "Add your payment details",
+    bn: "আপনার পেমেন্টের তথ্য দিন",
+  },
+  "desk.noDestination": {
+    group: "The writing desk",
+    en: "We cannot send your earnings anywhere until you tell us where. Takes a minute.",
+    bn: "কোথায় পাঠাব তা না জানালে আপনার সম্মানী পাঠানো যাবে না। এক মিনিটের কাজ।",
+  },
+  "desk.update": {
+    group: "The writing desk",
+    en: "Update",
+    bn: "হালনাগাদ",
+    note: "Button beside the saved payment details",
+  },
+  "desk.addDetails": {
+    group: "The writing desk",
+    en: "Add payment details",
+    bn: "পেমেন্টের তথ্য যোগ করুন",
+  },
+  "desk.myArticles": {
+    group: "The writing desk",
+    en: "My articles",
+    bn: "আমার লেখা",
+  },
+  "desk.nothingYet": {
+    group: "The writing desk",
+    en: "Nothing here yet. Start your first piece and save it as a draft whenever you like.",
+    bn: "এখনও কিছু নেই। প্রথম লেখাটি শুরু করুন, যখন খুশি খসড়া হিসেবে সংরক্ষণ করুন।",
+  },
+  "desk.untitled": {
+    group: "The writing desk",
+    en: "Untitled draft",
+    bn: "শিরোনামহীন খসড়া",
+    note: "Shown in the list when a draft has no headline yet",
+  },
+  "desk.continueEditing": {
+    group: "The writing desk",
+    en: "Continue editing",
+    bn: "সম্পাদনা চালিয়ে যান",
+  },
+  "desk.open": {
+    group: "The writing desk",
+    en: "Open",
+    bn: "খুলুন",
+  },
+  "desk.viewLive": {
+    group: "The writing desk",
+    en: "View live",
+    bn: "সাইটে দেখুন",
+  },
+  "desk.payoutPending": {
+    group: "The writing desk",
+    en: "payout pending",
+    bn: "সম্মানী নির্ধারণ হয়নি",
+  },
+  "desk.editorChanges": {
+    group: "The writing desk",
+    en: "Editor asked for changes",
+    bn: "সম্পাদক সংশোধন চেয়েছেন",
+  },
+  "desk.editorNote": {
+    group: "The writing desk",
+    en: "Editor note",
+    bn: "সম্পাদকের নোট",
+  },
+  "desk.attachments": {
+    group: "The writing desk",
+    en: "{n} attachments",
+    bn: "{n}টি সংযুক্তি",
+    note: "{n} is how many photos or videos",
+  },
+  "desk.attachment": {
+    group: "The writing desk",
+    en: "{n} attachment",
+    bn: "{n}টি সংযুক্তি",
+    note: "When there is exactly one",
+  },
+  "desk.edited": {
+    group: "The writing desk",
+    en: "edited {when}",
+    bn: "সম্পাদিত {when}",
+    note: "{when} is how long ago",
+  },
+  "desk.publishedOn": {
+    group: "The writing desk",
+    en: "published {date}",
+    bn: "প্রকাশিত {date}",
+  },
+  "nav.newsroomQueue": {
+    group: "The writing desk",
+    en: "Newsroom",
+    bn: "নিউজরুম",
+    note: "The editors' queue, in the bar",
+  },
+  "nav.publishedList": {
+    group: "The writing desk",
+    en: "Published",
+    bn: "প্রকাশিত",
+  },
+  "nav.frontPage": {
+    group: "The writing desk",
+    en: "Front page",
+    bn: "প্রথম পাতা",
+  },
+  "nav.people": {
+    group: "The writing desk",
+    en: "People",
+    bn: "সদস্য",
+  },
+  "nav.payouts": {
+    group: "The writing desk",
+    en: "Payouts",
+    bn: "সম্মানী পরিশোধ",
+  },
+  "nav.settings": {
+    group: "The writing desk",
+    en: "Settings",
+    bn: "সেটিংস",
+  },
+  "nav.wording": {
+    group: "The writing desk",
+    en: "Wording",
+    bn: "শব্দচয়ন",
+  },
+  "nav.myWritingDesk": {
+    group: "The writing desk",
+    en: "My writing desk",
+    bn: "আমার লেখার ডেস্ক",
+    note: "First item in the bar across a contributor's screens",
+  },
+  "nav.inbox": {
+    group: "The writing desk",
+    en: "Inbox",
+    bn: "বার্তা",
+    note: "Second item in that bar",
   },
 
   // --- Writing a piece ----------------------------------------------------

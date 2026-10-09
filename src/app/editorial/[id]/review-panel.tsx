@@ -29,6 +29,7 @@ type ArticleState = {
   language: string;
   coverImage: string | null;
   homeSlot: string | null;
+  sectionLead: boolean;
   bylineName: string;
   /** Whose account filed it, shown as the default byline. */
   authorName: string;
@@ -61,6 +62,7 @@ export function ReviewPanel({
   const [message, setMessage] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
   const bodyRef = useRef<HTMLTextAreaElement>(null);
   const [slot, setSlot] = useState(article.homeSlot ?? "");
+  const [sectionLead, setSectionLead] = useState(article.sectionLead);
 
   function update<K extends keyof typeof form>(key: K, value: string) {
     setForm((f) => ({ ...f, [key]: value }));
@@ -331,6 +333,41 @@ export function ReviewPanel({
               Front page
             </Link>{" "}
             screen.
+          </span>
+        </label>
+
+        <label className="flex items-start gap-3 text-sm">
+          <input
+            type="checkbox"
+            name="sectionLead"
+            checked={sectionLead}
+            disabled={status !== "APPROVED"}
+            onChange={(e) => {
+              const next = e.target.checked;
+              setSectionLead(next);
+              void fetch(`/api/editorial/${article.id}/section-lead`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ sectionLead: next }),
+              }).then(() => {
+                setMessage({
+                  kind: "ok",
+                  text: next
+                    ? "This now leads its section page. Any piece that led it before has stepped aside."
+                    : "Taken off the top of its section. The newest piece there leads instead.",
+                });
+                router.refresh();
+              });
+            }}
+            className="mt-0.5 size-4"
+          />
+          <span>
+            <span className="font-medium">Lead of its section page</span>
+            <span className="mt-0.5 block text-xs text-ink-soft">
+              {status === "APPROVED"
+                ? "Puts this at the top of its own section, above the headlines beside it. One piece per section; the newest leads if nobody chooses."
+                : "Publish the piece first, then it can lead its section."}
+            </span>
           </span>
         </label>
 

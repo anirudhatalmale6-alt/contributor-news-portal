@@ -34,6 +34,9 @@ type Site = {
   maxUnderLead: number;
   maxMoreGrid: number;
   maxRelated: number;
+  maxSectionRail: number;
+  maxSectionGrid: number;
+  deskLanguage: string;
   contributorMessaging: boolean;
 };
 
@@ -255,16 +258,18 @@ export function SiteForm({ settings }: { settings: Site }) {
           How many articles each place holds
         </h2>
         <p className="text-xs text-ink-soft">
-          The most each part of the front page will carry. Anything beyond this falls into the grid
-          at the foot of the page rather than disappearing.
+          The most each part of a page will carry. Anything beyond this falls into the grid at the
+          foot of the page rather than disappearing.
         </p>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {([
-            ["maxUnderLead", "Under the headline"],
-            ["maxLeftRail", "Left column"],
-            ["maxRightRail", "Right column"],
-            ["maxMoreGrid", "Grid at the foot"],
-            ["maxRelated", "More on this (article page)"],
+            ["maxUnderLead", "Front page: under the headline"],
+            ["maxLeftRail", "Front page: left column"],
+            ["maxRightRail", "Front page: right column"],
+            ["maxMoreGrid", "Front page: grid at the foot"],
+            ["maxSectionRail", "Section page: beside the lead"],
+            ["maxSectionGrid", "Section page: grid underneath"],
+            ["maxRelated", "Article page: more on this"],
           ] as const).map(([key, label]) => (
             <label key={key} className="grid gap-1 text-sm">
               <span className="font-medium">{label}</span>
@@ -278,6 +283,26 @@ export function SiteForm({ settings }: { settings: Site }) {
             </label>
           ))}
         </div>
+      </section>
+
+      {/* --- The language of the working screens ----------------------- */}
+      <section className="grid gap-3 border-t border-line pt-4">
+        <h2 className="text-xs font-bold uppercase tracking-widest text-ink-soft">
+          Language of the contributor's desk
+        </h2>
+        <p className="text-xs text-ink-soft">
+          Which column of the Wording screen the desk, the bar across the top and the buttons on
+          them are read from. Change any of those words under Wording - The writing desk.
+        </p>
+        <select
+          name="deskLanguage"
+          value={form.deskLanguage}
+          onChange={(e) => setForm({ ...form, deskLanguage: e.target.value })}
+          className={`${field} sm:w-72`}
+        >
+          <option value="EN">English</option>
+          <option value="BN">Bangla</option>
+        </select>
       </section>
 
       {/* --- Contributors talking to each other ------------------------ */}

@@ -25,9 +25,9 @@ NEW_EMAIL = f"rosa.{STAMP}@thedocument.test"
 NEW_PASS = "demo1234"
 NEW_PASS2 = "demo-changed-5678"
 INBOX_EMAIL = f"probe.inbox.{STAMP}@thedocument.test"
-REJECT_TITLE = "The minutes nobody has seen"
-WITNESS_TITLE = "The roadworks nobody signed off"
-BYLINE_TITLE = "The ferry terminal that opened twice"
+REJECT_TITLE = f"The minutes nobody has seen {STAMP}"
+WITNESS_TITLE = f"The roadworks nobody signed off {STAMP}"
+BYLINE_TITLE = f"The ferry terminal that opened twice {STAMP}"
 BYLINE_NAME = "Our Khulna correspondent"
 
 # Writing a test advertisement onto a page is fine locally and wrong on a site
@@ -37,8 +37,10 @@ AD_WRITES = os.environ.get("AD_WRITES", "") == "1" or "127.0.0.1" in BASE or "lo
 # Whatever advertising the site already carries, so the run can put it back.
 ADS_BEFORE: dict[str, str] = {}
 NEW_NAME = "Rosa Delgado"
-HEADLINE = "The allotment that became a flood defence"
-EV_TITLE = "Two photographs filed with the piece"
+# Stamped, so a copy left behind by an earlier run can never be mistaken for
+# this one's - that cost a run the payout checks once already.
+HEADLINE = f"The allotment that became a flood defence {STAMP}"
+EV_TITLE = f"Two photographs filed with the piece {STAMP}"
 NOTICE_ALL = f"Election coverage {STAMP}: file by 6pm and name every source."
 NOTICE_ONE = f"Khulna piece {STAMP}: attach the committee minutes before we run it."
 BN_HEADLINE = "যে বরাদ্দ জমি বন্যা প্রতিরোধের বাঁধ হয়ে উঠল"
@@ -364,7 +366,11 @@ def main():
         check("editor sees the queue with the new submission", HEADLINE in page.content())
         shot(page, "06-editorial-queue.png")
 
-        page.locator(f'li:has-text("{HEADLINE}")').last.locator('a:has-text("Review")').click()
+        # Filtered and newest-first: the queue can hold older copies of the same
+        # headline from an earlier run, and only the one just filed is in review.
+        go(page, f"{BASE}/editorial?status=SUBMITTED&q={STAMP}")
+        page.wait_for_timeout(SETTLE_MS)
+        page.locator(f'li:has-text("{HEADLINE}")').first.locator('a:has-text("Review")').click()
         page.wait_for_url("**/editorial/**", timeout=20000)
         page.wait_for_timeout(SETTLE_MS)
         check("review screen loads the submitted copy", "attenuation basin" in page.content())
@@ -1623,7 +1629,7 @@ def main():
         ed3 = ctx.browser.new_context(viewport=DESKTOP, http_credentials=GATE)
         ep4 = ed3.new_page()
         sign_in(ep4, "editor@thedocument.test", STAFF_PASS)
-        go(ep4, f"{BASE}/editorial?status=SUBMITTED&q={REJECT_TITLE.split(' ')[0]}")
+        go(ep4, f"{BASE}/editorial?status=SUBMITTED&q={STAMP}")
         ep4.locator(f'li:has-text("{REJECT_TITLE}") a:has-text("Review")').first.click()
         ep4.wait_for_url("**/editorial/**", timeout=20000)
         ep4.wait_for_timeout(SETTLE_MS)
@@ -2373,7 +2379,7 @@ def main():
         ec = ctx.browser.new_context(viewport=DESKTOP, http_credentials=GATE)
         ep5 = ec.new_page()
         sign_in(ep5, "editor@thedocument.test", STAFF_PASS)
-        go(ep5, f"{BASE}/editorial?status=SUBMITTED&q={WITNESS_TITLE.split(' ')[1]}")
+        go(ep5, f"{BASE}/editorial?status=SUBMITTED&q={STAMP}")
         ep5.locator(f'li:has-text("{WITNESS_TITLE}") a:has-text("Review")').first.click()
         ep5.wait_for_url("**/editorial/**", timeout=20000)
         ep5.wait_for_timeout(SETTLE_MS)
@@ -2428,7 +2434,7 @@ def main():
         bp.wait_for_selector("text=Submitted for review", timeout=20000)
 
         # Publish it, then look at what a reader sees.
-        go(bp, f"{BASE}/editorial?status=SUBMITTED&q={BYLINE_TITLE.split(' ')[1]}")
+        go(bp, f"{BASE}/editorial?status=SUBMITTED&q={STAMP}")
         bp.locator(f'li:has-text("{BYLINE_TITLE}") a:has-text("Review")').first.click()
         bp.wait_for_url("**/editorial/**", timeout=20000)
         bp.wait_for_timeout(SETTLE_MS)
@@ -2561,7 +2567,7 @@ def main():
         rp9.click('button[name="submit-article-foot"]')
         rp9.wait_for_selector("text=Submitted for review", timeout=20000)
 
-        go(rp9, f"{BASE}/editorial?status=SUBMITTED&q=photographs")
+        go(rp9, f"{BASE}/editorial?status=SUBMITTED&q={STAMP}")
         rp9.wait_for_timeout(SETTLE_MS)
         rp9.locator(f'li:has-text("{EV_TITLE}") a:has-text("Review")').first.click()
         rp9.wait_for_url("**/editorial/**", timeout=20000)
@@ -2896,6 +2902,180 @@ def main():
             check("and the contributor can sign in with it", "/dashboard" in fp9.url, fp9.url)
         fc9.close()
         r29.close()
+
+        # --- 10q. the section page, and the words on the desk ----------------
+        # He opened /section/technology and found a photograph tall enough to
+        # fill the screen with the headline somewhere below it, and a third of
+        # the page empty. The page is laid out like the front page now.
+        s30 = ctx.browser.new_context(viewport=DESKTOP, http_credentials=GATE)
+        sp = s30.new_page()
+        sign_in(sp, "admin@thedocument.test", STAFF_PASS)
+
+        go(sp, f"{BASE}/admin")
+        sp.wait_for_timeout(SETTLE_MS)
+        rail_was = sp.input_value('#site-settings input[name="maxSectionRail"]')
+
+        go(sp, f"{BASE}/en/section/culture")
+        order = sp.evaluate(
+            """() => {
+                 const lead = document.querySelector('main article');
+                 if (!lead) return 'NO LEAD';
+                 const kids = [...lead.querySelectorAll('h2, img')].map((n) => n.tagName);
+                 return kids.join(',');
+               }"""
+        )
+        check(
+            "the section page leads with the headline, not with the photograph",
+            order.startswith("H2"),
+            order,
+        )
+        check(
+            "the stories beside the lead fill the column that used to be empty",
+            sp.locator('main aside:not([aria-label="Advertisement"]) a').count() >= 2,
+            str(sp.locator('main aside:not([aria-label="Advertisement"]) a').count()),
+        )
+        # The grid under the lead carries whatever the lead and the column
+        # beside it did not take, and is absent when they took everything. The
+        # count comes from the page itself: the public list counts both
+        # languages, and the English page can only show the English ones.
+        on_page = len(
+            {
+                a.get_attribute("href")
+                for a in sp.locator('main a[href*="/article/"]').all()
+            }
+        )
+        check(
+            "the rest of the section runs in a grid under its own heading",
+            # inner_text gives back what the reader sees, and the heading is
+            # set in capitals by the stylesheet.
+            ("more in culture" in sp.inner_text("main").lower()) == (on_page > 1 + int(rail_was)),
+            f"{on_page} pieces on the page, {rail_was} beside the lead",
+        )
+        shot(sp, "55-section-page.png")
+
+        # How many sit beside the lead is the owner's number.
+        go(sp, f"{BASE}/admin")
+        sp.wait_for_timeout(SETTLE_MS)
+        sp.fill('#site-settings input[name="maxSectionRail"]', "1")
+        sp.click('button:has-text("Save site settings")')
+        sp.wait_for_selector("text=Refresh the public site", timeout=20000)
+        sp.wait_for_timeout(SETTLE_MS)
+        go(sp, f"{BASE}/en/section/culture")
+        beside = sp.locator('main aside:not([aria-label="Advertisement"]) a').count()
+        check(
+            "the owner's limit for the section page is obeyed",
+            beside == 1,
+            f"{beside} beside the lead with the limit set to 1",
+        )
+        go(sp, f"{BASE}/admin")
+        sp.wait_for_timeout(SETTLE_MS)
+        sp.fill('#site-settings input[name="maxSectionRail"]', rail_was)
+        sp.click('button:has-text("Save site settings")')
+        sp.wait_for_selector("text=Refresh the public site", timeout=20000)
+        sp.wait_for_timeout(SETTLE_MS)
+
+        # And which piece leads is the desk's choice, not just whichever was
+        # published last.
+        # Pieces that exist in English, newest first, which is what the English
+        # section page is working from.
+        culture = [
+            a
+            for a in sp.request.get(f"{BASE}/api/articles?category=Culture&perPage=50").json()[
+                "articles"
+            ]
+            if sp.request.get(f"{BASE}/en/article/{a['slug']}").status == 200
+        ][:4]
+        check("the section has enough published work to arrange", len(culture) >= 2, str(len(culture)))
+        if len(culture) >= 2:
+            pick = culture[1]
+            go(sp, f"{BASE}/editorial/{pick['id']}")
+            sp.wait_for_timeout(SETTLE_MS)
+            sp.check('input[name="sectionLead"]')
+            sp.wait_for_selector("text=leads its section", timeout=20000)
+            sp.wait_for_timeout(SETTLE_MS * 2)
+            go(sp, f"{BASE}/en/section/culture")
+            # By link, not by headline: two test pieces can share the first few
+            # words of a title, and the address is what actually identifies one.
+            lead_href = sp.locator("main article a").first.get_attribute("href") or ""
+            check(
+                "the piece the desk chose leads its section page",
+                pick["slug"] in lead_href,
+                f"{lead_href} / {pick['slug']}",
+            )
+            check(
+                "and it is not repeated in the column beside itself",
+                sp.locator(
+                    f'main aside:not([aria-label="Advertisement"]) a[href*="{pick["slug"]}"]'
+                ).count()
+                == 0,
+            )
+            # Take it off again: the newest piece leads when nobody chooses.
+            go(sp, f"{BASE}/editorial/{pick['id']}")
+            sp.wait_for_timeout(SETTLE_MS)
+            sp.uncheck('input[name="sectionLead"]')
+            sp.wait_for_selector("text=Taken off the top", timeout=20000)
+            sp.wait_for_timeout(SETTLE_MS * 2)
+            go(sp, f"{BASE}/en/section/culture")
+            back = sp.locator("main article a").first.get_attribute("href") or ""
+            check(
+                "taking it off hands the section back to the newest piece",
+                culture[0]["slug"] in back,
+                f"{back} / {culture[0]['slug']}",
+            )
+
+        # The label on the desk is his to change, which is what he could not do.
+        go(sp, f"{BASE}/admin/wording")
+        sp.wait_for_timeout(SETTLE_MS)
+        check(
+            "the wording screen now carries the lines on the writing desk",
+            sp.locator('textarea[name="EN:desk.newPiece"]').count() == 1,
+        )
+        sp.fill('textarea[name="EN:desk.newPiece"]', "File a report")
+        sp.click('button:has-text("Save wording")')
+        sp.wait_for_selector("text=Saved", timeout=20000)
+        sp.wait_for_timeout(SETTLE_MS)
+        go(sp, f"{BASE}/dashboard")
+        check(
+            "the button on the desk says what the owner typed",
+            sp.locator('button:has-text("File a report")').count() >= 1,
+            sp.inner_text("main")[:160].replace("\n", " "),
+        )
+
+        # The same words in Bangla, chosen with one switch in Settings.
+        go(sp, f"{BASE}/admin")
+        sp.wait_for_timeout(SETTLE_MS)
+        sp.select_option('#site-settings select[name="deskLanguage"]', "BN")
+        sp.click('button:has-text("Save site settings")')
+        sp.wait_for_selector("text=Refresh the public site", timeout=20000)
+        sp.wait_for_timeout(SETTLE_MS)
+        go(sp, f"{BASE}/dashboard")
+        check(
+            "switching the desk to Bangla puts the whole desk into Bangla",
+            sp.locator('button:has-text("নতুন লেখা শুরু করুন")').count() >= 1
+            and "মোট সম্মানী" in sp.inner_text("main"),
+            sp.inner_text("main")[:200].replace("\n", " "),
+        )
+        shot(sp, "56-desk-bangla.png")
+
+        # Hand both back, so the checks that follow find the desk in English.
+        go(sp, f"{BASE}/admin")
+        sp.wait_for_timeout(SETTLE_MS)
+        sp.select_option('#site-settings select[name="deskLanguage"]', "EN")
+        sp.click('button:has-text("Save site settings")')
+        sp.wait_for_selector("text=Refresh the public site", timeout=20000)
+        go(sp, f"{BASE}/admin/wording")
+        sp.wait_for_timeout(SETTLE_MS)
+        sp.fill('textarea[name="EN:desk.newPiece"]', "")
+        sp.click('button:has-text("Save wording")')
+        sp.wait_for_selector("text=Saved", timeout=20000)
+        sp.wait_for_timeout(SETTLE_MS)
+        go(sp, f"{BASE}/dashboard")
+        check(
+            "the run hands the desk back in English, with the shipped wording",
+            sp.locator('button:has-text("Start a new piece")').count() >= 1,
+            sp.inner_text("main")[:160].replace("\n", " "),
+        )
+        s30.close()
 
         # --- 11. mobile ------------------------------------------------------
         mob = ctx.browser.new_context(viewport=PHONE, device_scale_factor=2, http_credentials=GATE)

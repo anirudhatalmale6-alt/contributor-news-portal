@@ -143,6 +143,9 @@ export default async function AdminPage() {
             maxUnderLead: site.maxUnderLead,
             maxMoreGrid: site.maxMoreGrid,
             maxRelated: site.maxRelated,
+            maxSectionRail: site.maxSectionRail,
+            maxSectionGrid: site.maxSectionGrid,
+            deskLanguage: site.deskLanguage,
             contributorMessaging: site.contributorMessaging,
           }}
         />

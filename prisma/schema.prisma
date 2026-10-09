@@ -171,6 +171,11 @@ model Article {
   /// LEAD, STRIP (beside the masthead), LEFT, MIDDLE or RIGHT. Null means the
   /// page decides for itself, newest first, which is what most pieces do.
   homeSlot  String?
+
+  /// Leads its own section page. One per category: setting a new one clears
+  /// the old. Nothing to do with the front page, so a piece can lead its
+  /// section without being taken out of the front page's automatic fill.
+  sectionLead Boolean @default(false)
   /// Order within a slot, lowest first.
   homeOrder Int     @default(0)
 
@@ -297,6 +302,16 @@ model SiteSettings {
   maxMoreGrid     Int @default(12)
   /// And how many "more on this" blocks an article page shows.
   maxRelated      Int @default(8)
+
+  /// Which language the contributor's desk and the newsroom bar are written
+  /// in. The words themselves are all on the Wording screen; this only says
+  /// which column of it those screens read.
+  deskLanguage String @default("EN")
+
+  /// The section page: how many headlines run beside the lead, and how many
+  /// cards sit in the grid under it.
+  maxSectionRail Int @default(4)
+  maxSectionGrid Int @default(9)
 
   /// When off, a contributor cannot start a thread with another contributor.
   /// Off to begin with: most of them do not know each other, and writing to

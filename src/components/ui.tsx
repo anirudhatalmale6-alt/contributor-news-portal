@@ -108,47 +108,68 @@ export function ArticleCard({
   locale = "EN",
   lead,
   compact,
+  headlineFirst,
 }: {
   article: LocalisedArticle;
   locale?: Locale;
   lead?: boolean;
   /** Sits under the lead: no rule above it, and a smaller picture. */
   compact?: boolean;
+  /**
+   * Headline above the photograph instead of below it. Used at the top of a
+   * section page, where a 16:9 picture the width of the column is tall enough
+   * to fill a laptop screen on its own and push the headline out of sight.
+   */
+  headlineFirst?: boolean;
 }) {
   const copy = t(locale);
   const minutes = localeNumber(readingTime(article.body), locale);
+  const picture = article.coverImage ? (
+    <CoverImage
+      src={article.coverImage}
+      crop={article.coverCropHome}
+      shape="home"
+      eager={lead}
+      className={headlineFirst ? "mt-3 rounded" : "mb-3 rounded"}
+    />
+  ) : null;
+  const words = (
+    <>
+      <p className="text-[13px] font-semibold uppercase tracking-wide text-brand sm:text-xs">
+        {copy.sections[article.category] ?? article.category}
+      </p>
+      <h2
+        className={`balance mt-1 font-serif font-bold leading-tight group-hover:underline ${
+          lead
+            ? "text-[30px] sm:text-[38px]"
+            : compact
+              ? "text-xl sm:text-lg"
+              : "text-[20px] sm:text-[19px] lg:text-[17px]"
+        }`}
+      >
+        {article.title}
+      </h2>
+      {article.dek ? (
+        <p className={`mt-2 text-ink-soft ${lead ? "text-[17px] sm:text-lg" : "text-[15px] sm:text-sm"}`}>
+          {article.dek}
+        </p>
+      ) : null}
+    </>
+  );
   return (
     <article className={`group border-line ${lead || compact ? "" : "border-t pt-5"}`}>
       <Link href={article.href} className="block">
-        {article.coverImage ? (
-          <CoverImage
-            src={article.coverImage}
-            crop={article.coverCropHome}
-            shape="home"
-            eager={lead}
-            className="mb-3 rounded"
-          />
-        ) : null}
-
-        <p className="text-[13px] font-semibold uppercase tracking-wide text-brand sm:text-xs">
-          {copy.sections[article.category] ?? article.category}
-        </p>
-        <h2
-          className={`balance mt-1 font-serif font-bold leading-tight group-hover:underline ${
-            lead
-              ? "text-[30px] sm:text-[38px]"
-              : compact
-                ? "text-xl sm:text-lg"
-                : "text-[20px] sm:text-[19px] lg:text-[17px]"
-          }`}
-        >
-          {article.title}
-        </h2>
-        {article.dek ? (
-          <p className={`mt-2 text-ink-soft ${lead ? "text-[17px] sm:text-lg" : "text-[15px] sm:text-sm"}`}>
-            {article.dek}
-          </p>
-        ) : null}
+        {headlineFirst ? (
+          <>
+            {words}
+            {picture}
+          </>
+        ) : (
+          <>
+            {picture}
+            {words}
+          </>
+        )}
       </Link>
 
       <p className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-ink-soft">
@@ -178,4 +199,45 @@ export function ArticleCard({
 
 export function Money({ cents, currency }: { cents: number; currency: string }) {
   return <span className="tabular-nums">{money(cents, currency)}</span>;
+}
+
+/**
+ * A headline with a thumbnail: the unit every side rail is built from, on the
+ * front page and on a section page alike.
+ */
+export function RailItem({
+  article,
+  locale,
+  thumb = true,
+}: {
+  article: LocalisedArticle;
+  locale: Locale;
+  thumb?: boolean;
+}) {
+  const copy = t(locale);
+  return (
+    <Link href={article.href} className="group block border-t border-line pt-4 first:border-t-0 first:pt-0">
+      <span className="flex gap-3">
+        <span className="min-w-0 flex-1">
+          <span className="block text-[12px] font-semibold uppercase tracking-wide text-brand lg:text-[11px]">
+            {copy.sections[article.category] ?? article.category}
+          </span>
+          <span className="mt-0.5 block font-serif text-[17px] font-bold leading-snug group-hover:underline lg:text-base">
+            {article.title}
+          </span>
+          <span className="mt-1 block text-[13px] text-ink-soft">{article.author.name}</span>
+        </span>
+        {thumb && article.coverImage ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={`${article.coverImage}?w=320`}
+            alt=""
+            loading="lazy"
+            decoding="async"
+            className="size-24 shrink-0 rounded object-cover sm:size-28 lg:size-20"
+          />
+        ) : null}
+      </span>
+    </Link>
+  );
 }

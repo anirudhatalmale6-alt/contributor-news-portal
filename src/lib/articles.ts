@@ -120,6 +120,31 @@ export async function feedArticles(locale: Locale, category: string, take = 13) 
 }
 
 /**
+ * The piece the desk chose to lead this section page, if there is one.
+ *
+ * Returns null when nothing is pinned, or when the pinned piece does not exist
+ * in this language - the Bangla section page cannot lead with an English-only
+ * article, so it falls back to the newest piece that does exist.
+ */
+export async function sectionLeadArticle(locale: Locale, category: string) {
+  if (category === "All") return null;
+  const row = await prisma.article.findFirst({
+    where: {
+      status: "APPROVED",
+      category,
+      sectionLead: true,
+      OR: [{ language: locale }, { translations: { some: { locale } } }],
+    },
+    orderBy: { publishedAt: "desc" },
+    include: {
+      author: AUTHOR,
+      translations: { include: { translator: { select: { name: true } } } },
+    },
+  });
+  return row ? pick(row, locale) : null;
+}
+
+/**
  * The pieces an editor has pinned to a named place on the front page.
  *
  * Returned slot by slot so the page can take what it was given and fill the

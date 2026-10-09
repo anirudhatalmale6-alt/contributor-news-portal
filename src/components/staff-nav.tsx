@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { isAdmin, isOwner, isStaff, type SessionUser } from "@/lib/rbac";
 import { unreadCount } from "@/lib/inbox";
 import { unreadNotifications } from "@/lib/notify";
+import { deskLocale } from "@/lib/settings";
+import { text } from "@/lib/ui-text";
 
 /**
  * One bar across every working screen, so nobody has to guess where the queue,
@@ -27,6 +29,7 @@ export async function StaffNav({
     | "payouts";
 }) {
   const staff = isStaff(user.role);
+  const locale = await deskLocale();
   const [waiting, unread, updates, payouts] = await Promise.all([
     staff ? prisma.article.count({ where: { status: "SUBMITTED" } }) : 0,
     unreadCount(user),
@@ -36,33 +39,38 @@ export async function StaffNav({
   ]);
 
   const items: { key: typeof current; href: string; label: string; badge?: number }[] = [
-    { key: "desk", href: "/dashboard", label: "My writing desk", badge: updates },
-    { key: "inbox", href: "/inbox", label: "Inbox", badge: unread },
+    { key: "desk", href: "/dashboard", label: text("nav.myWritingDesk", locale), badge: updates },
+    { key: "inbox", href: "/inbox", label: text("nav.inbox", locale), badge: unread },
     ...(staff
       ? [
-          { key: "newsroom" as const, href: "/editorial", label: "Newsroom", badge: waiting },
+          { key: "newsroom" as const, href: "/editorial", label: text("nav.newsroomQueue", locale), badge: waiting },
           {
             key: "published" as const,
             href: "/editorial?status=APPROVED",
-            label: "Published",
+            label: text("nav.publishedList", locale),
           },
-          { key: "frontpage" as const, href: "/editorial/front-page", label: "Front page" },
-          { key: "people" as const, href: "/people", label: "People" },
+          { key: "frontpage" as const, href: "/editorial/front-page", label: text("nav.frontPage", locale) },
+          { key: "people" as const, href: "/people", label: text("nav.people", locale) },
         ]
       : []),
     ...(isAdmin(user.role)
-      ? [{ key: "payouts" as const, href: "/payouts", label: "Payouts", badge: payouts }]
+      ? [{ key: "payouts" as const, href: "/payouts", label: text("nav.payouts", locale), badge: payouts }]
       : []),
     ...(isOwner(user.role)
       ? [
-          { key: "settings" as const, href: "/admin", label: "Settings" },
-          { key: "wording" as const, href: "/admin/wording", label: "Wording" },
+          { key: "settings" as const, href: "/admin", label: text("nav.settings", locale) },
+          { key: "wording" as const, href: "/admin/wording", label: text("nav.wording", locale) },
         ]
       : []),
   ];
 
   return (
-    <nav className="-mx-1 mb-4 flex flex-wrap items-center gap-1 border-b border-line pb-3 pt-1">
+    <nav
+      // Bangla labels need the Bangla face, including on the newsroom screens
+      // that are otherwise set in the English stack.
+      lang={locale === "BN" ? "bn" : undefined}
+      className="-mx-1 mb-4 flex flex-wrap items-center gap-1 border-b border-line pb-3 pt-1"
+    >
       {items.map((item) => (
         <Link
           key={item.key}

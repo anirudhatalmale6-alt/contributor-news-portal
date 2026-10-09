@@ -1,3 +1,4 @@
+import type { Locale } from "@/lib/i18n";
 import { prisma } from "@/lib/prisma";
 import { slugify } from "@/lib/format";
 
@@ -26,4 +27,15 @@ export async function uniqueSlug(title: string, ignoreId?: string) {
     candidate = `${base}-${n}`;
   }
   return `${base}-${Date.now()}`;
+}
+
+/**
+ * Which column of the Wording screen the contributor's desk reads.
+ *
+ * The desk is one screen for both halves of the paper, so unlike an article it
+ * has no language of its own. The owner picks one in Settings.
+ */
+export async function deskLocale(): Promise<Locale> {
+  const site = await siteSettings();
+  return site.deskLanguage === "BN" ? "BN" : "EN";
 }

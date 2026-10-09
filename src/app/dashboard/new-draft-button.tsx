@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-export function NewDraftButton() {
+export function NewDraftButton({ label, busyLabel }: { label: string; busyLabel: string }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
 
@@ -31,7 +31,7 @@ export function NewDraftButton() {
       disabled={busy}
       className="rounded-full bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand-dark disabled:opacity-60"
     >
-      {busy ? "Opening editor..." : "Start a new piece"}
+      {busy ? busyLabel : label}
     </button>
   );
 }

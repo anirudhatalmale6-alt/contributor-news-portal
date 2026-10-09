@@ -10,47 +10,9 @@ import { siteSettings } from "@/lib/settings";
 import { banglaFontCss } from "@/lib/fonts";
 import { SiteFooter } from "@/components/site-footer";
 import { AdSlot } from "@/components/ad-slot";
-import { ArticleCard, SHELL } from "@/components/ui";
+import { ArticleCard, RailItem, SHELL } from "@/components/ui";
 import { type Locale, localeMeta, t } from "@/lib/i18n";
 import { planFrontPage } from "@/lib/front-page";
-
-/** A headline with a thumbnail, the unit both side rails are built from. */
-function RailItem({
-  article,
-  locale,
-  thumb = true,
-}: {
-  article: LocalisedArticle;
-  locale: Locale;
-  thumb?: boolean;
-}) {
-  const copy = t(locale);
-  return (
-    <Link href={article.href} className="group block border-t border-line pt-4 first:border-t-0 first:pt-0">
-      <span className="flex gap-3">
-        <span className="min-w-0 flex-1">
-          <span className="block text-[12px] font-semibold uppercase tracking-wide text-brand lg:text-[11px]">
-            {copy.sections[article.category] ?? article.category}
-          </span>
-          <span className="mt-0.5 block font-serif text-[17px] font-bold leading-snug group-hover:underline lg:text-base">
-            {article.title}
-          </span>
-          <span className="mt-1 block text-[13px] text-ink-soft">{article.author.name}</span>
-        </span>
-        {thumb && article.coverImage ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={`${article.coverImage}?w=320`}
-            alt=""
-            loading="lazy"
-            decoding="async"
-            className="size-24 shrink-0 rounded object-cover sm:size-28 lg:size-20"
-          />
-        ) : null}
-      </span>
-    </Link>
-  );
-}
 
 /**
  * The front page.

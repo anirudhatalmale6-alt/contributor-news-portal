@@ -37,7 +37,15 @@ function when(iso: string) {
  * checks this page to see where their piece got to, so the answer belongs on
  * the page they already open.
  */
-export function Notifications({ notes }: { notes: Note[] }) {
+export function Notifications({
+  notes,
+  words,
+}: {
+  notes: Note[];
+  /** The headings and the button, handed down so this screen can be in either
+      language without reaching for the database from the browser. */
+  words: { updates: string; unreadNew: string; markAllRead: string; marking: string };
+}) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const unread = notes.filter((n) => !n.read).length;
@@ -54,10 +62,10 @@ export function Notifications({ notes }: { notes: Note[] }) {
   return (
     <section className="mt-6 rounded-xl border border-line">
       <div className="flex flex-wrap items-center gap-2 border-b border-line px-4 py-3">
-        <h2 className="font-serif text-lg font-bold">Updates</h2>
+        <h2 className="font-serif text-lg font-bold">{words.updates}</h2>
         {unread ? (
           <span className="rounded-full bg-brand px-2 py-0.5 text-[11px] font-bold text-white">
-            {unread} new
+            {words.unreadNew.replace("{n}", String(unread))}
           </span>
         ) : null}
         {unread ? (
@@ -67,7 +75,7 @@ export function Notifications({ notes }: { notes: Note[] }) {
             disabled={busy}
             className="ml-auto text-xs font-medium text-navy hover:underline disabled:opacity-60"
           >
-            {busy ? "Marking..." : "Mark all as read"}
+            {busy ? words.marking : words.markAllRead}
           </button>
         ) : null}
       </div>

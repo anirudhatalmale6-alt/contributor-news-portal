@@ -3,9 +3,11 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { currentUser } from "@/lib/rbac";
 import { longDate, money, timeAgo } from "@/lib/format";
-import { paymentSettings } from "@/lib/settings";
+import { deskLocale, paymentSettings, siteSettings } from "@/lib/settings";
 import { earningsFor, payableFor } from "@/lib/earnings";
 import { localeDate } from "@/lib/i18n";
+import { text } from "@/lib/ui-text";
+import { banglaFontCss } from "@/lib/fonts";
 import { noticesFor } from "@/lib/notices";
 import { NoticeBoard } from "./notice-board";
 import { SiteFooter } from "@/components/site-footer";
@@ -67,6 +69,14 @@ export default async function DashboardPage() {
       },
     }),
   ]);
+  // Every word on this screen comes from the Wording screen, in whichever
+  // language the owner set for the desk.
+  const locale = await deskLocale();
+  const s = (key: string, vars?: Record<string, string | number>) => text(key, locale, vars);
+  // A Bangla desk needs the Bangla face as well as the Bangla words: the serif
+  // the headings use has no Bengali glyphs at all, so it would draw boxes.
+  const site = locale === "BN" ? await siteSettings() : null;
+
   const totalCents = earnings.totalCents;
   const inReview = articles.filter((a) => a.status === "SUBMITTED").length;
   const needsWork = articles.filter((a) => a.status === "REJECTED").length;
@@ -74,7 +84,15 @@ export default async function DashboardPage() {
   return (
     <>
       <SiteHeader />
-      <main className="mx-auto max-w-5xl px-4 pb-16">
+      <main
+        lang={locale === "BN" ? "bn" : undefined}
+        style={
+          site
+            ? ({ "--bn-reading-font": banglaFontCss(site.banglaFont) } as React.CSSProperties)
+            : undefined
+        }
+        className="mx-auto max-w-5xl px-4 pb-16"
+      >
         <div className="pt-4">
           <StaffNav user={user} current="desk" />
         </div>
@@ -86,7 +104,7 @@ export default async function DashboardPage() {
         <div className="flex flex-wrap items-end justify-between gap-3 border-b border-line py-6">
           <div>
             <h1 className="font-serif text-2xl font-bold sm:text-3xl">
-              {user.name.split(" ")[0]}&rsquo;s desk
+              {s("desk.title", { name: user.name.split(" ")[0] })}
             </h1>
             <div className="mt-2 flex flex-wrap items-center gap-2">
               <TierBadge tier={user.tier} role={user.role} />
@@ -95,14 +113,20 @@ export default async function DashboardPage() {
                 href="/dashboard/profile"
                 className="text-xs font-medium text-brand hover:underline"
               >
-                Edit my profile
+                {s("desk.editProfile")}
               </Link>
             </div>
           </div>
-          <NewDraftButton />
+          <NewDraftButton label={s("desk.newPiece")} busyLabel={s("desk.opening")} />
         </div>
 
         <Notifications
+          words={{
+            updates: s("desk.updates"),
+            unreadNew: s("desk.unreadNew", { n: "{n}" }),
+            markAllRead: s("desk.markAllRead"),
+            marking: s("desk.marking"),
+          }}
           notes={notes.map((n) => ({
             id: n.id,
             kind: n.kind,
@@ -116,7 +140,7 @@ export default async function DashboardPage() {
 
         <section className="grid gap-3 py-6 sm:grid-cols-2 lg:grid-cols-4">
           <StatCard
-            label="Total earnings"
+            label={s("desk.totalEarnings")}
             value={money(totalCents, settings.currency)}
             // A contributor adding up their own articles and getting a different
             // number would reasonably think the site was wrong.
@@ -125,16 +149,24 @@ export default async function DashboardPage() {
                 ? `${money(earnings.articleCents, settings.currency)} from articles, ${
                     earnings.adjustmentCents > 0 ? "plus" : "less"
                   } ${money(Math.abs(earnings.adjustmentCents), settings.currency)} adjusted by the desk`
-                : "Across every published piece"
+                : s("desk.acrossEvery")
             }
             accent
           />
-          <StatCard label="Published" value={String(published.length)} hint="Live on the site" />
-          <StatCard label="In review" value={String(inReview)} hint="Waiting on an editor" />
           <StatCard
-            label="Changes requested"
+            label={s("desk.published")}
+            value={String(published.length)}
+            hint={s("desk.liveOnSite")}
+          />
+          <StatCard
+            label={s("desk.inReview")}
+            value={String(inReview)}
+            hint={s("desk.waitingEditor")}
+          />
+          <StatCard
+            label={s("desk.changesRequested")}
             value={String(needsWork)}
-            hint={needsWork ? "Edit and resubmit" : "Nothing to fix"}
+            hint={needsWork ? s("desk.editResubmit") : s("desk.nothingToFix")}
           />
         </section>
 
@@ -166,12 +198,12 @@ export default async function DashboardPage() {
         >
           <div>
             <p className="text-sm font-medium">
-              {payout ? "Payment details" : "Add your payment details"}
+              {payout ? s("desk.paymentDetails") : s("desk.addPaymentTitle")}
             </p>
             <p className="mt-0.5 text-sm text-ink-soft">
               {payout
                 ? `${methodLabel(payout.method)} · ${payout.accountName} · ${maskedDestination(payout)}`
-                : "We cannot send your earnings anywhere until you tell us where. Takes a minute."}
+                : s("desk.noDestination")}
             </p>
           </div>
           <Link
@@ -182,22 +214,22 @@ export default async function DashboardPage() {
                 : "bg-brand text-white hover:bg-brand-dark"
             }`}
           >
-            {payout ? "Update" : "Add payment details"}
+            {payout ? s("desk.update") : s("desk.addDetails")}
           </Link>
         </section>
 
         <section>
           <h2 className="mb-3 text-xs font-bold uppercase tracking-widest text-ink-soft">
-            My articles
+            {s("desk.myArticles")}
           </h2>
 
           {articles.length === 0 ? (
             <div className="rounded-xl border border-dashed border-line bg-paper-soft p-8 text-center">
               <p className="text-sm text-ink-soft">
-                Nothing here yet. Start your first piece and save it as a draft whenever you like.
+                {s("desk.nothingYet")}
               </p>
               <div className="mt-4 flex justify-center">
-                <NewDraftButton />
+                <NewDraftButton label={s("desk.newPiece")} busyLabel={s("desk.opening")} />
               </div>
             </div>
           ) : (
@@ -215,18 +247,22 @@ export default async function DashboardPage() {
                         <div className="flex flex-wrap items-center gap-2">
                           <StatusPill status={a.status} />
                           <span className="text-xs text-ink-soft">
-                            {a.category} · edited {timeAgo(a.updatedAt)}
+                            {a.category} · {s("desk.edited", { when: timeAgo(a.updatedAt) })}
                           </span>
                         </div>
                         <p className="mt-1.5 truncate font-serif text-lg font-bold">
-                          {a.title || "Untitled draft"}
+                          {a.title || s("desk.untitled")}
                         </p>
                         {a.dek ? (
                           <p className="mt-0.5 line-clamp-2 text-sm text-ink-soft">{a.dek}</p>
                         ) : null}
                         <p className="mt-1 text-xs text-ink-soft">
-                          {a.media.length} attachment{a.media.length === 1 ? "" : "s"}
-                          {a.publishedAt ? ` · published ${longDate(a.publishedAt)}` : ""}
+                          {a.media.length === 1
+                            ? s("desk.attachment", { n: 1 })
+                            : s("desk.attachments", { n: a.media.length })}
+                          {a.publishedAt
+                            ? ` · ${s("desk.publishedOn", { date: longDate(a.publishedAt) })}`
+                            : ""}
                         </p>
                       </div>
 
@@ -235,7 +271,7 @@ export default async function DashboardPage() {
                           <span className="font-serif text-lg font-bold text-brand-dark tabular-nums">
                             {a.payoutCents > 0
                               ? money(a.payoutCents, settings.currency)
-                              : "payout pending"}
+                              : s("desk.payoutPending")}
                           </span>
                         ) : null}
                         <div className="flex gap-2">
@@ -244,7 +280,7 @@ export default async function DashboardPage() {
                               href={`/article/${a.slug}`}
                               className="rounded-full border border-line px-3 py-1.5 text-xs font-medium hover:bg-paper-soft"
                             >
-                              View live
+                              {s("desk.viewLive")}
                             </Link>
                           ) : null}
                           <Link
@@ -255,7 +291,7 @@ export default async function DashboardPage() {
                                 : "border border-line hover:bg-paper-soft"
                             }`}
                           >
-                            {editable ? "Continue editing" : "Open"}
+                            {editable ? s("desk.continueEditing") : s("desk.open")}
                           </Link>
                         </div>
                       </div>
@@ -270,7 +306,7 @@ export default async function DashboardPage() {
                         }`}
                       >
                         <p className="text-xs font-semibold uppercase tracking-wide">
-                          {note.action === "REJECTED" ? "Editor asked for changes" : "Editor note"}
+                          {note.action === "REJECTED" ? s("desk.editorChanges") : s("desk.editorNote")}
                           {note.editor ? ` · ${note.editor.name}` : ""}
                         </p>
                         <p className="mt-1">{note.note}</p>

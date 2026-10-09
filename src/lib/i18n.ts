@@ -81,6 +81,7 @@ type Dict = {
   byThisWriter: (n: string) => string;
   inSection: (name: string) => string;
   moreFromContributors: string;
+  moreInSection: (name: string) => string;
   nothingHere: string;
   signIn: string;
   writeForUs: string;
@@ -127,6 +128,7 @@ export const t = (locale: Locale): Dict => {
     byThisWriter: (n) => s("writer.byThisWriter", { n }),
     inSection: (name) => s("feed.inSection", { name }),
     moreFromContributors: s("feed.moreFromContributors"),
+    moreInSection: (name) => s("feed.moreInSection", { name }),
     nothingHere: s("feed.nothingHere"),
     signIn: s("nav.signIn"),
     writeForUs: s("nav.writeForUs"),
