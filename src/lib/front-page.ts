@@ -13,9 +13,12 @@
  * under the main headline.
  */
 
+/** What each position holds when the owner has not said otherwise. */
 export const SLOT_LIMIT = { LEAD: 1, STRIP: 3, LEFT: 3, MIDDLE: 2, RIGHT: 4 } as const;
 
 export type SlotKey = keyof typeof SLOT_LIMIT;
+
+export type SlotLimits = Record<SlotKey, number>;
 
 /** Prominence order. STRIP is missing on purpose: the masthead strip fills
     itself from the headlines the page is not already showing. */
@@ -38,6 +41,7 @@ export function planFrontPage<T>({
   latest,
   pinned,
   key,
+  limits,
 }: {
   /** Pieces an editor starred, most recently starred first. */
   featured: T[];
@@ -46,7 +50,10 @@ export function planFrontPage<T>({
   /** What the desk pinned, by position. */
   pinned: Map<string, T[]>;
   key: (item: T) => string;
+  /** How many each position holds. Omitted means the shipped sizes. */
+  limits?: Partial<SlotLimits>;
 }): FrontPagePlan<T> {
+  const cap = (slot: SlotKey) => limits?.[slot] ?? SLOT_LIMIT[slot];
   const spoken = new Set<string>();
   for (const list of pinned.values()) for (const item of list) spoken.add(key(item));
 
@@ -60,8 +67,8 @@ export function planFrontPage<T>({
   const automatic = { LEAD: [], STRIP: [], LEFT: [], MIDDLE: [], RIGHT: [] } as Record<SlotKey, T[]>;
 
   for (const slot of FILL_ORDER) {
-    const here = (pinned.get(slot) ?? []).slice(0, SLOT_LIMIT[slot]);
-    while (here.length < SLOT_LIMIT[slot] && pool.length) {
+    const here = (pinned.get(slot) ?? []).slice(0, cap(slot));
+    while (here.length < cap(slot) && pool.length) {
       const next = pool.shift()!;
       here.push(next);
       automatic[slot].push(next);

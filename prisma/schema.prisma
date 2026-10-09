@@ -98,6 +98,10 @@ model User {
   notifications   Notification[]
   payoutRequests  PayoutRequest[]      @relation("requester")
   payoutsDecided  PayoutRequest[]      @relation("payoutDecider")
+  notices         Notice[]             @relation("noticeFor")
+  noticesWritten  Notice[]             @relation("noticeAuthor")
+  dismissals      NoticeDismissal[]
+  passwordResets  PasswordReset[]
 }
 
 /// Where a contributor wants their payouts sent. Visible to the contributor
@@ -276,6 +280,28 @@ model SiteSettings {
   taglineBn       String  @default("পাঠকদের লেখা, সম্পাদকদের যাচাই করা সংবাদ।")
   footerEn        String  @default("© The Document. All rights reserved.")
   footerBn        String  @default("© দ্য ডকুমেন্ট। সর্বস্বত্ব সংরক্ষিত।")
+
+  /// Footer links. An empty address hides that link rather than printing a
+  /// dead one; the words themselves are edited in Wording.
+  footerAboutUrl   String @default("")
+  footerContactUrl String @default("")
+  footerPrivacyUrl String @default("")
+
+  /// Shows today's date across the foot of every public page.
+  footerShowDate Boolean @default(true)
+
+  /// How many pieces each part of the front page may carry.
+  maxLeftRail     Int @default(3)
+  maxRightRail    Int @default(4)
+  maxUnderLead    Int @default(2)
+  maxMoreGrid     Int @default(12)
+  /// And how many "more on this" blocks an article page shows.
+  maxRelated      Int @default(8)
+
+  /// When off, a contributor cannot start a thread with another contributor.
+  /// Off to begin with: most of them do not know each other, and writing to
+  /// the newsroom is a separate channel that is never blocked.
+  contributorMessaging Boolean @default(false)
   /// Uploaded masthead; falls back to the bundled artwork when empty.
   logoUrl         String?
   /// Ad slots. The HTML is pasted by an Admin and rendered as-is, which is what
@@ -472,5 +498,58 @@ model PayoutRequest {
   createdAt   DateTime  @default(now())
 
   @@index([status, createdAt])
+  @@index([userId, createdAt])
+}
+
+
+/// Something the desk wants a contributor to see when they next sign in.
+///
+/// One mechanism, two uses: with no `userId` it is for everybody, and with one
+/// it is a note for that person alone. It sits at the top of their dashboard
+/// until they close it, and closing it is recorded per person so one reader
+/// dismissing it does not take it off everybody else's screen.
+model Notice {
+  id        String   @id @default(cuid())
+  body      String
+  /// Null means everyone. Set means this person only.
+  userId    String?
+  user      User?    @relation("noticeFor", fields: [userId], references: [id], onDelete: Cascade)
+  writtenById String
+  writtenBy   User   @relation("noticeAuthor", fields: [writtenById], references: [id])
+  /// Taken down by the desk, as opposed to dismissed by a reader.
+  retiredAt DateTime?
+  createdAt DateTime @default(now())
+
+  dismissals NoticeDismissal[]
+
+  @@index([userId, retiredAt])
+}
+
+/// One row per person who has closed a notice.
+model NoticeDismissal {
+  noticeId String
+  notice   Notice   @relation(fields: [noticeId], references: [id], onDelete: Cascade)
+  userId   String
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  at       DateTime @default(now())
+
+  @@id([noticeId, userId])
+}
+
+
+/// A one-time link that lets somebody choose a new password.
+///
+/// The token itself is never stored - only its hash - so a copy of the
+/// database does not hand somebody every live reset link. One hour to use it,
+/// and using it burns it.
+model PasswordReset {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String   @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
   @@index([userId, createdAt])
 }

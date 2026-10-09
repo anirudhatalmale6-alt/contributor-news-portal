@@ -25,6 +25,16 @@ type Site = {
   adBannerHtmlEn: string;
   adSquareHtmlEn: string;
   banglaFont: string;
+  footerAboutUrl: string;
+  footerContactUrl: string;
+  footerPrivacyUrl: string;
+  footerShowDate: boolean;
+  maxLeftRail: number;
+  maxRightRail: number;
+  maxUnderLead: number;
+  maxMoreGrid: number;
+  maxRelated: number;
+  contributorMessaging: boolean;
 };
 
 /**
@@ -198,6 +208,97 @@ export function SiteForm({ settings }: { settings: Site }) {
           Prothom Alo reads in Shurjo, which is their own licensed typeface and cannot be copied
           onto another site. These are the closest freely licensed faces, hosted with the site.
         </p>
+      </section>
+
+      {/* --- The foot of every public page ---------------------------- */}
+      <section className="grid gap-3 border-t border-line pt-4">
+        <h2 className="text-xs font-bold uppercase tracking-widest text-ink-soft">Footer</h2>
+        <p className="text-xs text-ink-soft">
+          Addresses for the three extra footer links. Leave one empty and that link disappears
+          rather than going nowhere. The words themselves are in Wording, under &ldquo;Footer and
+          invitation&rdquo;.
+        </p>
+        <div className="grid gap-3 sm:grid-cols-3">
+          <label className="grid gap-1 text-sm">
+            <span className="font-medium">About us</span>
+            <input name="footerAboutUrl" value={form.footerAboutUrl} onChange={set("footerAboutUrl")} placeholder="/about or https://..." className={field} />
+          </label>
+          <label className="grid gap-1 text-sm">
+            <span className="font-medium">Contact</span>
+            <input name="footerContactUrl" value={form.footerContactUrl} onChange={set("footerContactUrl")} placeholder="/contact or https://..." className={field} />
+          </label>
+          <label className="grid gap-1 text-sm">
+            <span className="font-medium">Privacy</span>
+            <input name="footerPrivacyUrl" value={form.footerPrivacyUrl} onChange={set("footerPrivacyUrl")} placeholder="/privacy or https://..." className={field} />
+          </label>
+        </div>
+        <label className="flex items-start gap-3 text-sm">
+          <input
+            type="checkbox"
+            name="footerShowDate"
+            checked={form.footerShowDate}
+            onChange={(e) => setForm({ ...form, footerShowDate: e.target.checked })}
+            className="mt-0.5 size-4"
+          />
+          <span>
+            <span className="font-medium">Show today&rsquo;s date in the footer</span>
+            <span className="mt-0.5 block text-xs text-ink-soft">
+              In the language of the page, with Bangla digits on the Bangla side.
+            </span>
+          </span>
+        </label>
+      </section>
+
+      {/* --- How much fits on a page ----------------------------------- */}
+      <section className="grid gap-3 border-t border-line pt-4">
+        <h2 className="text-xs font-bold uppercase tracking-widest text-ink-soft">
+          How many articles each place holds
+        </h2>
+        <p className="text-xs text-ink-soft">
+          The most each part of the front page will carry. Anything beyond this falls into the grid
+          at the foot of the page rather than disappearing.
+        </p>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+          {([
+            ["maxUnderLead", "Under the headline"],
+            ["maxLeftRail", "Left column"],
+            ["maxRightRail", "Right column"],
+            ["maxMoreGrid", "Grid at the foot"],
+            ["maxRelated", "More on this (article page)"],
+          ] as const).map(([key, label]) => (
+            <label key={key} className="grid gap-1 text-sm">
+              <span className="font-medium">{label}</span>
+              <input
+                name={key}
+                inputMode="numeric"
+                value={String(form[key])}
+                onChange={(e) => setForm({ ...form, [key]: e.target.value.replace(/[^0-9]/g, "") })}
+                className={`${field} tabular-nums`}
+              />
+            </label>
+          ))}
+        </div>
+      </section>
+
+      {/* --- Contributors talking to each other ------------------------ */}
+      <section className="grid gap-3 border-t border-line pt-4">
+        <label className="flex items-start gap-3 text-sm">
+          <input
+            type="checkbox"
+            name="contributorMessaging"
+            checked={form.contributorMessaging}
+            onChange={(e) => setForm({ ...form, contributorMessaging: e.target.checked })}
+            className="mt-0.5 size-4"
+          />
+          <span>
+            <span className="font-medium">Let contributors message each other</span>
+            <span className="mt-0.5 block text-xs text-ink-soft">
+              With this off, a contributor can still write to the newsroom and the newsroom can
+              still write to them - only contributor-to-contributor threads are stopped. Threads
+              that already exist stay readable.
+            </span>
+          </span>
+        </label>
       </section>
 
       <section className="grid gap-3 border-t border-line pt-4">

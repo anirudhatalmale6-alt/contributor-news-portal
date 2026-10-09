@@ -149,14 +149,16 @@ export async function SiteHeader({
               <>
                 {/* A phone has room for one of these, not both - the sign-in
                     link is the one a returning reader needs. */}
+                {/* The language travels with the link, so signing in from the
+                    Bangla paper lands on a Bangla sign-in page. */}
                 <Link
-                  href="/login"
+                  href={locale === "BN" ? "/login?lang=bn" : "/login"}
                   className="px-2 py-1.5 text-[13px] text-ink-soft hover:text-ink sm:text-sm"
                 >
                   {copy.signIn}
                 </Link>
                 <Link
-                  href="/register"
+                  href={locale === "BN" ? "/register?lang=bn" : "/register"}
                   className="hidden rounded-full bg-brand px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-dark sm:inline-block"
                 >
                   {copy.writeForUs}

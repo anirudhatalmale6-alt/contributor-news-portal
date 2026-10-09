@@ -47,9 +47,11 @@ export async function POST(req: Request) {
         url,
         caption,
         originalName,
-        // An image a contributor sends is evidence by default; an editor can
-        // take anything out of the public gallery while reviewing.
-        isEvidence: true,
+        // Not evidence until an editor puts it there. Flagging every upload
+        // automatically meant the gallery appeared on pieces where nobody had
+        // chosen anything for it - usually showing the cover photo a second
+        // time. The desk opts a photo in from the media desk.
+        isEvidence: false,
       },
     });
 

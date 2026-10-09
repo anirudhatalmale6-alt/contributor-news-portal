@@ -9,6 +9,7 @@ import { SuspendPanel } from "./suspend-panel";
 import { RolePanel } from "./role-panel";
 import { MessageButton } from "./message-button";
 import { EarningsPanel } from "./earnings-panel";
+import { NoticeComposer } from "../notice-composer";
 import { earningsFor } from "@/lib/earnings";
 import { paymentSettings } from "@/lib/settings";
 import { StatusPill, TierBadge } from "@/components/ui";
@@ -54,6 +55,15 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
 
   // Only an admin may move money, so only an admin pays for these queries.
   const mayAdjust = isAdmin(me.role);
+  // What the desk has already put on this person's screen, and how many of
+  // them have read it - which for one person is only ever 0 or 1.
+  const personNotices = mayAdjust
+    ? await prisma.notice.findMany({
+        where: { userId: person.id, retiredAt: null },
+        orderBy: { createdAt: "desc" },
+        select: { id: true, body: true, _count: { select: { dismissals: true } } },
+      })
+    : [];
   const [totals, ledger, payment] = mayAdjust
     ? await Promise.all([
         earningsFor(person.id),
@@ -141,6 +151,18 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
                 initialEntries={ledger.map((e) => ({
                   ...e,
                   createdAt: e.createdAt.toISOString(),
+                }))}
+              />
+            ) : null}
+
+            {mayAdjust ? (
+              <NoticeComposer
+                person={{ id: person.id, name: person.name }}
+                live={personNotices.map((n) => ({
+                  id: n.id,
+                  body: n.body,
+                  forEveryone: false,
+                  seenBy: n._count.dismissals,
                 }))}
               />
             ) : null}

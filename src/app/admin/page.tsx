@@ -8,6 +8,7 @@ import { SiteHeader } from "@/components/site-header";
 import { StatCard } from "@/components/ui";
 import { StaffNav } from "@/components/staff-nav";
 import { SettingsForm } from "./settings-form";
+import { NoticeComposer } from "../people/notice-composer";
 import { SiteForm } from "./site-form";
 
 export const metadata = { title: "Admin" };
@@ -19,7 +20,7 @@ export default async function AdminPage() {
   // a dead end.
   if (!isOwner(user.role)) redirect(isStaff(user.role) ? "/people" : "/dashboard");
 
-  const [users, settings, site, totals] = await Promise.all([
+  const [users, settings, site, totals, siteNotices] = await Promise.all([
     prisma.user.findMany({
       orderBy: { createdAt: "asc" },
       select: {
@@ -39,6 +40,11 @@ export default async function AdminPage() {
       where: { status: "APPROVED" },
       _sum: { payoutCents: true },
       _count: { _all: true },
+    }),
+    prisma.notice.findMany({
+      where: { userId: null, retiredAt: null },
+      orderBy: { createdAt: "desc" },
+      select: { id: true, body: true, _count: { select: { dismissals: true } } },
     }),
   ]);
 
@@ -83,6 +89,19 @@ export default async function AdminPage() {
           />
         </section>
 
+        {/* A notice for every contributor at once. The per-person version of
+            the same control is on each person's page. */}
+        <div className="mb-4">
+          <NoticeComposer
+            live={siteNotices.map((n) => ({
+              id: n.id,
+              body: n.body,
+              forEveryone: true,
+              seenBy: n._count.dismissals,
+            }))}
+          />
+        </div>
+
         <SettingsForm
           settings={{
             currency: settings.currency,
@@ -115,6 +134,16 @@ export default async function AdminPage() {
             adBannerHtmlEn: site.adBannerHtmlEn,
             adSquareHtmlEn: site.adSquareHtmlEn,
             banglaFont: site.banglaFont,
+            footerAboutUrl: site.footerAboutUrl,
+            footerContactUrl: site.footerContactUrl,
+            footerPrivacyUrl: site.footerPrivacyUrl,
+            footerShowDate: site.footerShowDate,
+            maxLeftRail: site.maxLeftRail,
+            maxRightRail: site.maxRightRail,
+            maxUnderLead: site.maxUnderLead,
+            maxMoreGrid: site.maxMoreGrid,
+            maxRelated: site.maxRelated,
+            contributorMessaging: site.contributorMessaging,
           }}
         />
 

@@ -11,6 +11,18 @@ const schema = z.object({
   taglineBn: z.string().trim().max(200).optional(),
   footerEn: z.string().trim().max(300).optional(),
   footerBn: z.string().trim().max(300).optional(),
+  footerAboutUrl: z.string().trim().max(500).optional(),
+  footerContactUrl: z.string().trim().max(500).optional(),
+  footerPrivacyUrl: z.string().trim().max(500).optional(),
+  footerShowDate: z.boolean().optional(),
+  // Floors and ceilings so a mistyped figure cannot empty the front page or
+  // put two hundred articles in one column.
+  maxUnderLead: z.coerce.number().int().min(0).max(12).optional(),
+  maxLeftRail: z.coerce.number().int().min(0).max(20).optional(),
+  maxRightRail: z.coerce.number().int().min(0).max(20).optional(),
+  maxMoreGrid: z.coerce.number().int().min(0).max(60).optional(),
+  maxRelated: z.coerce.number().int().min(0).max(20).optional(),
+  contributorMessaging: z.boolean().optional(),
   logoUrl: z.string().trim().max(500).nullable().optional(),
   adsEnabled: z.boolean().optional(),
   adHomeHtml: z.string().max(4000).optional(),

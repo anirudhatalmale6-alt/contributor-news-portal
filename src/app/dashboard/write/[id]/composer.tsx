@@ -509,6 +509,30 @@ export function Composer({
         beforeSave={() => save(true)}
       />
 
+      {/* The same two actions again at the foot. A writer finishes at the
+          bottom of their piece, and sending it in should not mean scrolling
+          back to the top to find the button. */}
+      {!locked ? (
+        <div className="flex flex-wrap items-center gap-2 border-t border-line pt-4">
+          <button
+            type="button"
+            name="submit-article-foot"
+            onClick={() => void submit()}
+            className="rounded-full bg-brand px-5 py-2.5 text-sm font-medium text-white hover:bg-brand-dark"
+          >
+            {status === "REJECTED" ? w("submit.resubmit") : w("submit.button")}
+          </button>
+          <button
+            type="button"
+            name="save-draft-foot"
+            onClick={() => void save()}
+            className="rounded-full border border-line px-4 py-2.5 text-sm font-medium hover:bg-paper-soft"
+          >
+            {w("compose.saveDraft")}
+          </button>
+        </div>
+      ) : null}
+
       {status === "APPROVED" ? (
         <Link
           href={`/article/${article.slug}`}

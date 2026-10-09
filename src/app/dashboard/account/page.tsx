@@ -38,6 +38,29 @@ export default async function AccountPage() {
           ) : null}
         </div>
 
+        {/* The three things people actually come to this page looking for, and
+            could not reach from here before. */}
+        <nav className="mt-5 flex flex-wrap gap-2">
+          <Link
+            href="/dashboard/profile"
+            className="rounded-full border border-line px-4 py-2 text-sm font-medium hover:bg-paper-soft"
+          >
+            Update public profile
+          </Link>
+          <Link
+            href="/dashboard"
+            className="rounded-full border border-line px-4 py-2 text-sm font-medium hover:bg-paper-soft"
+          >
+            Earnings dashboard
+          </Link>
+          <Link
+            href="/inbox"
+            className="rounded-full border border-line px-4 py-2 text-sm font-medium hover:bg-paper-soft"
+          >
+            Contact the editors
+          </Link>
+        </nav>
+
         <div className="mt-6">
           <PasswordForm hasPassword={Boolean(account?.passwordHash)} />
         </div>

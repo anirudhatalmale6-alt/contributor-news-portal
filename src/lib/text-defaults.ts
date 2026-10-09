@@ -22,6 +22,7 @@ export type TextEntry = {
 
 export const TEXT_GROUPS = [
   "Menu and buttons",
+  "Signing in",
   "Section names",
   "Front page",
   "Article page",
@@ -41,6 +42,19 @@ export const TEXT_DEFAULTS: Record<string, TextEntry> = {
   "nav.newsroom": { group: "Menu and buttons", en: "Newsroom", bn: "নিউজরুম", note: "Takes an editor to the queue" },
   "nav.signOut": { group: "Menu and buttons", en: "Sign out", bn: "সাইন আউট", note: "In the strip at the very top" },
   "nav.account": { group: "Menu and buttons", en: "Account", bn: "অ্যাকাউন্ট", note: "In the strip at the very top" },
+
+  // --- Signing in ---------------------------------------------------------
+  "auth.signInTitle": { group: "Signing in", en: "Sign in", bn: "সাইন ইন", note: "Heading on the sign-in page" },
+  "auth.signInSub": {
+    group: "Signing in",
+    en: "Back to your drafts, submissions and earnings.",
+    bn: "আপনার খসড়া, জমা দেওয়া লেখা ও সম্মানীতে ফিরে যান।",
+    note: "The line under that heading",
+  },
+  "auth.orWithEmail": { group: "Signing in", en: "or with email", bn: "অথবা ইমেইল দিয়ে", note: "Between the Google button and the email form" },
+  "auth.noAccount": { group: "Signing in", en: "No account yet?", bn: "এখনও অ্যাকাউন্ট নেই?" },
+  "auth.createOne": { group: "Signing in", en: "Create one", bn: "একটি তৈরি করুন" },
+  "auth.forgot": { group: "Signing in", en: "Forgotten your password?", bn: "পাসওয়ার্ড ভুলে গেছেন?", note: "Link under the sign-in form" },
 
   // --- Section names ------------------------------------------------------
   "section.All": { group: "Section names", en: "All", bn: "সব", note: "The section menu and the label above a headline" },
@@ -119,6 +133,24 @@ export const TEXT_DEFAULTS: Record<string, TextEntry> = {
     note: "The paragraph under that heading",
   },
   "cta.button": { group: "Footer and invitation", en: "Become a contributor", bn: "লেখক হিসেবে যোগ দিন", note: "The button under that paragraph" },
+  "footer.about": {
+    group: "Footer and invitation",
+    en: "About us",
+    bn: "আমাদের সম্পর্কে",
+    note: "Footer link. Leave the address empty in Settings to hide it",
+  },
+  "footer.contact": {
+    group: "Footer and invitation",
+    en: "Contact",
+    bn: "যোগাযোগ",
+    note: "Footer link. Leave the address empty in Settings to hide it",
+  },
+  "footer.privacy": {
+    group: "Footer and invitation",
+    en: "Privacy",
+    bn: "গোপনীয়তা নীতি",
+    note: "Footer link. Leave the address empty in Settings to hide it",
+  },
   "footer.tagline": {
     group: "Footer and invitation",
     en: "news written by its readers, checked by its editors.",

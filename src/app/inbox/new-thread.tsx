@@ -80,7 +80,7 @@ export function NewThread({
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search a contributor or colleague by name or email"
+            placeholder="Search by name"
             className="rounded-lg border border-line px-3 py-2 outline-none focus:border-navy"
           />
           <select
@@ -91,7 +91,8 @@ export function NewThread({
             <option value="">The whole newsroom (every editor can answer)</option>
             {matches.slice(0, 50).map((p) => (
               <option key={p.id} value={p.id}>
-                {p.name} · {ROLE_LABEL[p.role] ?? p.role} · {p.email}
+                {p.name} · {ROLE_LABEL[p.role] ?? p.role}
+                {p.email ? ` · ${p.email}` : ""}
               </option>
             ))}
           </select>

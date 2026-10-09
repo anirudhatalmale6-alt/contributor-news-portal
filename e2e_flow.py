@@ -38,6 +38,9 @@ AD_WRITES = os.environ.get("AD_WRITES", "") == "1" or "127.0.0.1" in BASE or "lo
 ADS_BEFORE: dict[str, str] = {}
 NEW_NAME = "Rosa Delgado"
 HEADLINE = "The allotment that became a flood defence"
+EV_TITLE = "Two photographs filed with the piece"
+NOTICE_ALL = f"Election coverage {STAMP}: file by 6pm and name every source."
+NOTICE_ONE = f"Khulna piece {STAMP}: attach the committee minutes before we run it."
 BN_HEADLINE = "যে বরাদ্দ জমি বন্যা প্রতিরোধের বাঁধ হয়ে উঠল"
 BN_DEK = "এগারো বছর ধরে কাউন্সিল জমিটি কিনতে রাজি হয়নি। তারপর পানি এল।"
 BN_BODY = (
@@ -2446,7 +2449,9 @@ def main():
         live = bp.locator('a:has-text("View live")').first.get_attribute("href")
         go(bp, f"{BASE}{live}")
         wait_article(bp)
-        reader = bp.inner_text("main")
+        # The piece itself, not the whole page: the panel of other news down
+        # the right is full of other people's bylines, quite properly.
+        reader = bp.inner_text("main article")
         check(
             "the reader sees the name the desk set, not the editor's account",
             BYLINE_NAME in reader and "Nadia Okoro" not in reader,
@@ -2486,6 +2491,411 @@ def main():
         )
         shot(bp, "44-ads-by-language.png")
         bl.close()
+
+        # --- 10p. the list of fourteen ---------------------------------------
+        # Everything he numbered on 9 October, checked in the order a person
+        # would meet it: the reader's page first, then the contributor's desk,
+        # then the controls the desk itself gets.
+        r29 = ctx.browser.new_context(viewport=DESKTOP, http_credentials=GATE)
+        rp9 = r29.new_page()
+        sign_in(rp9, "admin@thedocument.test", STAFF_PASS)
+        # Rosa has been promoted to Editor by now, so the contributor's side of
+        # these checks uses a contributor who is still one.
+        roster9 = rp9.request.get(f"{BASE}/api/admin/users").json()["users"]
+        MAYA = "maya@thedocument.test"
+        maya_id = next(u["id"] for u in roster9 if u["email"] == MAYA)
+        peer_id = next(
+            u["id"]
+            for u in roster9
+            if u["role"] == "CONTRIBUTOR" and u["id"] != maya_id
+        )
+
+        # (12) the article page gets its own advertising space at the foot.
+        go(rp9, f"{BASE}/admin")
+        rp9.click('summary:has-text("Or paste code from an ad network")')
+        rp9.wait_for_timeout(300)
+        for col in ("adArticleHtml", "adArticleHtmlEn"):
+            rp9.fill(
+                f'#site-settings textarea[name="{col}"]',
+                '<div id="ad-foot">ARTICLE FOOT SPACE</div>',
+            )
+        rp9.click('button:has-text("Save site settings")')
+        rp9.wait_for_selector("text=Refresh the public site", timeout=20000)
+        rp9.wait_for_timeout(SETTLE_MS)
+
+        # A piece with two photographs, so the Evidence gallery can be tested
+        # both ways round. The cover shot alone must never make a gallery -
+        # that is exactly what he photographed on his phone.
+        go(rp9, f"{BASE}/dashboard")
+        rp9.click('button:has-text("Start a new piece")')
+        rp9.wait_for_url("**/dashboard/write/**", timeout=20000)
+        rp9.wait_for_timeout(SETTLE_MS)
+        rp9.select_option('select[name="language"]', "EN")
+        rp9.wait_for_timeout(300)
+        rp9.fill('input[name="title"]', EV_TITLE)
+        rp9.fill(
+            "textarea >> nth=0",
+            "Two photographs are attached to this piece. The cover shot is already at the top "
+            "of the page, so it must never be repeated inside the Evidence gallery, and the "
+            "gallery itself must stay away until the desk puts something in it.",
+        )
+        photo2 = os.path.join(SHOTS, "..", "sample-upload-2.jpg")
+        make_photo(photo2)
+        for each in (photo, photo2):
+            with rp9.expect_file_chooser() as fc:
+                rp9.click('button[name="attach-media"]')
+            fc.value.set_files(each)
+            rp9.wait_for_timeout(SETTLE_MS * 3)
+        shot_count = rp9.locator("section li img").count()
+        check("both photographs attach to the draft", shot_count >= 2, f"{shot_count} attached")
+
+        # (7) the composer has a submit button at the foot as well as the top,
+        # so a long piece does not need scrolling back up to file it.
+        check(
+            "the composer has Save and Submit at the foot of the form too",
+            rp9.locator('button[name="save-draft-foot"]').count() == 1
+            and rp9.locator('button[name="submit-article-foot"]').count() == 1,
+        )
+        rp9.click('button[name="save-draft-foot"]')
+        rp9.wait_for_selector("text=Draft saved", timeout=20000)
+        rp9.click('button[name="submit-article-foot"]')
+        rp9.wait_for_selector("text=Submitted for review", timeout=20000)
+
+        go(rp9, f"{BASE}/editorial?status=SUBMITTED&q=photographs")
+        rp9.wait_for_timeout(SETTLE_MS)
+        rp9.locator(f'li:has-text("{EV_TITLE}") a:has-text("Review")').first.click()
+        rp9.wait_for_url("**/editorial/**", timeout=20000)
+        rp9.wait_for_timeout(SETTLE_MS)
+        ev_review = rp9.url
+        check(
+            "an upload is not in the Evidence gallery until an editor puts it there",
+            rp9.locator('button:has-text("Add to Evidence")').count() == 2
+            and rp9.locator('button:has-text("In Evidence")').count() == 0,
+            f'add={rp9.locator("button:has-text(\'Add to Evidence\')").count()}',
+        )
+        rp9.fill("section#translation input >> nth=0", f"{EV_TITLE} (Bangla)")
+        rp9.fill("section#translation textarea", "দুটি ছবি সহ প্রতিবেদন, প্রমাণ গ্যালারির পরীক্ষা।")
+        rp9.click('section#translation button:has-text("translation")')
+        rp9.wait_for_selector("text=version saved", timeout=20000)
+        rp9.wait_for_timeout(SETTLE_MS)
+        rp9.click('button:has-text("Approve and publish")')
+        rp9.wait_for_selector("text=Published", timeout=20000)
+        rp9.wait_for_timeout(SETTLE_MS)
+        ev_live = rp9.locator('a:has-text("View live")').first.get_attribute("href")
+
+        go(rp9, f"{BASE}{ev_live}")
+        wait_article(rp9)
+        art = rp9.inner_text("main")
+        check(
+            "the Evidence gallery stays away when nobody has chosen anything for it",
+            rp9.locator("#evidence").count() == 0,
+            art[-200:].replace("\n", " "),
+        )
+        check(
+            "the home page banner does not follow the reader onto an article",
+            "BANGLA BANNER" not in art and "ENGLISH BANNER" not in art,
+        )
+        check(
+            "an article carries its own advertising space at the foot, set by the desk",
+            "ARTICLE FOOT SPACE" in art,
+            art[-200:].replace("\n", " "),
+        )
+        shot(rp9, "48-article-no-gallery.png", scroll="footer")
+
+        # Now put both photographs in the gallery. The cover must still be left
+        # out of it, so the reader sees one picture there and not two.
+        go(rp9, ev_review)
+        rp9.wait_for_timeout(SETTLE_MS)
+        for _ in range(4):
+            if not rp9.locator('button:has-text("Add to Evidence")').count():
+                break
+            rp9.locator('button:has-text("Add to Evidence")').first.click()
+            rp9.wait_for_timeout(SETTLE_MS * 3)
+        go(rp9, f"{BASE}{ev_live}")
+        wait_article(rp9)
+        check(
+            "with both photographs flagged the gallery shows the one that is not the cover",
+            rp9.locator("#evidence").count() == 1
+            and rp9.locator("#evidence figure").count() == 1,
+            f'figures={rp9.locator("#evidence figure").count()}',
+        )
+        shot(rp9, "49-article-gallery.png", scroll="#evidence")
+
+        # (5) and (4) the foot of the public page: today's date, and the three
+        # links he can point anywhere.
+        go(rp9, f"{BASE}/admin")
+        rp9.wait_for_timeout(SETTLE_MS)
+        foot_before = {
+            f: rp9.input_value(f'#site-settings input[name="{f}"]')
+            for f in ("footerAboutUrl", "footerContactUrl", "footerPrivacyUrl")
+        }
+        rp9.fill('#site-settings input[name="footerAboutUrl"]', "https://thedocument.net/about")
+        rp9.check('#site-settings input[name="footerShowDate"]')
+        rp9.click('button:has-text("Save site settings")')
+        rp9.wait_for_selector("text=Refresh the public site", timeout=20000)
+        rp9.wait_for_timeout(SETTLE_MS)
+        go(rp9, BASE)
+        foot = rp9.inner_text("footer")
+        check(
+            "today's date is printed at the foot of the Bangla page, in Bangla digits",
+            any("০" <= ch <= "৯" for ch in foot),
+            foot[-120:].replace("\n", " "),
+        )
+        go(rp9, f"{BASE}/en")
+        foot_en = rp9.inner_text("footer")
+        check(
+            "and at the foot of the English page",
+            str(time.localtime().tm_mday) in foot_en,
+            foot_en[-120:].replace("\n", " "),
+        )
+        check(
+            "a footer link the owner filled in appears, and the two he left empty do not",
+            rp9.locator('footer a[href="https://thedocument.net/about"]').count() == 1
+            and rp9.locator('footer a[href=""]').count() == 0,
+            foot[-160:].replace("\n", " "),
+        )
+        shot(rp9, "50-footer.png", scroll="footer")
+        go(rp9, f"{BASE}/admin")
+        rp9.wait_for_timeout(SETTLE_MS)
+        for f, v in foot_before.items():
+            rp9.fill(f'#site-settings input[name="{f}"]', v)
+        rp9.click('button:has-text("Save site settings")')
+        rp9.wait_for_selector("text=Refresh the public site", timeout=20000)
+
+        # (13) how many pieces each position on the front page holds.
+        rp9.wait_for_timeout(SETTLE_MS)
+        rail_before = rp9.input_value('#site-settings input[name="maxLeftRail"]')
+        rp9.fill('#site-settings input[name="maxLeftRail"]', "1")
+        rp9.click('button:has-text("Save site settings")')
+        rp9.wait_for_selector("text=Refresh the public site", timeout=20000)
+        rp9.wait_for_timeout(SETTLE_MS)
+        go(rp9, BASE)
+        rail = rp9.locator('main aside:not([aria-label="Advertisement"])').first.locator("a").count()
+        check(
+            "the owner's limit for a front page position is obeyed",
+            rail == 1,
+            f"{rail} in the left rail with the limit set to 1",
+        )
+        go(rp9, f"{BASE}/admin")
+        rp9.wait_for_timeout(SETTLE_MS)
+        rp9.fill('#site-settings input[name="maxLeftRail"]', "3")
+        rp9.click('button:has-text("Save site settings")')
+        rp9.wait_for_selector("text=Refresh the public site", timeout=20000)
+        rp9.wait_for_timeout(SETTLE_MS)
+        go(rp9, BASE)
+        rail = rp9.locator('main aside:not([aria-label="Advertisement"])').first.locator("a").count()
+        check(
+            "and raising the limit fills the position again",
+            rail >= 2,
+            f"{rail} in the left rail with the limit at 3",
+        )
+        if rail_before != "3":
+            go(rp9, f"{BASE}/admin")
+            rp9.wait_for_timeout(SETTLE_MS)
+            rp9.fill('#site-settings input[name="maxLeftRail"]', rail_before)
+            rp9.click('button:has-text("Save site settings")')
+            rp9.wait_for_selector("text=Refresh the public site", timeout=20000)
+
+        # (9) and (11) a notice on every contributor's desk, and one for a
+        # single person. Same mechanism, so both are checked here.
+        go(rp9, f"{BASE}/admin")
+        rp9.wait_for_timeout(SETTLE_MS)
+        rp9.fill('textarea[name="notice-body"]', NOTICE_ALL)
+        rp9.click('button[name="post-notice"]')
+        rp9.wait_for_selector("text=every contributor", timeout=20000)
+        go(rp9, f"{BASE}/people/{maya_id}")
+        rp9.wait_for_timeout(SETTLE_MS)
+        rp9.fill('textarea[name="notice-body"]', NOTICE_ONE)
+        rp9.click('button[name="post-notice"]')
+        rp9.wait_for_timeout(SETTLE_MS * 3)
+        check(
+            "the desk can post a notice to one contributor",
+            NOTICE_ONE[:28] in rp9.inner_text("main"),
+            rp9.inner_text("main")[:200].replace("\n", " "),
+        )
+
+        # (2) the sign-in page in the language the reader came from, and (1)
+        # the way back in for somebody who has forgotten their password. Signed
+        # out, because a signed-in page would be sent to the dashboard instead.
+        lo9 = ctx.browser.new_context(viewport=DESKTOP, http_credentials=GATE)
+        lp9 = lo9.new_page()
+        go(lp9, f"{BASE}/login?lang=bn")
+        check(
+            "the Bangla site sends people to a Bangla sign-in page",
+            any("ঀ" <= ch <= "৿" for ch in lp9.inner_text("main")),
+            lp9.inner_text("main")[:120].replace("\n", " "),
+        )
+        check(
+            "and the menu on it belongs to the Bangla site, not the English one",
+            lp9.locator('nav a[href^="/section/"]').count() >= 1
+            and lp9.locator('nav a[href^="/en/section/"]').count() == 0,
+            f'bn={lp9.locator('nav a[href^="/section/"]').count()} '
+            f'en={lp9.locator('nav a[href^="/en/section/"]').count()}',
+        )
+        check(
+            "and it offers the forgotten-password way back in",
+            lp9.locator('a[href*="/forgot"]').count() >= 1,
+        )
+        shot(lp9, "51-login-bangla.png")
+        go(lp9, f"{BASE}/login")
+        check(
+            "the English sign-in page stays in English",
+            not any("ঀ" <= ch <= "৿" for ch in lp9.inner_text("main")),
+            lp9.inner_text("main")[:120].replace("\n", " "),
+        )
+        check(
+            "with the English menu",
+            lp9.locator('nav a[href^="/en/section/"]').count() >= 1,
+        )
+        lo9.close()
+
+        # (6) and (8) the contributor's own desk: the notices waiting for them,
+        # the buttons on the account screen, and a foot to the page.
+        cc9 = ctx.browser.new_context(viewport=DESKTOP, http_credentials=GATE)
+        cp9 = cc9.new_page()
+        sign_in(cp9, MAYA, STAFF_PASS)
+        go(cp9, f"{BASE}/dashboard")
+        desk9 = cp9.inner_text("main")
+        check(
+            "a contributor sees both notices the moment they sign in",
+            NOTICE_ALL[:28] in desk9 and NOTICE_ONE[:28] in desk9,
+            desk9[:240].replace("\n", " "),
+        )
+        check("the contributor's desk has a foot to the page", cp9.locator("footer").count() >= 1)
+        shot(cp9, "52-dashboard-notices.png")
+        cp9.locator(
+            f'div[role="status"]:has-text("{NOTICE_ALL[:28]}") button[name="dismiss-notice"]'
+        ).first.click()
+        cp9.wait_for_timeout(SETTLE_MS * 4)
+        go(cp9, f"{BASE}/dashboard")
+        after9 = cp9.inner_text("main")
+        check(
+            "closing a notice takes it off their desk for good",
+            NOTICE_ALL[:28] not in after9 and NOTICE_ONE[:28] in after9,
+            after9[:200].replace("\n", " "),
+        )
+
+        go(cp9, f"{BASE}/dashboard/account")
+        acct = cp9.inner_text("main")
+        check(
+            "the account screen is more than a password box",
+            "Update public profile" in acct
+            and "Earnings dashboard" in acct
+            and "Contact the editors" in acct,
+            acct[:240].replace("\n", " "),
+        )
+        shot(cp9, "53-account.png")
+
+        # (14) messages between contributors, off until the owner turns them on.
+        r = cp9.request.post(
+            f"{BASE}/api/inbox",
+            data={
+                "subject": "Writing to another contributor",
+                "body": "This should be refused while the switch is off.",
+                "toUserId": peer_id,
+            },
+        )
+        check(
+            "a contributor cannot message another contributor while that is switched off",
+            r.status == 403,
+            f"got {r.status}",
+        )
+        go(cp9, f"{BASE}/inbox")
+        check(
+            "and the screen offers them the newsroom rather than a person",
+            "Message the newsroom" in cp9.inner_text("main"),
+            cp9.inner_text("main")[:200].replace("\n", " "),
+        )
+        go(rp9, f"{BASE}/admin")
+        rp9.wait_for_timeout(SETTLE_MS)
+        rp9.check('#site-settings input[name="contributorMessaging"]')
+        rp9.click('button:has-text("Save site settings")')
+        rp9.wait_for_selector("text=Refresh the public site", timeout=20000)
+        rp9.wait_for_timeout(SETTLE_MS)
+        go(cp9, f"{BASE}/inbox")
+        check(
+            "switching it on gives contributors a New message button",
+            "New message" in cp9.inner_text("main"),
+            cp9.inner_text("main")[:200].replace("\n", " "),
+        )
+        go(rp9, f"{BASE}/admin")
+        rp9.wait_for_timeout(SETTLE_MS)
+        rp9.uncheck('#site-settings input[name="contributorMessaging"]')
+        rp9.click('button:has-text("Save site settings")')
+        rp9.wait_for_selector("text=Refresh the public site", timeout=20000)
+        cc9.close()
+
+        # The run clears up after itself: both notices come back down, so a
+        # later run is not reading somebody else's leftovers.
+        for where in (f"{BASE}/admin", f"{BASE}/people/{maya_id}"):
+            go(rp9, where)
+            rp9.wait_for_timeout(SETTLE_MS)
+            for _ in range(6):
+                down = rp9.locator(f'li:has-text("{STAMP}") button:has-text("Take down")')
+                if not down.count():
+                    break
+                down.first.click()
+                rp9.wait_for_timeout(SETTLE_MS * 3)
+
+        # (1) the whole way back in, end to end: ask, get a link, use it once.
+        fc9 = ctx.browser.new_context(viewport=DESKTOP, http_credentials=GATE)
+        fp9 = fc9.new_page()
+        r = fp9.request.post(
+            f"{BASE}/api/auth/forgot", data={"email": f"nobody.{STAMP}@thedocument.test"}
+        )
+        check(
+            "asking about an address nobody owns is answered the same way",
+            r.status == 200,
+            f"got {r.status}",
+        )
+        go(fp9, f"{BASE}/forgot")
+        fp9.fill('input[type="email"]', NEW_EMAIL)
+        fp9.click('button[type="submit"]')
+        fp9.wait_for_selector("text=on its way", timeout=20000)
+        check("the forgotten-password screen confirms the request", "lasts an hour" in fp9.inner_text("main"))
+        shot(fp9, "54-forgot.png")
+
+        # With no mail server configured the desk is told instead, so an editor
+        # can pass the link on by phone. That is where the run reads it from.
+        go(rp9, f"{BASE}/dashboard")
+        rp9.wait_for_timeout(SETTLE_MS)
+        told9 = rp9.inner_text("main")
+        found = re.search(r"/reset\?token=[A-Za-z0-9_\-]+", told9)
+        check(
+            "with no mail server, the desk is handed the link to pass on",
+            bool(found) and "needs a new password" in told9,
+            told9[:200].replace("\n", " "),
+        )
+        if found:
+            go(fp9, f"{BASE}{found.group(0)}")
+            check(
+                "the link opens a page naming the account it belongs to",
+                NEW_NAME in fp9.inner_text("main"),
+                fp9.inner_text("main")[:160].replace("\n", " "),
+            )
+            fp9.fill('input[name="password"]', "longenough-1")
+            fp9.fill('input[name="again"]', "longenough-2")
+            fp9.click('button[type="submit"]')
+            fp9.wait_for_timeout(SETTLE_MS * 2)
+            check(
+                "two different passwords are refused before anything is sent",
+                "not the same" in fp9.inner_text("main"),
+            )
+            fp9.fill('input[name="password"]', NEW_PASS2)
+            fp9.fill('input[name="again"]', NEW_PASS2)
+            fp9.click('button[type="submit"]')
+            fp9.wait_for_selector("text=Done.", timeout=20000)
+            check("a new password can be set from the link", True)
+            go(fp9, f"{BASE}{found.group(0)}")
+            check(
+                "the same link cannot be used twice",
+                "used already" in fp9.inner_text("main"),
+                fp9.inner_text("main")[:160].replace("\n", " "),
+            )
+            sign_in(fp9, NEW_EMAIL, NEW_PASS2)
+            check("and the contributor can sign in with it", "/dashboard" in fp9.url, fp9.url)
+        fc9.close()
+        r29.close()
 
         # --- 11. mobile ------------------------------------------------------
         mob = ctx.browser.new_context(viewport=PHONE, device_scale_factor=2, http_credentials=GATE)

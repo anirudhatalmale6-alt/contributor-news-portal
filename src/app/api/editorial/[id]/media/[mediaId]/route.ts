@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { errorResponse, HttpError, requireStaff } from "@/lib/rbac";
+import { refreshPublicPages } from "@/lib/revalidate";
 
 type Ctx = { params: Promise<{ id: string; mediaId: string }> };
 
@@ -44,6 +45,11 @@ export async function PATCH(req: Request, { params }: Ctx) {
         ...(sortOrder !== undefined ? { sortOrder } : {}),
       },
     });
+
+    // The cover shot and the Evidence gallery are both on the public page, so
+    // the reader has to see the change on the next load rather than a minute
+    // later.
+    await refreshPublicPages();
 
     return Response.json({ media: updated, cover: makeCover ? media.url : undefined });
   } catch (err) {

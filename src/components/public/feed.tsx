@@ -68,9 +68,13 @@ export async function Feed({ locale, category }: { locale: Locale; category: str
   const copy = t(locale);
   const site = await siteSettings();
   const home = category === "All";
+  // Fetch enough to fill every position the owner has asked for, plus the grid
+  // at the foot - otherwise raising a limit in Settings would do nothing.
+  const need =
+    1 + site.maxUnderLead + site.maxLeftRail + site.maxRightRail + site.maxMoreGrid + 6;
   const [featured, latest, pinned] = await Promise.all([
     home ? featuredArticles(locale, 5) : Promise.resolve([] as LocalisedArticle[]),
-    feedArticles(locale, category, 24),
+    feedArticles(locale, category, need),
     home ? pinnedArticles(locale) : Promise.resolve(new Map<string, LocalisedArticle[]>()),
   ]);
 
@@ -81,7 +85,17 @@ export async function Feed({ locale, category }: { locale: Locale; category: str
     latest,
     pinned,
     key: (a) => a.href,
+    // How many each position holds is the owner's decision, in Settings.
+    limits: {
+      MIDDLE: site.maxUnderLead,
+      LEFT: site.maxLeftRail,
+      RIGHT: site.maxRightRail,
+      STRIP: 3,
+    },
   });
+  // Anything past the named positions falls into the grid at the foot, which
+  // has its own limit rather than running on forever.
+  const moreShown = more.slice(0, site.maxMoreGrid);
 
   return (
     <div
@@ -138,13 +152,13 @@ export async function Feed({ locale, category }: { locale: Locale; category: str
               </aside>
             </div>
 
-            {more.length > 0 ? (
+            {moreShown.length > 0 ? (
               <section className="mt-10 border-t-2 border-ink pt-5">
                 <h2 className="mb-5 text-xs font-bold uppercase tracking-widest text-ink-soft">
                   {copy.moreFromContributors}
                 </h2>
                 <div className="grid gap-x-7 gap-y-8 sm:grid-cols-2 lg:grid-cols-4">
-                  {more.map((a) => (
+                  {moreShown.map((a) => (
                     <ArticleCard key={a.href} article={a} locale={locale} />
                   ))}
                 </div>

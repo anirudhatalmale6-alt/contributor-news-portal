@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { siteSettings } from "@/lib/settings";
 import { z } from "zod";
 import { errorResponse, HttpError, isStaff, requireUser } from "@/lib/rbac";
 
@@ -25,11 +26,31 @@ export async function POST(req: Request) {
     const { subject, body, toUserId, articleId } = parsed.data;
     const staff = isStaff(user.role);
 
-    // Only staff may address an individual, and never a suspended account.
+    // Staff may always address an individual. A contributor may only write to
+    // another contributor when the owner has switched that on - it is off
+    // until he does, because most contributors here do not know each other.
+    // Writing to the newsroom is never blocked either way.
     let recipient: { id: string } | null = null;
-    if (toUserId && staff) {
-      recipient = await prisma.user.findUnique({ where: { id: toUserId }, select: { id: true } });
-      if (!recipient) throw new HttpError(404, "That person no longer has an account");
+    if (toUserId) {
+      const target = await prisma.user.findUnique({
+        where: { id: toUserId },
+        select: { id: true, role: true, suspendedAt: true },
+      });
+      if (!target) throw new HttpError(404, "That person no longer has an account");
+
+      if (staff) {
+        recipient = { id: target.id };
+      } else {
+        const site = await siteSettings();
+        if (!site.contributorMessaging) {
+          throw new HttpError(
+            403,
+            "Messages between contributors are switched off. You can still write to the newsroom.",
+          );
+        }
+        if (target.suspendedAt) throw new HttpError(403, "That account is suspended");
+        recipient = { id: target.id };
+      }
     }
 
     // An attached article has to belong to the person writing, unless they are

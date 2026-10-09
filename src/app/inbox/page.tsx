@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { currentUser, isStaff } from "@/lib/rbac";
+import { siteSettings } from "@/lib/settings";
 import { SiteHeader } from "@/components/site-header";
 import { StaffNav } from "@/components/staff-nav";
 import { otherNames, threadWhere } from "@/lib/inbox";
@@ -61,14 +62,26 @@ export default async function InboxPage() {
     }),
   );
 
-  // Staff pick a person to write to; contributors always write to the desk.
+  // Staff pick anyone. A contributor writes to the desk, and may also write to
+  // another contributor when the owner has switched that on in Settings. Even
+  // then they get names only - a contributor never sees another's email here.
+  const site = await siteSettings();
+  const peers = !staff && site.contributorMessaging;
   const people = staff
     ? await prisma.user.findMany({
         where: { id: { not: user.id }, suspendedAt: null },
         orderBy: [{ role: "asc" }, { name: "asc" }],
         select: { id: true, name: true, email: true, role: true },
       })
-    : [];
+    : peers
+      ? (
+          await prisma.user.findMany({
+            where: { id: { not: user.id }, suspendedAt: null, role: "CONTRIBUTOR" },
+            orderBy: { name: "asc" },
+            select: { id: true, name: true, role: true },
+          })
+        ).map((p) => ({ ...p, email: "" }))
+      : [];
 
   return (
     <>
@@ -85,7 +98,7 @@ export default async function InboxPage() {
             : "Talk to the newsroom here. Editors can see your messages and will reply on this page."}
         </p>
 
-        <NewThread people={people} canChoosePerson={staff} />
+        <NewThread people={people} canChoosePerson={staff || peers} />
 
         <ul className="mt-6 grid gap-2">
           {threads.length === 0 ? (

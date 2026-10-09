@@ -6,6 +6,9 @@ import { longDate, money, timeAgo } from "@/lib/format";
 import { paymentSettings } from "@/lib/settings";
 import { earningsFor, payableFor } from "@/lib/earnings";
 import { localeDate } from "@/lib/i18n";
+import { noticesFor } from "@/lib/notices";
+import { NoticeBoard } from "./notice-board";
+import { SiteFooter } from "@/components/site-footer";
 import { RequestPayout } from "./request-payout";
 import { Notifications } from "@/components/notifications";
 import { SiteHeader } from "@/components/site-header";
@@ -41,13 +44,14 @@ export default async function DashboardPage() {
   const published = articles.filter((a) => a.status === "APPROVED");
   // One resolver decides this figure, so the desk and the newsroom can never
   // disagree about what somebody is owed.
-  const [earnings, payable, pendingRequest, notes] = await Promise.all([
+  const [earnings, payable, pendingRequest, notices, notes] = await Promise.all([
     earningsFor(user.id),
     payableFor(user.id),
     prisma.payoutRequest.findFirst({
       where: { userId: user.id, status: "PENDING" },
       orderBy: { createdAt: "desc" },
     }),
+    noticesFor(user.id),
     prisma.notification.findMany({
       where: { userId: user.id },
       orderBy: { createdAt: "desc" },
@@ -73,6 +77,10 @@ export default async function DashboardPage() {
       <main className="mx-auto max-w-5xl px-4 pb-16">
         <div className="pt-4">
           <StaffNav user={user} current="desk" />
+        </div>
+
+        <div className="pt-2">
+          <NoticeBoard notices={notices.map((n) => ({ id: n.id, body: n.body, forEveryone: n.forEveryone }))} />
         </div>
 
         <div className="flex flex-wrap items-end justify-between gap-3 border-b border-line py-6">
@@ -275,6 +283,7 @@ export default async function DashboardPage() {
           )}
         </section>
       </main>
+      <SiteFooter />
     </>
   );
 }

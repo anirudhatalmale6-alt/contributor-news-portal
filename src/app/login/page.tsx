@@ -5,35 +5,56 @@ import { currentUser } from "@/lib/rbac";
 import { SiteHeader } from "@/components/site-header";
 import { SocialButtons } from "@/components/auth-buttons";
 import { LoginForm } from "./login-form";
+import { text } from "@/lib/ui-text";
+import type { Locale } from "@/lib/i18n";
 
 export const metadata = { title: "Sign in" };
 
-export default async function LoginPage() {
+/**
+ * A reader signing in from the Bangla paper should not land on an English
+ * page. The link that brought them here carries ?lang=bn, and everything on
+ * this page - the menu above it included - follows that.
+ */
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ lang?: string }>;
+}) {
   if (await currentUser()) redirect("/dashboard");
+  const { lang } = await searchParams;
+  const locale: Locale = lang === "bn" ? "BN" : "EN";
+  const s = (key: string) => text(key, locale);
 
   return (
     <>
-      <SiteHeader />
-      <main className="mx-auto max-w-md px-4 py-10">
-        <h1 className="font-serif text-2xl font-bold sm:text-3xl">Sign in</h1>
-        <p className="mt-1 text-sm text-ink-soft">
-          Back to your drafts, submissions and earnings.
-        </p>
+      <SiteHeader locale={locale} />
+      <main lang={locale === "BN" ? "bn" : "en"} className="mx-auto max-w-md px-4 py-10">
+        <h1 className="font-serif text-2xl font-bold sm:text-3xl">{s("auth.signInTitle")}</h1>
+        <p className="mt-1 text-sm text-ink-soft">{s("auth.signInSub")}</p>
 
         <div className="mt-6 grid gap-4">
           <SocialButtons providers={socialProviders} />
           <div className="flex items-center gap-3 text-xs text-ink-soft">
             <span className="h-px flex-1 bg-line" />
-            or with email
+            {s("auth.orWithEmail")}
             <span className="h-px flex-1 bg-line" />
           </div>
           <LoginForm />
         </div>
 
+        <p className="mt-4 text-sm">
+          <Link href={`/forgot${locale === "BN" ? "?lang=bn" : ""}`} className="text-ink-soft hover:text-ink">
+            {s("auth.forgot")}
+          </Link>
+        </p>
+
         <p className="mt-6 text-sm text-ink-soft">
-          No account yet?{" "}
-          <Link href="/register" className="font-medium text-brand hover:underline">
-            Create one
+          {s("auth.noAccount")}{" "}
+          <Link
+            href={`/register${locale === "BN" ? "?lang=bn" : ""}`}
+            className="font-medium text-brand hover:underline"
+          >
+            {s("auth.createOne")}
           </Link>
         </p>
 

@@ -147,8 +147,8 @@ export async function ArticleView({ locale, slug }: { locale: Locale; slug: stri
   const evidence = article.media
     .filter((m) => m.isEvidence && m.url !== article.coverImage)
     .sort((a, b) => a.sortOrder - b.sortOrder);
-  // The right panel wants more than the four that used to sit at the foot.
-  const related = await relatedArticles(locale, article.id, article.category, 8);
+  // How many pieces the right-hand panel carries is the owner's decision.
+  const related = await relatedArticles(locale, article.id, article.category, site.maxRelated);
 
   return (
     <div
@@ -252,10 +252,14 @@ export async function ArticleView({ locale, slug }: { locale: Locale; slug: stri
 
           <div className="prose-article mt-6">{renderBody(article.body)}</div>
 
-          <AdSlot slot="banner" locale={locale} />
+          {/* No banner here. The banner belongs to the front page; an article
+              has its own slot at the foot, which the desk sets separately. */}
 
           {evidence.length > 0 ? (
-            <section className="mt-10 rounded-xl border border-line bg-paper-soft p-4 sm:p-5">
+            <section
+              id="evidence"
+              className="mt-10 rounded-xl border border-line bg-paper-soft p-4 sm:p-5"
+            >
               <h2 className="text-sm font-bold">{copy.evidenceTitle}</h2>
               <p className="mb-4 mt-1 text-xs text-ink-soft">{copy.evidenceNote}</p>
               <div className="grid gap-4 sm:grid-cols-2">
@@ -308,6 +312,8 @@ export async function ArticleView({ locale, slug }: { locale: Locale; slug: stri
           </aside>
           ) : null}
 
+          {/* The article page's own advertising space, set in Settings under
+              "Article page" - nothing else on the site writes to it. */}
           <AdSlot slot="article" locale={locale} />
 
         </article>
