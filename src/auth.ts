@@ -69,7 +69,13 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         const password = String(raw?.password ?? "");
         if (!email || !password) return null;
 
-        const user = await prisma.user.findUnique({ where: { email } });
+        // Case-insensitive on purpose: an account whose address was stored as
+        // Rahim@gmail.com could never sign in as rahim@gmail.com, and the
+        // screen would tell them their password was wrong rather than that
+        // nobody by that name was found.
+        const user = await prisma.user.findFirst({
+          where: { email: { equals: email, mode: "insensitive" } },
+        });
         if (!user?.passwordHash) return null;
         if (!(await bcrypt.compare(password, user.passwordHash))) return null;
         // A suspended account is refused here, so the session never exists at
@@ -92,7 +98,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       const email = user.email?.toLowerCase();
       if (!email) return false;
 
-      const existing = await prisma.user.findUnique({ where: { email } });
+      const existing = await prisma.user.findFirst({
+        where: { email: { equals: email, mode: "insensitive" } },
+      });
       if (existing?.suspendedAt) return false;
       const local =
         existing ??

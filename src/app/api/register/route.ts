@@ -21,7 +21,9 @@ export async function POST(req: Request) {
     }
     const { name, email, password } = parsed.data;
 
-    if (await prisma.user.findUnique({ where: { email } })) {
+    // Compared without case, so the same person cannot end up with two
+    // accounts that differ only by a capital letter.
+    if (await prisma.user.findFirst({ where: { email: { equals: email, mode: "insensitive" } } })) {
       return Response.json({ error: "That email already has an account" }, { status: 409 });
     }
 

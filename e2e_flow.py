@@ -3077,6 +3077,48 @@ def main():
         )
         s30.close()
 
+        # --- 10r. capitals in an email address --------------------------------
+        # An address typed with a capital letter must still find the account.
+        # Matching it exactly as stored meant a contributor whose address was
+        # saved as Rahim@gmail.com was told their password was wrong.
+        caps = ctx.browser.new_context(viewport=DESKTOP, http_credentials=GATE)
+        cap = caps.new_page()
+        caps_email = f"Mixed.Case.{STAMP}@thedocument.test"
+        go(cap, f"{BASE}/register")
+        cap.fill('input[autocomplete="name"]', "Mixed Case")
+        cap.fill('input[type="email"]', caps_email)
+        cap.fill('input[type="password"]', NEW_PASS)
+        cap.click('button[type="submit"]')
+        cap.wait_for_url("**/dashboard", timeout=20000)
+        check("an address with capitals in it can open an account", "/dashboard" in cap.url)
+        sign_out(cap)
+        sign_in(cap, caps_email.lower(), NEW_PASS)
+        check(
+            "and signing in with it all in lower case works",
+            "/dashboard" in cap.url,
+            cap.url,
+        )
+        sign_out(cap)
+        sign_in(cap, caps_email.upper(), NEW_PASS)
+        check(
+            "and signing in with it all in capitals works too",
+            "/dashboard" in cap.url,
+            cap.url,
+        )
+        # The same address must not be able to open a second account under a
+        # different spelling.
+        sign_out(cap)
+        r = cap.request.post(
+            f"{BASE}/api/register",
+            data={"name": "Mixed Case Again", "email": caps_email.upper(), "password": NEW_PASS},
+        )
+        check(
+            "and it cannot open a second account under a different spelling",
+            r.status == 409,
+            f"got {r.status}",
+        )
+        caps.close()
+
         # --- 11. mobile ------------------------------------------------------
         mob = ctx.browser.new_context(viewport=PHONE, device_scale_factor=2, http_credentials=GATE)
         mp = mob.new_page()
