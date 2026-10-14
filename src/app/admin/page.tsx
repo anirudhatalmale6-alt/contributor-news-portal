@@ -10,6 +10,8 @@ import { StaffNav } from "@/components/staff-nav";
 import { SettingsForm } from "./settings-form";
 import { NoticeComposer } from "../people/notice-composer";
 import { SiteForm } from "./site-form";
+import { AiKeyForm } from "./ai-key-form";
+import { aiKeySummary } from "@/lib/ai-config";
 
 export const metadata = { title: "Admin" };
 
@@ -49,6 +51,7 @@ export default async function AdminPage() {
   ]);
 
   const waiting = await prisma.article.count({ where: { status: "SUBMITTED" } });
+  const aiSummary = await aiKeySummary();
 
   return (
     <>
@@ -101,6 +104,8 @@ export default async function AdminPage() {
             }))}
           />
         </div>
+
+        <AiKeyForm summary={aiSummary} />
 
         <SettingsForm
           settings={{

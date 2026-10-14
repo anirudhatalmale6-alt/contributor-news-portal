@@ -303,6 +303,15 @@ model SiteSettings {
   /// And how many "more on this" blocks an article page shows.
   maxRelated      Int @default(8)
 
+  /// Which AI service drafts translations and runs the web copy check:
+  /// "OPENAI", "ANTHROPIC", or empty for none. The key is the owner's own,
+  /// pasted in Settings, stored encrypted (see secret-box.ts) and never sent
+  /// back to a browser - only its last four characters, so he can tell which
+  /// key is in.
+  aiProvider  String @default("")
+  aiKeyCipher String @default("")
+  aiKeyHint   String @default("")
+
   /// Which language the contributor's desk and the newsroom bar are written
   /// in. The words themselves are all on the Wording screen; this only says
   /// which column of it those screens read.

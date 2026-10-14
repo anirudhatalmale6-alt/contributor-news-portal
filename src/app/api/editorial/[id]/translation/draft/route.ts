@@ -17,7 +17,7 @@ export async function POST(_req: Request, { params }: Ctx) {
     await requireStaff();
     const { id } = await params;
 
-    if (!aiTranslationReady()) {
+    if (!(await aiTranslationReady())) {
       throw new HttpError(503, "Automatic translation is not switched on for this site");
     }
 

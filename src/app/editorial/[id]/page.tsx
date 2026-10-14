@@ -195,7 +195,7 @@ export default async function ReviewPage({ params }: { params: Promise<{ id: str
 
           <div className="lg:col-span-2">
             <TranslationPanel
-              aiReady={aiTranslationReady()}
+              aiReady={await aiTranslationReady()}
               articleId={article.id}
               sourceLocale={article.language}
               source={{

@@ -1,7 +1,10 @@
 import Anthropic from "@anthropic-ai/sdk";
+import OpenAI from "openai";
+import { aiConfig, type AiConfig } from "@/lib/ai-config";
 
 /**
- * A first draft of the other-language version, written by Claude.
+ * A first draft of the other-language version, written by whichever AI
+ * service the owner chose in Settings (ChatGPT or Claude).
  *
  * Deliberately a DRAFT and nothing else: it fills the translation boxes on the
  * review screen and an editor still has to read it and press Save. Nothing here
@@ -9,14 +12,12 @@ import Anthropic from "@anthropic-ai/sdk";
  * machine translation straight in front of readers is how a paper prints
  * something it never said.
  *
- * The key is the owner's, read from the environment on his own server. If it is
- * not set the feature is simply off - the button does not appear - rather than
- * failing at the moment an editor presses it.
+ * The key is the owner's own (see ai-config.ts). If none is set the feature is
+ * simply off - the button does not appear - rather than failing at the moment
+ * an editor presses it.
  */
 
-export const AI_MODEL = process.env.AI_TRANSLATION_MODEL || "claude-opus-5";
-
-export const aiTranslationReady = () => Boolean(process.env.ANTHROPIC_API_KEY);
+export const aiTranslationReady = async () => Boolean(await aiConfig());
 
 export type Draft = { title: string; dek: string; body: string };
 
@@ -82,30 +83,12 @@ export async function draftTranslation({
   dek: string;
   body: string;
 }): Promise<Draft> {
-  const key = process.env.ANTHROPIC_API_KEY;
-  if (!key) throw new Error("No translation key is configured on the server");
+  const config = await aiConfig();
+  if (!config) throw new Error("No translation key is configured for this site");
 
-  const client = new Anthropic({ apiKey: key });
   const source = from === "BN" ? "Bangla" : "English";
   const target = to === "BN" ? "Bangla" : "English";
-
-  const message = await client.messages.create({
-    model: AI_MODEL,
-    // Room for a long piece plus the model's own thinking, which shares this
-    // budget. Well under the point where the request would need streaming.
-    max_tokens: 16000,
-    system: SYSTEM,
-    output_config: {
-      // Translation is a well-specified job rather than a reasoning problem,
-      // so it does not need to be pondered at length - and the owner pays for
-      // every token either way.
-      effort: "low",
-      format: { type: "json_schema", schema: SCHEMA },
-    },
-    messages: [
-      {
-        role: "user",
-        content: `Translate this ${source} news article into ${target}.
+  const prompt = `Translate this ${source} news article into ${target}.
 
 <headline>
 ${title}
@@ -117,28 +100,14 @@ ${dek}
 
 <article>
 ${body}
-</article>`,
-      },
-    ],
-  });
+</article>`;
 
-  // A safety classifier can decline; that is a 200 with no usable content, so
-  // it has to be checked before the content is read.
-  if (message.stop_reason === "refusal") {
-    throw new Error(
-      "The translation service declined this piece. Write the other version by hand.",
-    );
-  }
-  if (message.stop_reason === "max_tokens") {
-    throw new Error("This piece is too long to translate in one go. Translate it in sections.");
-  }
-
-  const text = message.content.find((block) => block.type === "text");
-  if (!text || text.type !== "text") throw new Error("The translation came back empty");
+  const raw =
+    config.provider === "OPENAI" ? await viaOpenAI(config, prompt) : await viaAnthropic(config, prompt);
 
   let parsed: Partial<Draft>;
   try {
-    parsed = JSON.parse(text.text) as Partial<Draft>;
+    parsed = JSON.parse(raw) as Partial<Draft>;
   } catch {
     throw new Error("The translation came back in a form this site could not read");
   }
@@ -148,4 +117,70 @@ ${body}
     dek: String(parsed.dek ?? "").trim(),
     body: String(parsed.body ?? "").trim(),
   };
+}
+
+/** Claude: the Messages API, with the answer held to the schema. */
+async function viaAnthropic(config: AiConfig, prompt: string): Promise<string> {
+  const client = new Anthropic({ apiKey: config.key });
+  const message = await client.messages.create({
+    model: config.model,
+    // Room for a long piece plus the model's own thinking, which shares this
+    // budget. Well under the point where the request would need streaming.
+    max_tokens: 16000,
+    system: SYSTEM,
+    output_config: {
+      // Translation is a well-specified job rather than a reasoning problem,
+      // so it does not need to be pondered at length - and the owner pays for
+      // every token either way.
+      effort: "low",
+      format: { type: "json_schema", schema: SCHEMA },
+    },
+    messages: [{ role: "user", content: prompt }],
+  });
+
+  // A safety classifier can decline; that is a 200 with no usable content, so
+  // it has to be checked before the content is read.
+  if (message.stop_reason === "refusal") {
+    throw new Error("The translation service declined this piece. Write the other version by hand.");
+  }
+  if (message.stop_reason === "max_tokens") {
+    throw new Error("This piece is too long to translate in one go. Translate it in sections.");
+  }
+  const text = message.content.find((block) => block.type === "text");
+  if (!text || text.type !== "text") throw new Error("The translation came back empty");
+  return text.text;
+}
+
+/** ChatGPT: the Responses API, with the answer held to the same schema. */
+async function viaOpenAI(config: AiConfig, prompt: string): Promise<string> {
+  const client = new OpenAI({ apiKey: config.key });
+  const response = await client.responses.create({
+    model: config.model,
+    instructions: SYSTEM,
+    input: prompt,
+    // Same reasoning as above: a translation is not a puzzle, and the owner
+    // pays for the thinking as well as the answer.
+    reasoning: { effort: "low" },
+    max_output_tokens: 16000,
+    text: {
+      format: { type: "json_schema", name: "translation", schema: SCHEMA, strict: true },
+    },
+  });
+
+  if (response.status === "incomplete") {
+    if (response.incomplete_details?.reason === "max_output_tokens") {
+      throw new Error("This piece is too long to translate in one go. Translate it in sections.");
+    }
+    throw new Error("The translation service stopped part way. Try again, or write it by hand.");
+  }
+  for (const item of response.output) {
+    if (item.type !== "message") continue;
+    for (const part of item.content) {
+      if (part.type === "refusal") {
+        throw new Error("The translation service declined this piece. Write the other version by hand.");
+      }
+    }
+  }
+  if (!response.output_text) throw new Error("The translation came back empty");
+  return response.output_text;
 }

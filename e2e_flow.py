@@ -78,6 +78,7 @@ def check(name, ok, detail=""):
 
 # Clicking before React has hydrated does nothing at all, and over the internet
 # hydration takes noticeably longer than it does against localhost.
+AI_STUB = os.environ.get("AI_STUB", "") == "1"  # a local stand-in for both AI services
 SETTLE_MS = 250 if ("127.0.0.1" in BASE or "localhost" in BASE) else 1500
 
 
@@ -3118,6 +3119,112 @@ def main():
             f"got {r.status}",
         )
         caps.close()
+
+        # --- 10s. the owner's AI key, and ChatGPT as well as Claude ----------
+        # Only against the local stand-in (AI_STUB=1): the real services are
+        # never called by this suite, because that spends the owner's money.
+        if AI_STUB:
+            ak = ctx.browser.new_context(viewport=DESKTOP, http_credentials=GATE)
+            kp = ak.new_page()
+            sign_in(kp, "admin@thedocument.test", STAFF_PASS)
+            kp.request.get("http://127.0.0.1:3999/_reset")
+            # Start from no key, whatever an earlier, interrupted run left behind.
+            kp.request.delete(f"{BASE}/api/admin/ai-key")
+            go(kp, f"{BASE}/admin")
+            kp.wait_for_timeout(SETTLE_MS)
+            check(
+                "Settings has a place for the owner's AI key",
+                kp.locator("#ai-key").count() == 1,
+            )
+
+            # A key for the wrong service is caught before anything is asked.
+            kp.select_option('select[name="aiProvider"]', "OPENAI")
+            kp.fill('input[name="aiKey"]', "sk-ant-api03-this-is-a-claude-key-0000")
+            kp.click('button[name="save-ai-key"]')
+            kp.wait_for_selector("text=does not look like an OpenAI key", timeout=20000)
+            check("a Claude key pasted under ChatGPT is refused in words", True)
+
+            # A key the service rejects is not kept.
+            kp.fill('input[name="aiKey"]', "sk-proj-bad-key-the-service-will-refuse-0000")
+            kp.click('button[name="save-ai-key"]')
+            kp.wait_for_selector("text=not valid", timeout=20000)
+            check("a key the service rejects is not saved", "Switched off" in kp.inner_text("#ai-key"))
+
+            kp.fill('input[name="aiKey"]', "sk-proj-good-stub-key-for-the-suite-ab12")
+            kp.click('button[name="save-ai-key"]')
+            kp.wait_for_selector("text=accepted the key ending in ab12", timeout=20000)
+            kp.wait_for_timeout(SETTLE_MS)
+            go(kp, f"{BASE}/admin")
+            panel = kp.inner_text("#ai-key")
+            check(
+                "the saved key shows only its service and last four characters",
+                "ChatGPT (OpenAI)" in panel and "ab12" in panel and "good-stub" not in kp.content(),
+                panel[:160].replace("\n", " "),
+            )
+
+            # Now an editor's translate button goes to ChatGPT.
+            go(kp, f"{BASE}/editorial?status=APPROVED")
+            kp.wait_for_timeout(SETTLE_MS)
+            kp.locator('main a:has-text("Open")').first.click()
+            kp.wait_for_url("**/editorial/**", timeout=20000)
+            kp.wait_for_timeout(SETTLE_MS)
+            check(
+                "with a key saved the translate button appears",
+                kp.locator('button[name="draft-translation"]').count() == 1,
+            )
+            # This piece already has a translation, so the panel asks before
+            # writing over it - accept, the way an editor who wants a fresh
+            # draft would.
+            asked_first = []
+            kp.once("dialog", lambda d: (asked_first.append(d.message), d.accept()))
+            kp.click('button[name="draft-translation"]')
+            kp.wait_for_selector("text=Draft ready", timeout=30000)
+            check(
+                "it asks before writing over a translation that is already there",
+                asked_first and "replaces what is in the boxes" in asked_first[0],
+                str(asked_first),
+            )
+            drafted = kp.input_value("section#translation input >> nth=0")
+            check(
+                "ChatGPT's draft lands in the translation boxes for an editor to check",
+                drafted == "Stubbed English headline",
+                drafted,
+            )
+            sent = kp.request.get("http://127.0.0.1:3999/_seen").json()
+            asked = [r for r in sent if r.get("path") == "/v1/responses"]
+            check(
+                "the request ChatGPT received is the one its API expects",
+                len(asked) == 1 and asked[0]["problems"] == [] and asked[0]["model"] == "gpt-6.1-sol",
+                str(asked)[:240],
+            )
+            # Reload: if the draft had been stored, the box would come back with
+            # it. It must come back with what was there before.
+            review_url = kp.url
+            go(kp, review_url)
+            kp.wait_for_timeout(SETTLE_MS)
+            check(
+                "and nothing was saved: the editor still has to press Save",
+                kp.input_value("section#translation input >> nth=0") != "Stubbed English headline",
+                kp.input_value("section#translation input >> nth=0"),
+            )
+
+            # Taking the key out switches the button off again.
+            go(kp, f"{BASE}/admin")
+            kp.wait_for_timeout(SETTLE_MS)
+            kp.click('button[name="remove-ai-key"]')
+            kp.wait_for_selector("text=Key removed", timeout=20000)
+            go(kp, f"{BASE}/editorial?status=APPROVED")
+            kp.wait_for_timeout(SETTLE_MS)
+            kp.locator('main a:has-text("Open")').first.click()
+            kp.wait_for_url("**/editorial/**", timeout=20000)
+            kp.wait_for_timeout(SETTLE_MS)
+            check(
+                "removing the key takes the button away",
+                kp.locator('button[name="draft-translation"]').count() == 0,
+            )
+            ak.close()
+        else:
+            print("NOTE AI_STUB not set, so the AI key checks were skipped (they never call a real service)")
 
         # --- 11. mobile ------------------------------------------------------
         mob = ctx.browser.new_context(viewport=PHONE, device_scale_factor=2, http_credentials=GATE)
