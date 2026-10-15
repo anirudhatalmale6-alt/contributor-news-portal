@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   COVER_SHAPES,
@@ -11,16 +11,32 @@ import {
   serialiseCrop,
 } from "@/components/cover-image";
 
-/** The widest crop of this shape that fits inside the picture, centred. */
-function fitted(ratio: number): Crop {
-  // Working in percentages of a square-ish box: start full width, and take the
-  // height the shape asks for. Anything over 100 means the picture is taller
-  // than the frame, so take full height instead.
-  const h = 100 / ratio;
-  if (h <= 100) return { x: 0, y: (100 - h) / 2, w: 100, h };
-  const w = 100 * ratio;
-  return { x: (100 - w) / 2, y: 0, w, h: 100 };
+/**
+ * The crop that fills the frame with as much of the picture as possible,
+ * centred. Coordinates are percentages of the picture, so the picture's own
+ * shape matters: a crop w% wide and h% tall shows (w x pictureWidth) by
+ * (h x pictureHeight), and that has to come out at the frame's shape.
+ */
+function covering(frame: number, picture: number): Crop {
+  if (picture >= frame) {
+    const w = (100 * frame) / picture;
+    return { x: (100 - w) / 2, y: 0, w, h: 100 };
+  }
+  const h = (100 * picture) / frame;
+  return { x: 0, y: (100 - h) / 2, w: 100, h };
 }
+
+/** How tall a crop of this width is, for this frame and picture. */
+const heightFor = (w: number, frame: number, picture: number) => (w * picture) / frame;
+
+/**
+ * Keeps one side of the crop inside the picture when it is smaller than the
+ * picture, and keeps the picture inside the frame when it has been zoomed out
+ * past it - so you can slide a small photo around a large frame, but never
+ * lose it off the edge.
+ */
+const clampEdge = (pos: number, size: number) =>
+  Math.min(Math.max(pos, Math.min(0, 100 - size)), Math.max(0, 100 - size));
 
 /**
  * Framing a cover photo for one place on the site.
@@ -45,21 +61,52 @@ function ShapeCropper({
 }) {
   const router = useRouter();
   const frameRef = useRef<HTMLDivElement>(null);
-  const [crop, setCrop] = useState<Crop>(parseCrop(initial) ?? fitted(aspect));
+  // The picture's own shape is only known once it has loaded. Until then the
+  // saved framing is shown as it is and the zoom waits.
+  const [picture, setPicture] = useState<number | null>(null);
+  const [crop, setCrop] = useState<Crop>(parseCrop(initial) ?? { x: 0, y: 0, w: 100, h: 100 });
+
+  const imgRef = useRef<HTMLImageElement>(null);
+  const measure = useCallback(
+    (img: HTMLImageElement) => {
+      if (!img.naturalWidth || !img.naturalHeight) return;
+      const shapeOfPicture = img.naturalWidth / img.naturalHeight;
+      setPicture(shapeOfPicture);
+      // Nothing saved yet: start from the picture filling the frame.
+      if (!parseCrop(initial)) setCrop(covering(aspect, shapeOfPicture));
+    },
+    [aspect, initial],
+  );
+  // A photo already in the browser's cache can finish loading before this
+  // screen's script is running, and then its load event is never seen. Read
+  // it directly in that case, or the zoom would stay switched off.
+  useEffect(() => {
+    const img = imgRef.current;
+    if (img?.complete) measure(img);
+  }, [measure]);
+
+  // Zooming in stops at a fifth of the filled frame; zooming out stops when the
+  // whole picture fits inside the frame, with the rest of the frame left plain.
+  const fill = picture ? covering(aspect, picture) : null;
+  const minW = fill ? fill.w * 0.2 : 20;
+  const maxW = picture ? Math.max(100, (100 * aspect) / picture) : 100;
   const [drag, setDrag] = useState<{ x: number; y: number; cx: number; cy: number } | null>(null);
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Zoom is expressed as the width of the crop: a narrower crop is a closer
-  // view. Height always follows from the shape, so the frame cannot be skewed.
+  // view, and a crop wider than the picture is the picture zoomed out. Height
+  // always follows from the two shapes, so the photo is never stretched.
   function setZoom(width: number) {
-    const w = Math.min(100, Math.max(20, width));
-    const h = Math.min(100, w / aspect);
+    if (!picture) return;
+    const w = Math.min(maxW, Math.max(minW, width));
+    const h = heightFor(w, aspect, picture);
     setCrop((c) => ({
       w,
       h,
-      x: Math.min(Math.max(0, c.x + (c.w - w) / 2), 100 - w),
-      y: Math.min(Math.max(0, c.y + (c.h - h) / 2), 100 - h),
+      x: clampEdge(c.x + (c.w - w) / 2, w),
+      y: clampEdge(c.y + (c.h - h) / 2, h),
     }));
     setSaved(false);
   }
@@ -78,8 +125,8 @@ function ShapeCropper({
     const dy = ((e.clientY - drag.y) / box.height) * crop.h;
     setCrop((c) => ({
       ...c,
-      x: Math.min(Math.max(0, drag.cx - dx), 100 - c.w),
-      y: Math.min(Math.max(0, drag.cy - dy), 100 - c.h),
+      x: clampEdge(drag.cx - dx, c.w),
+      y: clampEdge(drag.cy - dy, c.h),
     }));
     setSaved(false);
   }
@@ -93,7 +140,12 @@ function ShapeCropper({
       body: JSON.stringify({ [field]: serialiseCrop(crop) }),
     });
     setBusy(false);
-    if (!res.ok) return;
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      setError(data.error ?? "Could not save this framing.");
+      return;
+    }
+    setError(null);
     setSaved(true);
     router.refresh();
   }
@@ -108,7 +160,7 @@ function ShapeCropper({
     });
     setBusy(false);
     if (!res.ok) return;
-    setCrop(fitted(aspect));
+    if (picture) setCrop(covering(aspect, picture));
     setSaved(true);
     router.refresh();
   }
@@ -132,17 +184,29 @@ function ShapeCropper({
         aria-label={`Framing for ${COVER_SHAPES[shape].label}`}
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={src} alt="" draggable={false} style={cropStyle(crop)} />
+        <img
+          src={src}
+          alt=""
+          draggable={false}
+          style={cropStyle(crop)}
+          ref={imgRef}
+          onLoad={(e) => measure(e.currentTarget)}
+        />
       </div>
 
       <label className="grid gap-1 text-xs text-ink-soft">
-        <span>Zoom</span>
+        <span className="flex justify-between">
+          <span>Zoom in</span>
+          <span>Zoom out</span>
+        </span>
         <input
           type="range"
-          min={20}
-          max={100}
-          step={1}
-          value={Math.round(crop.w)}
+          name={`zoom-${shape}`}
+          min={minW}
+          max={maxW}
+          step="any"
+          disabled={!picture}
+          value={Math.min(maxW, Math.max(minW, crop.w))}
           onChange={(e) => setZoom(Number(e.target.value))}
           className="w-full accent-navy"
           aria-label={`Zoom for ${COVER_SHAPES[shape].label}`}
@@ -164,9 +228,10 @@ function ShapeCropper({
           disabled={busy}
           className="rounded-full border border-line px-3.5 py-1.5 text-xs font-medium hover:bg-paper-soft disabled:opacity-60"
         >
-          Use the whole picture
+          Reset
         </button>
         {saved ? <span className="text-xs text-emerald-700">Saved.</span> : null}
+        {error ? <span className="text-xs text-rose-700">{error}</span> : null}
       </div>
     </div>
   );
@@ -191,9 +256,9 @@ export function CropEditor({
           How the cover is framed
         </h2>
         <p className="mt-1 text-xs text-ink-soft">
-          Drag the picture and zoom to choose what shows. The two places need
-          different shapes, so they are framed separately. The photograph itself is never
-          altered.
+          Drag the picture to choose what shows, and use the slider to zoom in or out. Zoomed
+          right out, the whole photograph fits inside the frame. The two places need different
+          shapes, so they are framed separately. The photograph itself is never altered.
         </p>
       </div>
       <div className="grid gap-5 sm:grid-cols-2">

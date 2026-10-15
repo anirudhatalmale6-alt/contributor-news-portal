@@ -108,6 +108,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           data: {
             email,
             name: user.name ?? email.split("@")[0],
+            publicName: user.name ?? email.split("@")[0],
             image: user.image ?? null,
           },
         }));

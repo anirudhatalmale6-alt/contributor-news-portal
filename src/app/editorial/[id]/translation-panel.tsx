@@ -76,6 +76,27 @@ export function TranslationPanel({
     });
   }
 
+  const [summarising, setSummarising] = useState(false);
+
+  /** The feed summary for this language version, from what is in the boxes now. */
+  async function summarise() {
+    setSummarising(true);
+    setMessage(null);
+    const res = await fetch(`/api/editorial/${articleId}/summary`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ language: target, title: form.title, body: form.body }),
+    });
+    const data = (await res.json().catch(() => ({}))) as { dek?: string; error?: string };
+    setSummarising(false);
+    if (!res.ok || !data.dek) {
+      setMessage({ kind: "err", text: data.error ?? "Could not write the summary." });
+      return;
+    }
+    setForm((f) => ({ ...f, dek: data.dek as string }));
+    setMessage({ kind: "ok", text: "Summary written. Check it, then press Save." });
+  }
+
   async function save() {
     setBusy(true);
     setMessage(null);
@@ -170,13 +191,29 @@ export function TranslationPanel({
             placeholder={target === "BN" ? "শিরোনাম" : "Headline"}
             className="w-full rounded-lg border border-line px-3 py-2 font-serif text-base font-bold outline-none focus:border-navy"
           />
-          <input
-            value={form.dek}
-            lang={lang}
-            onChange={(e) => setForm({ ...form, dek: e.target.value })}
-            placeholder={target === "BN" ? "সংক্ষিপ্ত বিবরণ" : "Standfirst"}
-            className="w-full rounded-lg border border-line px-3 py-2 text-sm outline-none focus:border-navy"
-          />
+          <div className="flex flex-wrap items-center gap-2">
+            <input
+              name="translation-dek"
+              value={form.dek}
+              lang={lang}
+              onChange={(e) => setForm({ ...form, dek: e.target.value })}
+              placeholder={
+                target === "BN" ? "এক লাইনের সারাংশ (ফিডের জন্য)" : "One-line summary for the feed"
+              }
+              className="min-w-0 flex-1 rounded-lg border border-line px-3 py-2 text-sm outline-none focus:border-navy"
+            />
+            {aiReady ? (
+              <button
+                type="button"
+                name="ai-summary-translation"
+                disabled={summarising || !form.body.trim()}
+                onClick={() => void summarise()}
+                className="rounded-full border border-navy px-3 py-1.5 text-xs font-medium text-navy hover:bg-navy hover:text-white disabled:opacity-50"
+              >
+                {summarising ? "Writing..." : "Write with AI"}
+              </button>
+            ) : null}
+          </div>
           <div>
             {/* The same bold, italics and subtitles the original was written
                 with - a translation that cannot carry them is not a translation. */}

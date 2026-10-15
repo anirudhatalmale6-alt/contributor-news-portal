@@ -27,6 +27,7 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
   const person = await prisma.user.findUnique({
     where: { id },
     select: {
+      publicName: true,
       id: true,
       name: true,
       email: true,
@@ -181,8 +182,10 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
               endpoint={`/api/admin/users/${person.id}/profile`}
               method="PATCH"
               photoEndpoint={`/api/admin/users/${person.id}/profile`}
+              staff
               initial={{
                 name: person.name,
+                publicName: person.publicName ?? person.name,
                 bio: person.bio ?? "",
                 publicEmail: person.publicEmail ?? "",
                 phone: person.phone ?? "",

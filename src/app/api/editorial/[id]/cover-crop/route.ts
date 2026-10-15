@@ -3,11 +3,19 @@ import { z } from "zod";
 import { errorResponse, HttpError, requireStaff } from "@/lib/rbac";
 import { refreshPublicPages } from "@/lib/revalidate";
 
-/** Four percentages: left, top, width, height, of the original picture. */
+/**
+ * Four percentages: left, top, width, height, of the original picture. Left
+ * and top go negative, and width or height past 100, when the picture has been
+ * zoomed out so that all of it fits inside the frame.
+ */
 const crop = z
   .string()
   .trim()
-  .regex(/^\d+(\.\d+)?(,\d+(\.\d+)?){3}$/, "A crop is four numbers separated by commas")
+  .regex(/^-?\d+(\.\d+)?(,-?\d+(\.\d+)?){3}$/, "A crop is four numbers separated by commas")
+  .refine((v) => {
+    const [x, y, w, h] = v.split(",").map(Number);
+    return w > 0 && h > 0 && w <= 1000 && h <= 1000 && x >= -1000 && y >= -1000 && x <= 100 && y <= 100;
+  }, "That framing is outside the picture")
   .nullable();
 
 const schema = z.object({

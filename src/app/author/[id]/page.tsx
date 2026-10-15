@@ -9,7 +9,7 @@ type Props = { params: Promise<{ id: string }> };
 async function authorMeta(id: string) {
   return prisma.user.findUnique({
     where: { id },
-    select: { name: true, bio: true, image: true, suspendedAt: true },
+    select: { name: true, publicName: true, bio: true, image: true, suspendedAt: true },
   });
 }
 
@@ -18,10 +18,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const author = await authorMeta(id);
   if (!author || author.suspendedAt) return { title: "লেখক পাওয়া যায়নি" };
   return {
-    title: author.name,
+    title: author.publicName?.trim() || author.name,
     description: author.bio ?? undefined,
     alternates: { canonical: `/author/${id}`, languages: { bn: `/author/${id}`, en: `/en/author/${id}` } },
-    openGraph: { title: author.name, description: author.bio ?? undefined, type: "profile" },
+    openGraph: { title: author.publicName?.trim() || author.name, description: author.bio ?? undefined, type: "profile" },
   };
 }
 

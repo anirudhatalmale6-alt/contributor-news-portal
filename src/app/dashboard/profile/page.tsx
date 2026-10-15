@@ -16,6 +16,7 @@ export default async function MyProfilePage() {
     where: { id: me.id },
     select: {
       name: true,
+      publicName: true,
       image: true,
       bio: true,
       publicEmail: true,
@@ -51,6 +52,7 @@ export default async function MyProfilePage() {
             photoEndpoint="/api/profile/photo"
             initial={{
               name: user?.name ?? "",
+              publicName: user?.publicName ?? user?.name ?? "",
               bio: user?.bio ?? "",
               publicEmail: user?.publicEmail ?? "",
               phone: user?.phone ?? "",

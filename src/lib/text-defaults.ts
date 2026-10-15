@@ -208,6 +208,17 @@ export const TEXT_DEFAULTS: Record<string, TextEntry> = {
     en: "Marking...",
     bn: "চিহ্নিত করা হচ্ছে...",
   },
+  "desk.showEarlier": {
+    group: "The writing desk",
+    en: "Show {n} earlier updates",
+    bn: "আগের আরও {n}টি হালনাগাদ দেখুন",
+    note: "Under the newest update, which is the only one shown until this is pressed",
+  },
+  "desk.showFewer": {
+    group: "The writing desk",
+    en: "Show only the latest",
+    bn: "শুধু সর্বশেষটি দেখুন",
+  },
   "desk.title": {
     group: "The writing desk",
     en: "{name}'s desk",

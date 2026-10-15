@@ -19,6 +19,7 @@ export async function AuthorPage({ locale, id }: { locale: Locale; id: string })
     select: {
       id: true,
       name: true,
+      publicName: true,
       image: true,
       bio: true,
       tier: true,
@@ -56,7 +57,7 @@ export async function AuthorPage({ locale, id }: { locale: Locale; id: string })
           </span>
 
           <div className="min-w-0 flex-1">
-            <h1 className="font-serif text-2xl font-bold sm:text-3xl">{author.name}</h1>
+            <h1 className="font-serif text-2xl font-bold sm:text-3xl">{author.publicName?.trim() || author.name}</h1>
             <div className="mt-2">
               <TierBadge
                 tier={author.tier}

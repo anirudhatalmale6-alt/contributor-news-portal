@@ -2,6 +2,8 @@ import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { errorResponse, HttpError, requireUser } from "@/lib/rbac";
 import { bdMobile, normalisePhone } from "@/lib/profile";
+import { after } from "next/server";
+import { fillMissingSummaries } from "@/lib/ai-tasks";
 
 const schema = z.object({
   contactPhone: z.string().trim().max(24).optional(),
@@ -95,6 +97,9 @@ export async function POST(req: Request, { params }: Ctx) {
         },
       }),
     ]);
+    // The feed summary is written for the desk once the contributor has their
+    // answer - see fillMissingSummaries.
+    after(() => fillMissingSummaries(id));
     return Response.json({ article: updated });
   } catch (err) {
     return errorResponse(err);

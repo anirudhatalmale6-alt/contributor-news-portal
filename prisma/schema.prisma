@@ -58,6 +58,10 @@ model User {
   id           String          @id @default(cuid())
   email        String          @unique
   name         String
+  /// The name printed on their articles and public page. Set to their own name
+  /// when they sign up, and from then on changed only by an editor or admin -
+  /// a contributor can rename their account but not their byline.
+  publicName String?
   passwordHash String? // null when the account came from Google / a social provider
   image        String?
   role         Role            @default(CONTRIBUTOR)
@@ -308,6 +312,23 @@ model SiteSettings {
   /// pasted in Settings, stored encrypted (see secret-box.ts) and never sent
   /// back to a browser - only its last four characters, so he can tell which
   /// key is in.
+  /// The owner's own instructions for each AI job, written in Settings. Empty
+  /// means the shipped wording (see ai-tasks.ts). The rules that keep the
+  /// facts straight are added after these and cannot be edited away.
+  aiPromptToEnglish String @default("")
+  aiPromptToBangla  String @default("")
+  aiPromptSummary   String @default("")
+  aiPromptPolish    String @default("")
+
+  /// The mailbox the site sends from - password resets and the like. The
+  /// password is sealed like the AI key and never sent back to a browser.
+  /// The defaults are the IONOS server his domain's email is with.
+  smtpHost       String @default("smtp.ionos.com")
+  smtpPort       Int    @default(587)
+  smtpUser       String @default("")
+  smtpPassCipher String @default("")
+  smtpFromName   String @default("The Document")
+
   aiProvider  String @default("")
   aiKeyCipher String @default("")
   aiKeyHint   String @default("")

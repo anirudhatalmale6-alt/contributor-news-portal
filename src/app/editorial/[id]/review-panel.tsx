@@ -42,10 +42,13 @@ export function ReviewPanel({
   article,
   settings,
   authorTier,
+  aiReady = false,
 }: {
   article: ArticleState;
   settings: { currency: string; suggestedCents: number; verifiedBonusPct: number };
   authorTier: string;
+  /** The owner has an AI key in Settings, so the AI buttons are offered. */
+  aiReady?: boolean;
 }) {
   const router = useRouter();
   const [form, setForm] = useState({
@@ -63,6 +66,47 @@ export function ReviewPanel({
   const bodyRef = useRef<HTMLTextAreaElement>(null);
   const [slot, setSlot] = useState(article.homeSlot ?? "");
   const [sectionLead, setSectionLead] = useState(article.sectionLead);
+
+  const [aiBusy, setAiBusy] = useState<"summary" | "polish" | null>(null);
+  const saveWord = status === "APPROVED" ? "Save and update the live article" : "Save edits";
+
+  /** Asks the AI for something and hands back its answer, or puts its reason on screen. */
+  async function askAi(job: "summary" | "polish") {
+    setAiBusy(job);
+    setMessage(null);
+    const res = await fetch(`/api/editorial/${article.id}/${job}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ language: article.language, title: form.title, body: form.body }),
+    });
+    const data = (await res.json().catch(() => ({}))) as { dek?: string; body?: string; error?: string };
+    setAiBusy(null);
+    if (!res.ok) {
+      setMessage({ kind: "err", text: data.error ?? "The AI could not do that just now." });
+      return null;
+    }
+    return data;
+  }
+
+  async function aiSummary() {
+    const data = await askAi("summary");
+    if (!data?.dek) return;
+    update("dek", data.dek);
+    setMessage({ kind: "ok", text: `Summary written. Check it, change anything, then press ${saveWord}.` });
+  }
+
+  async function aiPolish() {
+    if (!window.confirm("Replace the article text in the box with a polished version? Nothing is saved until you press Save.")) {
+      return;
+    }
+    const data = await askAi("polish");
+    if (!data?.body) return;
+    update("body", data.body);
+    setMessage({
+      kind: "ok",
+      text: `Polished. Read it through: if you prefer the original, reload the page without saving. Otherwise press ${saveWord}.`,
+    });
+  }
 
   function update<K extends keyof typeof form>(key: K, value: string) {
     setForm((f) => ({ ...f, [key]: value }));
@@ -209,13 +253,30 @@ export function ReviewPanel({
           lang={article.language === "BN" ? "bn" : "en"}
           className="w-full border-b border-line pb-2 font-serif text-xl font-bold outline-none focus:border-navy"
         />
-        <input
-          value={form.dek}
-          onChange={(e) => update("dek", e.target.value)}
-          lang={article.language === "BN" ? "bn" : "en"}
-          placeholder="Standfirst"
-          className="w-full rounded-lg border border-line px-3 py-2 text-sm outline-none focus:border-navy"
-        />
+        <div className="grid gap-1 text-sm">
+          <span className="flex flex-wrap items-center justify-between gap-2">
+            <span className="font-medium">One-line summary for the feed</span>
+            {aiReady ? (
+              <button
+                type="button"
+                name="ai-summary"
+                onClick={() => void aiSummary()}
+                disabled={aiBusy !== null}
+                className="rounded-full border border-navy px-3 py-1 text-xs font-medium text-navy hover:bg-navy hover:text-white disabled:opacity-50"
+              >
+                {aiBusy === "summary" ? "Writing..." : "Write with AI"}
+              </button>
+            ) : null}
+          </span>
+          <input
+            name="dek"
+            value={form.dek}
+            onChange={(e) => update("dek", e.target.value)}
+            lang={article.language === "BN" ? "bn" : "en"}
+            placeholder="Shown under the headline in lists, not on the article itself"
+            className="w-full rounded-lg border border-line px-3 py-2 text-sm outline-none focus:border-navy"
+          />
+        </div>
         <label className="flex items-center gap-2 text-sm">
           <span className="font-medium">Section</span>
           <select
@@ -231,6 +292,19 @@ export function ReviewPanel({
           </select>
         </label>
         <div>
+          {aiReady ? (
+            <div className="mb-2 flex justify-end">
+              <button
+                type="button"
+                name="ai-polish"
+                onClick={() => void aiPolish()}
+                disabled={aiBusy !== null}
+                className="rounded-full border border-navy px-3 py-1 text-xs font-medium text-navy hover:bg-navy hover:text-white disabled:opacity-50"
+              >
+                {aiBusy === "polish" ? "Polishing..." : "Polish with AI"}
+              </button>
+            </div>
+          ) : null}
           <FormatToolbar
             textareaRef={bodyRef}
             value={form.body}
@@ -252,11 +326,7 @@ export function ReviewPanel({
           disabled={busy !== null}
           className="justify-self-start rounded-full border border-line px-4 py-2 text-sm font-medium hover:bg-paper-soft disabled:opacity-60"
         >
-          {busy === "save"
-            ? "Saving..."
-            : status === "APPROVED"
-              ? "Save and update the live article"
-              : "Save edits"}
+          {busy === "save" ? "Saving..." : saveWord}
         </button>
       </section>
 

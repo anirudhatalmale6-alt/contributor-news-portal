@@ -68,6 +68,10 @@ export async function PATCH(req: Request, { params }: Ctx) {
     if (data.bylineName !== undefined && user.role === "CONTRIBUTOR") {
       delete data.bylineName;
     }
+    // Same for the summary in the feed: the desk writes it while reviewing.
+    if (data.dek !== undefined && user.role === "CONTRIBUTOR") {
+      delete data.dek;
+    }
 
     const article = await prisma.article.update({
       where: { id },

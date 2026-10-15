@@ -130,6 +130,7 @@ export default async function ReviewPage({ params }: { params: Promise<{ id: str
               verifiedBonusPct: settings.verifiedBonusPct,
             }}
             authorTier={article.author.tier}
+            aiReady={await aiTranslationReady()}
           />
 
 

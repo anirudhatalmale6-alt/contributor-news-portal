@@ -79,6 +79,7 @@ def check(name, ok, detail=""):
 # Clicking before React has hydrated does nothing at all, and over the internet
 # hydration takes noticeably longer than it does against localhost.
 AI_STUB = os.environ.get("AI_STUB", "") == "1"  # a local stand-in for both AI services
+SMTP_STUB = os.environ.get("SMTP_STUB", "") == "1"  # a local mail server on :2525, inbox on :2526
 SETTLE_MS = 250 if ("127.0.0.1" in BASE or "localhost" in BASE) else 1500
 
 
@@ -255,9 +256,11 @@ def main():
         )
         page.select_option('select[name="language"]', "EN")
         page.fill('input[name="title"]', HEADLINE)
-        page.fill(
-            'input[name="dek"]',
-            "The council spent eleven years refusing to buy it. Then the water came.",
+        # The one-line summary for the feed is the desk's job now: a
+        # contributor is not shown the box at all.
+        check(
+            "a contributor's composer has no summary box",
+            page.locator('input[name="dek"]').count() == 0,
         )
         page.select_option("select", "Culture")
         page.fill(
@@ -398,7 +401,7 @@ def main():
 
         # --- 6b. the editor writes the Bangla version ------------------------
         page.fill('input[placeholder="শিরোনাম"]', BN_HEADLINE)
-        page.fill('input[placeholder="সংক্ষিপ্ত বিবরণ"]', BN_DEK)
+        page.fill('input[name="translation-dek"]', BN_DEK)
         page.fill('textarea[placeholder="অনুবাদ এখানে লিখুন"]', BN_BODY)
         shot(
             page,
@@ -604,10 +607,6 @@ def main():
         page.select_option('select[name="language"]', "EN")
         page.fill('input[name="title"]', BOTH_EN_TITLE)
         page.fill(
-            'input[name="dek"]',
-            "Two years of minutes, and not one of them mentions the cost.",
-        )
-        page.fill(
             "textarea >> nth=0",
             "The committee met eleven times before anyone asked what the ferry would cost to run.\n\n"
             "## What the minutes show\nEvery meeting records the same three items and none of them is the operating subsidy. "
@@ -617,7 +616,6 @@ def main():
         )
         page.click('button:has-text("Add it")')
         page.fill('input[placeholder="শিরোনাম"]', BOTH_BN_TITLE)
-        page.fill('input[placeholder="সংক্ষিপ্ত বিবরণ"]', "দুই বছরের কার্যবিবরণী, একবারও খরচের উল্লেখ নেই।")
         page.fill(
             'textarea[placeholder="এখানে বাংলা সংস্করণ লিখুন"]',
             "ফেরি চালাতে কত খরচ হবে, কমিটির এগারোটি সভার আগে কেউ সে প্রশ্ন করেনি।\n\n"
@@ -1647,6 +1645,15 @@ def main():
         ed3.close()
 
         go(tp, f"{BASE}/dashboard")
+        # Folded to the newest by default; the rest are one press away.
+        folded = tp.locator("section:has(h2:text-is('Updates')) li").count()
+        check("updates show only the newest until opened", folded == 1, str(folded))
+        tp.click('button[name="toggle-updates"]')
+        tp.wait_for_timeout(300)
+        check(
+            "opening them shows the earlier ones, newest first",
+            tp.locator("section:has(h2:text-is('Updates')) li").count() > 1,
+        )
         updates = tp.inner_text("main")
         check(
             "the contributor is told their article was published",
@@ -2225,15 +2232,46 @@ def main():
                 str(shown),
             )
 
+            # And out: the slider's far end fits the whole photograph inside
+            # the frame, which he could not do before.
+            go(ip2, article_url)
+            ip2.wait_for_timeout(SETTLE_MS * 2)
+            far = ip2.locator('input[type="range"]').nth(1).get_attribute("max")
+            ip2.locator('input[type="range"]').nth(1).fill(far)
+            ip2.wait_for_timeout(300)
+            ip2.locator('button:has-text("Save this framing")').nth(1).click()
+            ip2.wait_for_selector("text=Saved.", timeout=20000)
+            ip2.wait_for_timeout(SETTLE_MS * 2)
+            go(ip2, f"{BASE}{live_href}")
+            wait_article(ip2)
+            whole = ip2.evaluate(
+                """() => {
+                     const img = document.querySelector('main figure img');
+                     if (!img) return null;
+                     const frame = img.parentElement.getBoundingClientRect();
+                     const box = img.getBoundingClientRect();
+                     return {
+                       w: Math.round((box.width / frame.width) * 100) / 100,
+                       h: Math.round((box.height / frame.height) * 100) / 100,
+                     };
+                   }"""
+            )
+            check(
+                "zoomed right out, the whole photograph fits inside the frame",
+                bool(whole) and whole["w"] <= 1.0 and whole["h"] <= 1.0 and min(whole["w"], whole["h"]) < 0.97,
+                str(whole),
+            )
+            shot(ip2, "57-zoomed-out.png", scroll="main figure")
+
             go(ip2, article_url)
             ip2.wait_for_timeout(SETTLE_MS)
-            ip2.locator('button:has-text("Use the whole picture")').nth(1).click()
+            ip2.locator('button:text-is("Reset")').nth(1).click()
             ip2.wait_for_timeout(SETTLE_MS)
 
             # Put it back, so the run leaves nothing behind.
             go(ip2, article_url)
             ip2.wait_for_timeout(SETTLE_MS)
-            ip2.locator('button:has-text("Use the whole picture")').first.click()
+            ip2.locator('button:text-is("Reset")').first.click()
             ip2.wait_for_timeout(SETTLE_MS)
         ic.close()
 
@@ -2866,6 +2904,9 @@ def main():
         # can pass the link on by phone. That is where the run reads it from.
         go(rp9, f"{BASE}/dashboard")
         rp9.wait_for_timeout(SETTLE_MS)
+        if rp9.locator('button[name="toggle-updates"]').count():
+            rp9.click('button[name="toggle-updates"]')
+            rp9.wait_for_timeout(300)
         told9 = rp9.inner_text("main")
         found = re.search(r"/reset\?token=[A-Za-z0-9_\-]+", told9)
         check(
@@ -3225,6 +3266,237 @@ def main():
             ak.close()
         else:
             print("NOTE AI_STUB not set, so the AI key checks were skipped (they never call a real service)")
+
+        # --- 10t. Part A: the byline, the summary, polishing, email ---------
+        pa = ctx.browser.new_context(viewport=DESKTOP, http_credentials=GATE)
+        ap = pa.new_page()
+        sign_in(ap, "admin@thedocument.test", STAFF_PASS)
+        roster_a = ap.request.get(f"{BASE}/api/admin/users").json()["users"]
+        maya = next(u for u in roster_a if u["email"] == "maya@thedocument.test")
+        mc = ctx.browser.new_context(viewport=DESKTOP, http_credentials=GATE)
+        mp = mc.new_page()
+        sign_in(mp, "maya@thedocument.test", STAFF_PASS)
+
+        def byline_on_author_page():
+            go(ap, f"{BASE}/en/author/{maya['id']}")
+            return ap.inner_text("main h1").strip()
+
+        # (1) The name on articles is the desk's; the contributor's own name is theirs.
+        printed = byline_on_author_page()
+        go(mp, f"{BASE}/dashboard/profile")
+        check(
+            "a contributor sees the name on their articles but cannot edit it",
+            mp.locator('[data-field="publicName"]').count() == 1
+            and mp.locator('input[name="publicName"]').count() == 0,
+        )
+        r = mp.request.put(
+            f"{BASE}/api/profile",
+            data={"name": "Maya Iyer", "publicName": "Hijacked Byline"},
+        )
+        check(
+            "and sending one to the server anyway changes nothing",
+            r.status == 200 and byline_on_author_page() == printed,
+            f"{r.status} {byline_on_author_page()}",
+        )
+        mp.request.put(f"{BASE}/api/profile", data={"name": "Maya (account name)"})
+        check(
+            "renaming their own account does not rename their byline",
+            byline_on_author_page() == printed,
+            byline_on_author_page(),
+        )
+        mp.request.put(f"{BASE}/api/profile", data={"name": "Maya Iyer"})
+
+        go(ap, f"{BASE}/people/{maya['id']}")
+        ap.wait_for_timeout(SETTLE_MS)
+        ap.fill('input[name="publicName"]', "Maya Iyer, Staff Correspondent")
+        ap.click('button:has-text("Save profile")')
+        ap.wait_for_timeout(SETTLE_MS * 3)
+        check(
+            "an editor can change the name on someone's articles",
+            byline_on_author_page() == "Maya Iyer, Staff Correspondent",
+            byline_on_author_page(),
+        )
+        shot(ap, "58-byline-set-by-desk.png")
+        go(ap, f"{BASE}/people/{maya['id']}")
+        ap.wait_for_timeout(SETTLE_MS)
+        ap.fill('input[name="publicName"]', printed)
+        ap.click('button:has-text("Save profile")')
+        ap.wait_for_timeout(SETTLE_MS * 3)
+
+        # (3) and (10): the AI writes the summary, polishes, and follows his words.
+        if AI_STUB:
+            ap.request.get("http://127.0.0.1:3999/_reset")
+            ap.request.put(
+                f"{BASE}/api/admin/ai-key",
+                data={"provider": "OPENAI", "key": "sk-proj-good-stub-key-for-part-a-cd34"},
+            )
+            go(ap, f"{BASE}/admin")
+            ap.wait_for_timeout(SETTLE_MS)
+            check(
+                "Settings has an instruction box for every AI job",
+                all(
+                    ap.locator(f'textarea[name="ai-{k}"]').count() == 1
+                    for k in ("toEnglish", "toBangla", "summary", "polish")
+                ),
+            )
+            shipped_en = ap.input_value('textarea[name="ai-toEnglish"]')
+            check(
+                "the English translation starts from his own wording",
+                "professional, journalistic English version" in shipped_en,
+                shipped_en[:80],
+            )
+            ap.fill('textarea[name="ai-toEnglish"]', "CUSTOM-TONE: write it the way a wire service would.")
+            ap.click('button[name="save-ai-instructions"]')
+            ap.wait_for_selector("text=Instructions saved", timeout=20000)
+
+            # A contributor files a piece, with no summary, as they now must.
+            made = mp.request.post(f"{BASE}/api/drafts", data={"language": "BN"}).json()["article"]
+            mp.request.patch(
+                f"{BASE}/api/drafts/{made['id']}",
+                data={
+                    "title": f"নদীভাঙনে বিলীন তিন গ্রাম {STAMP}",
+                    "body": "যমুনার ভাঙনে গত এক সপ্তাহে তিনটি গ্রামের দুই শতাধিক পরিবার ঘর হারিয়েছে। "
+                    "স্থানীয়রা বলছেন, বাঁধ মেরামতের কাজ তিন বছর ধরে আটকে আছে।",
+                    "category": "Politics",
+                },
+            )
+            sub = mp.request.post(
+                f"{BASE}/api/drafts/{made['id']}/submit", data={"contactPhone": "01711000111"}
+            )
+            check("the contributor's piece goes in without a summary", sub.status == 200, str(sub.status))
+
+            # The summary is written once they have their answer.
+            go(ap, f"{BASE}/editorial/{made['id']}")
+            dek_now = ""
+            for _ in range(10):
+                ap.wait_for_timeout(1000)
+                go(ap, f"{BASE}/editorial/{made['id']}")
+                dek_now = ap.input_value('input[name="dek"]')
+                if dek_now:
+                    break
+            check(
+                "the AI has written the feed summary by the time an editor opens it",
+                dek_now == "Stubbed feed summary that adds a fact.",
+                dek_now,
+            )
+
+            ap.fill('input[name="dek"]', "")
+            ap.click('button[name="ai-summary"]')
+            ap.wait_for_selector("text=Summary written", timeout=30000)
+            check(
+                "Write with AI fills an empty summary box for the editor to check",
+                ap.input_value('input[name="dek"]') == "Stubbed feed summary that adds a fact.",
+            )
+
+            ap.once("dialog", lambda d: d.accept())
+            ap.click('button[name="ai-polish"]')
+            ap.wait_for_selector("text=Polished", timeout=30000)
+            check(
+                "Polish with AI replaces the text in the box, unsaved, for the editor to read",
+                "Stubbed polished first paragraph" in ap.locator("textarea").first.input_value(),
+            )
+            shot(ap, "59-ai-summary-and-polish.png")
+
+            # The translate button now carries his instruction, with the
+            # fact rules after it.
+            if ap.locator('button[name="draft-translation"]').count():
+                ap.once("dialog", lambda d: d.accept())
+                ap.click('button[name="draft-translation"]')
+                ap.wait_for_selector("text=Draft ready", timeout=30000)
+            sent = ap.request.get("http://127.0.0.1:3999/_seen").json()
+            jobs = {r.get("job") for r in sent if r.get("path") == "/v1/responses"}
+            trans = [r for r in sent if r.get("job") == "translation"]
+            check(
+                "every AI job went to the service in the shape it expects",
+                {"summary", "polish", "translation"} <= jobs
+                and all(r["problems"] == [] for r in sent if r.get("path") == "/v1/responses"),
+                str([(r.get("job"), r.get("problems")) for r in sent if r.get("path") == "/v1/responses"]),
+            )
+            check(
+                "the translation used his instruction, with the rules that keep facts straight after it",
+                bool(trans)
+                and "CUSTOM-TONE" in trans[-1]["instructions"]
+                and "Never add a fact" in trans[-1]["instructions"],
+                trans[-1]["instructions"][:200] if trans else "no translation request",
+            )
+
+            # Put everything back.
+            go(ap, f"{BASE}/admin")
+            ap.wait_for_timeout(SETTLE_MS)
+            ap.click('#ai-instructions button:has-text("Back to the original wording")')
+            ap.click('button[name="save-ai-instructions"]')
+            ap.wait_for_selector("text=Instructions saved", timeout=20000)
+            ap.request.delete(f"{BASE}/api/admin/ai-key")
+            ap.request.delete(f"{BASE}/api/drafts/{made['id']}")
+        else:
+            print("NOTE AI_STUB not set, so the summary and polish checks were skipped")
+
+        # (7) Reset links by email, through a mailbox he sets in Settings.
+        if SMTP_STUB:
+            ap.request.get("http://127.0.0.1:2526/_reset")
+            go(ap, f"{BASE}/admin")
+            ap.wait_for_timeout(SETTLE_MS)
+            check("Settings has an Email sending box", ap.locator("#mailbox").count() == 1)
+            ap.fill('input[name="smtpHost"]', "127.0.0.1")
+            ap.fill('input[name="smtpPort"]', "2525")
+            ap.fill('input[name="smtpUser"]', "no-reply@thedocument.test")
+            ap.fill('input[name="smtpPass"]', "wrong-password")
+            ap.click('button[name="save-mailbox"]')
+            ap.wait_for_selector("text=address or password is wrong", timeout=30000)
+            check("a wrong mailbox password is caught before it is kept", True)
+
+            ap.fill('input[name="smtpPass"]', "right-password")
+            ap.click('button[name="save-mailbox"]')
+            ap.wait_for_selector("text=The mail server accepted", timeout=30000)
+            ap.wait_for_timeout(SETTLE_MS)
+            go(ap, f"{BASE}/admin")
+            check(
+                "the mailbox is kept, and its password is never shown again",
+                "Sending from no-reply@thedocument.test" in ap.inner_text("#mailbox")
+                and ap.input_value('input[name="smtpPass"]') == ""
+                and "right-password" not in ap.content(),
+            )
+            ap.click('button[name="test-mailbox"]')
+            ap.wait_for_selector("text=Sent to", timeout=30000)
+            inbox = ap.request.get("http://127.0.0.1:2526/_mail").json()
+            check(
+                "the test email reaches the owner",
+                any("admin@thedocument.test" in m["to"] for m in inbox),
+                str([m["to"] for m in inbox]),
+            )
+
+            fc_a = ctx.browser.new_context(viewport=DESKTOP, http_credentials=GATE)
+            fp_a = fc_a.new_page()
+            go(fp_a, f"{BASE}/forgot")
+            fp_a.fill('input[type="email"]', "maya@thedocument.test")
+            fp_a.click('button[type="submit"]')
+            fp_a.wait_for_selector("text=on its way", timeout=20000)
+            mail = [m for m in ap.request.get("http://127.0.0.1:2526/_mail").json() if "maya@thedocument.test" in m["to"]]
+            link = re.search(r"/reset\?token=[A-Za-z0-9_\-]+", mail[-1]["body"]) if mail else None
+            check(
+                "a contributor who forgets their password gets the link in their own inbox",
+                bool(link) and "The Document" in mail[-1]["header_from"],
+                str(mail[-1] if mail else "no email"),
+            )
+            if link:
+                go(fp_a, f"{BASE}{link.group(0)}")
+                fp_a.fill('input[name="password"]', STAFF_PASS)
+                fp_a.fill('input[name="again"]', STAFF_PASS)
+                fp_a.click('button[type="submit"]')
+                fp_a.wait_for_selector("text=Done.", timeout=20000)
+                sign_in(fp_a, "maya@thedocument.test", STAFF_PASS)
+                check("and the emailed link really resets it", "/dashboard" in fp_a.url, fp_a.url)
+            fc_a.close()
+
+            go(ap, f"{BASE}/admin")
+            ap.wait_for_timeout(SETTLE_MS)
+            ap.click('button[name="remove-mailbox"]')
+            ap.wait_for_selector("text=Mailbox removed", timeout=20000)
+        else:
+            print("NOTE SMTP_STUB not set, so the email checks were skipped")
+
+        mc.close()
+        pa.close()
 
         # --- 11. mobile ------------------------------------------------------
         mob = ctx.browser.new_context(viewport=PHONE, device_scale_factor=2, http_credentials=GATE)

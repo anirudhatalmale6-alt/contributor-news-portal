@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 
 export type ProfileFields = {
   name: string;
+  /** The name on their articles. Only an editor's form can change it. */
+  publicName: string;
   bio: string;
   publicEmail: string;
   phone: string;
@@ -27,6 +29,7 @@ export function ProfileForm({
   photoEndpoint,
   heading,
   note,
+  staff = false,
 }: {
   initial: ProfileFields;
   /** Where the text fields go: the self endpoint or the staff one. */
@@ -35,6 +38,8 @@ export function ProfileForm({
   photoEndpoint: string;
   heading: string;
   note?: string;
+  /** An editor editing someone else: may change the name on their articles. */
+  staff?: boolean;
 }) {
   const router = useRouter();
   const [form, setForm] = useState(initial);
@@ -59,6 +64,7 @@ export function ProfileForm({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         name: form.name,
+        ...(staff ? { publicName: form.publicName } : {}),
         bio: form.bio,
         publicEmail: form.publicEmail,
         phone: form.phone,
@@ -142,11 +148,56 @@ export function ProfileForm({
         </div>
       </div>
 
-      <label className="grid gap-1 text-sm">
-        <span className="font-medium">Name shown on articles</span>
-        <input name="name" value={form.name} onChange={set("name")} className={field} />
-        {error("name") ? <span className="text-xs text-rose-700">{error("name")}</span> : null}
-      </label>
+      {staff ? (
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label className="grid gap-1 text-sm">
+            <span className="font-medium">Name shown on articles</span>
+            <input
+              name="publicName"
+              value={form.publicName}
+              onChange={set("publicName")}
+              className={field}
+            />
+            <span className="text-xs text-ink-soft">
+              Readers see this. Only editors and admins can change it.
+            </span>
+            {error("publicName") ? (
+              <span className="text-xs text-rose-700">{error("publicName")}</span>
+            ) : null}
+          </label>
+          <label className="grid gap-1 text-sm">
+            <span className="font-medium">Their own name</span>
+            <input name="name" value={form.name} onChange={set("name")} className={field} />
+            <span className="text-xs text-ink-soft">
+              The name they gave when signing up. For the newsroom, not printed.
+            </span>
+            {error("name") ? <span className="text-xs text-rose-700">{error("name")}</span> : null}
+          </label>
+        </div>
+      ) : (
+        <>
+          <div className="grid gap-1 text-sm">
+            <span className="font-medium">Name shown on articles</span>
+            <p
+              data-field="publicName"
+              className="rounded-lg border border-line bg-paper-soft px-3 py-2.5 text-sm"
+            >
+              {form.publicName || form.name}
+            </p>
+            <span className="text-xs text-ink-soft">
+              Set by the editors. Ask them through Contact the editors if it needs changing.
+            </span>
+          </div>
+          <label className="grid gap-1 text-sm">
+            <span className="font-medium">Your name</span>
+            <input name="name" value={form.name} onChange={set("name")} className={field} />
+            <span className="text-xs text-ink-soft">
+              For the newsroom. Changing it does not change the name on your articles.
+            </span>
+            {error("name") ? <span className="text-xs text-rose-700">{error("name")}</span> : null}
+          </label>
+        </>
+      )}
 
       <label className="grid gap-1 text-sm">
         <span className="font-medium">Short introduction</span>

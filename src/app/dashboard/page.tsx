@@ -126,6 +126,8 @@ export default async function DashboardPage() {
             unreadNew: s("desk.unreadNew", { n: "{n}" }),
             markAllRead: s("desk.markAllRead"),
             marking: s("desk.marking"),
+            showEarlier: s("desk.showEarlier", { n: "{n}" }),
+            showFewer: s("desk.showFewer"),
           }}
           notes={notes.map((n) => ({
             id: n.id,

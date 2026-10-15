@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { canChangeRole, errorResponse, HttpError, requireStaff } from "@/lib/rbac";
-import { profileData, profileSchema } from "@/lib/profile";
+import { profileData, profileSchema, publicNameField } from "@/lib/profile";
+import { refreshPublicPages } from "@/lib/revalidate";
 import { saveUpload } from "@/lib/storage";
 
 type Ctx = { params: Promise<{ id: string }> };
@@ -62,20 +63,24 @@ export async function PATCH(req: Request, { params }: Ctx) {
     const { id } = await params;
     await editable(actor.role, actor.id, id);
 
-    const parsed = profileSchema.safeParse(await req.json());
+    // The byline is the one field only staff may set, so it is validated here
+    // and never accepted by the contributor's own endpoint.
+    const parsed = profileSchema.extend({ publicName: publicNameField.optional() }).safeParse(await req.json());
     if (!parsed.success) {
       return Response.json(
         { error: "Check the form", issues: parsed.error.flatten().fieldErrors },
         { status: 422 },
       );
     }
+    const { publicName, ...rest } = parsed.data;
 
     const user = await prisma.user.update({
       where: { id },
-      data: profileData(parsed.data),
+      data: { ...profileData(rest), ...(publicName !== undefined ? { publicName } : {}) },
       select: {
         id: true,
         name: true,
+        publicName: true,
         image: true,
         bio: true,
         publicEmail: true,
@@ -86,6 +91,8 @@ export async function PATCH(req: Request, { params }: Ctx) {
         location: true,
       },
     });
+    // Every byline of theirs on the public site changes with it.
+    await refreshPublicPages();
     return Response.json({ user });
   } catch (err) {
     return errorResponse(err);

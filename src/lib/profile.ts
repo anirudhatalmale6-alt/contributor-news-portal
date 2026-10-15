@@ -11,6 +11,9 @@ export const phoneField = z
     message: "Use an 11-digit number starting with 01",
   });
 
+/** Only an editor or admin may set this: it is the byline readers see. */
+export const publicNameField = z.string().trim().min(2, "At least two letters").max(80);
+
 /** The fields a contributor (or a senior colleague) may edit on a profile. */
 export const profileSchema = z.object({
   name: z.string().trim().min(2).max(80).optional(),

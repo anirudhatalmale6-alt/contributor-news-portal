@@ -28,7 +28,7 @@ export type LocalisedArticle = {
   author: { id?: string; name: string; tier: string; bio?: string | null };
 };
 
-const AUTHOR = { select: { id: true, name: true, tier: true, bio: true } } as const;
+const AUTHOR = { select: { id: true, name: true, publicName: true, tier: true, bio: true } } as const;
 
 function pick(
   article: {
@@ -44,7 +44,7 @@ function pick(
     coverCropArticle: string | null;
     publishedAt: Date | null;
     language: Locale;
-    author: { id?: string; name: string; tier: string; bio?: string | null };
+    author: { id?: string; name: string; publicName?: string | null; tier: string; bio?: string | null };
     translations: {
       locale: Locale;
       slug: string;
@@ -59,9 +59,12 @@ function pick(
   // A desk filing carries whatever name the editor put on it; a contributor's
   // own piece always carries theirs. Deciding it here means every screen that
   // shows a byline shows the same one.
+  // The account's own name is never printed: readers see the name the desk
+  // set, which starts out the same.
+  const { publicName, ...account } = article.author;
   const byline = article.bylineName?.trim()
     ? { name: article.bylineName.trim(), tier: "GENERAL" as const }
-    : article.author;
+    : { ...account, name: publicName?.trim() || account.name };
 
   const base = {
     id: article.id,

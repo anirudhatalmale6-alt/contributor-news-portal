@@ -42,7 +42,10 @@ export async function PUT(req: Request, { params }: Ctx) {
         { status: 422 },
       );
     }
-    const { title, dek, body } = parsed.data;
+    const { title, body } = parsed.data;
+    // A contributor no longer has the summary box, so whatever they send is
+    // left alone rather than wiping a summary the desk has written.
+    const dek = user.role === "CONTRIBUTOR" ? undefined : parsed.data.dek;
     const locale = other(article.language);
 
     const existing = await prisma.articleTranslation.findUnique({
@@ -64,7 +67,13 @@ export async function PUT(req: Request, { params }: Ctx) {
         slug,
         translatorId: user.id,
       },
-      update: { title, dek: dek ?? null, body, slug, translatorId: user.id },
+      update: {
+        title,
+        ...(dek !== undefined ? { dek: dek || null } : {}),
+        body,
+        slug,
+        translatorId: user.id,
+      },
     });
 
     return Response.json({ translation });

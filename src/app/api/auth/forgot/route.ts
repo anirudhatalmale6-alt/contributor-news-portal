@@ -36,16 +36,26 @@ export async function POST(req: Request) {
       const base = process.env.SITE_URL || new URL(req.url).origin;
       const link = await createResetLink(user.id, base);
 
-      if (mailReady()) {
-        await sendMail({
-          to: user.email,
-          subject: "Set a new password for The Document",
-          text:
-            `Somebody asked to reset the password for your account.\n\n${link}\n\n` +
-            `The link works once and stops working in an hour. If this was not you, ` +
-            `ignore this message - nothing has changed.`,
-        });
-      } else {
+      // Email if the site has a mailbox and the email goes; otherwise, or if
+      // sending fails, the desk is told so an admin can pass the link on. A
+      // reset request must never just disappear.
+      let emailed = false;
+      if (await mailReady()) {
+        try {
+          await sendMail({
+            to: user.email,
+            subject: "Set a new password for The Document",
+            text:
+              `Somebody asked to reset the password for your account.\n\n${link}\n\n` +
+              `The link works once and stops working in an hour. If this was not you, ` +
+              `ignore this message - nothing has changed.`,
+          });
+          emailed = true;
+        } catch (err) {
+          console.warn(`reset email failed - ${err instanceof Error ? err.message : "unknown"}`);
+        }
+      }
+      if (!emailed) {
         const admins = await prisma.user.findMany({
           where: { role: { in: ["ADMIN", "SUPERADMIN"] }, suspendedAt: null },
           select: { id: true },

@@ -11,6 +11,10 @@ import { SettingsForm } from "./settings-form";
 import { NoticeComposer } from "../people/notice-composer";
 import { SiteForm } from "./site-form";
 import { AiKeyForm } from "./ai-key-form";
+import { AiInstructionsForm } from "./ai-instructions-form";
+import { MailboxForm } from "./mailbox-form";
+import { mailboxSummary } from "@/lib/mail";
+import { DEFAULT_INSTRUCTIONS, instructions } from "@/lib/ai-tasks";
 import { aiKeySummary } from "@/lib/ai-config";
 
 export const metadata = { title: "Admin" };
@@ -52,6 +56,8 @@ export default async function AdminPage() {
 
   const waiting = await prisma.article.count({ where: { status: "SUBMITTED" } });
   const aiSummary = await aiKeySummary();
+  const aiWords = await instructions();
+  const mail = await mailboxSummary();
 
   return (
     <>
@@ -106,6 +112,8 @@ export default async function AdminPage() {
         </div>
 
         <AiKeyForm summary={aiSummary} />
+        <AiInstructionsForm current={aiWords} shipped={{ ...DEFAULT_INSTRUCTIONS }} />
+        <MailboxForm summary={mail} />
 
         <SettingsForm
           settings={{

@@ -288,14 +288,19 @@ export function Composer({
         className="w-full border-b border-line pb-2 font-serif text-2xl font-bold outline-none placeholder:text-ink-soft/50 focus:border-navy disabled:bg-transparent sm:text-3xl"
       />
 
-      <input
-        name="dek"
-        value={form.dek}
-        onChange={(e) => update("dek", e.target.value)}
-        disabled={locked}
-        placeholder={w("compose.dek")}
-        className="w-full rounded-lg border border-line px-3 py-2.5 text-sm outline-none focus:border-navy"
-      />
+      {/* The one-line summary for the feed is the desk's job: an editor writes
+          it, or has the AI write it, while reviewing. A contributor never sees
+          the box, so they are not asked to do a sub-editor's work. */}
+      {isStaff ? (
+        <input
+          name="dek"
+          value={form.dek}
+          onChange={(e) => update("dek", e.target.value)}
+          disabled={locked}
+          placeholder={w("compose.dek")}
+          className="w-full rounded-lg border border-line px-3 py-2.5 text-sm outline-none focus:border-navy"
+        />
+      ) : null}
 
       {/* The desk often files a piece on behalf of a correspondent. A
           contributor never needs this: their own name is the byline. */}
@@ -507,6 +512,7 @@ export function Composer({
         locked={locked}
         initial={secondKey === 0 ? secondVersion : null}
         beforeSave={() => save(true)}
+        isStaff={isStaff}
       />
 
       {/* The same two actions again at the foot. A writer finishes at the
@@ -557,7 +563,9 @@ function SecondVersion({
   locked,
   initial,
   beforeSave,
+  isStaff,
 }: {
+  isStaff: boolean;
   articleId: string;
   otherName: string;
   otherLang: string;
@@ -654,14 +662,16 @@ function SecondVersion({
             placeholder={otherLang === "bn" ? "শিরোনাম" : "Headline"}
             className="w-full rounded-lg border border-line px-3 py-2 font-serif text-base font-bold outline-none focus:border-navy"
           />
-          <input
-            value={form.dek}
-            lang={otherLang}
-            disabled={locked}
-            onChange={(e) => setForm({ ...form, dek: e.target.value })}
-            placeholder={otherLang === "bn" ? "সংক্ষিপ্ত বিবরণ" : "Standfirst"}
-            className="w-full rounded-lg border border-line px-3 py-2 text-sm outline-none focus:border-navy"
-          />
+          {isStaff ? (
+            <input
+              value={form.dek}
+              lang={otherLang}
+              disabled={locked}
+              onChange={(e) => setForm({ ...form, dek: e.target.value })}
+              placeholder={otherLang === "bn" ? "সংক্ষিপ্ত বিবরণ" : "Standfirst"}
+              className="w-full rounded-lg border border-line px-3 py-2 text-sm outline-none focus:border-navy"
+            />
+          ) : null}
           <textarea
             value={form.body}
             lang={otherLang}

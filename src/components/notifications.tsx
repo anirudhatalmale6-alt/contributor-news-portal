@@ -44,10 +44,20 @@ export function Notifications({
   notes: Note[];
   /** The headings and the button, handed down so this screen can be in either
       language without reaching for the database from the browser. */
-  words: { updates: string; unreadNew: string; markAllRead: string; marking: string };
+  words: {
+    updates: string;
+    unreadNew: string;
+    markAllRead: string;
+    marking: string;
+    showEarlier: string;
+    showFewer: string;
+  };
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
+  // Folded to the newest one by default: a long list pushed the writer's own
+  // articles off the first screen of their desk.
+  const [open, setOpen] = useState(false);
   const unread = notes.filter((n) => !n.read).length;
 
   if (notes.length === 0) return null;
@@ -81,7 +91,7 @@ export function Notifications({
       </div>
 
       <ul className="divide-y divide-line">
-        {notes.map((n) => {
+        {(open ? notes : notes.slice(0, 1)).map((n) => {
           const row = (
             <>
               <span className="flex items-start gap-2.5">
@@ -114,6 +124,18 @@ export function Notifications({
           );
         })}
       </ul>
+
+      {notes.length > 1 ? (
+        <button
+          type="button"
+          name="toggle-updates"
+          aria-expanded={open}
+          onClick={() => setOpen((o) => !o)}
+          className="block w-full border-t border-line px-4 py-2.5 text-left text-xs font-medium text-navy hover:bg-paper-soft"
+        >
+          {open ? words.showFewer : words.showEarlier.replace("{n}", String(notes.length - 1))}
+        </button>
+      ) : null}
     </section>
   );
 }
