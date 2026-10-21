@@ -2960,7 +2960,7 @@ def main():
         go(sp, f"{BASE}/en/section/culture")
         order = sp.evaluate(
             """() => {
-                 const lead = document.querySelector('main article');
+                 const lead = document.querySelector('main [data-block="lead"]');
                  if (!lead) return 'NO LEAD';
                  const kids = [...lead.querySelectorAll('h2, img')].map((n) => n.tagName);
                  return kids.join(',');
@@ -2972,26 +2972,48 @@ def main():
             order,
         )
         check(
-            "the stories beside the lead fill the column that used to be empty",
-            sp.locator('main aside:not([aria-label="Advertisement"]) a').count() >= 2,
-            str(sp.locator('main aside:not([aria-label="Advertisement"]) a').count()),
-        )
-        # The grid under the lead carries whatever the lead and the column
-        # beside it did not take, and is absent when they took everything. The
-        # count comes from the page itself: the public list counts both
-        # languages, and the English page can only show the English ones.
-        on_page = len(
-            {
-                a.get_attribute("href")
-                for a in sp.locator('main a[href*="/article/"]').all()
-            }
+            "a column of headlines runs down the left, The Hindu's way",
+            sp.locator('main [data-block="left"] article').count() >= 2,
+            str(sp.locator('main [data-block="left"] article').count()),
         )
         check(
-            "the rest of the section runs in a grid under its own heading",
-            # inner_text gives back what the reader sees, and the heading is
-            # set in capitals by the stylesheet.
-            ("more in culture" in sp.inner_text("main").lower()) == (on_page > 1 + int(rail_was)),
-            f"{on_page} pieces on the page, {rail_was} beside the lead",
+            "and the newest pieces from the whole paper run down the right",
+            sp.locator('main [data-block="latest"] li').count() >= 2,
+            str(sp.locator('main [data-block="latest"] li').count()),
+        )
+        # Every story on the page appears exactly once, in the order of
+        # prominence: lead, under the lead, the left column, the row of four,
+        # then the list - and the list only exists when the blocks above it
+        # have taken their share. Counted from this section's own blocks,
+        # because "Latest news" deliberately shows other sections.
+        blocks = ["lead", "under-lead", "left", "cards", "list"]
+        seen_hrefs = []
+        for blk in blocks:
+            for a in sp.locator(f'main [data-block="{blk}"] h2 a, main [data-block="{blk}"] a:has(h2)').all():
+                seen_hrefs.append(a.get_attribute("href"))
+        check(
+            "no story is shown twice in the section's own blocks",
+            len(seen_hrefs) == len(set(seen_hrefs)) and len(seen_hrefs) > 0,
+            f"{len(seen_hrefs)} links, {len(set(seen_hrefs))} distinct",
+        )
+        in_list = sp.locator('main [data-block="list"] article').count()
+        in_cards = sp.locator('main [data-block="cards"] article').count()
+        check(
+            "the list of more stories only starts once the row of four is full",
+            in_list == 0 or in_cards == 4,
+            f"cards={in_cards} list={in_list}",
+        )
+        check(
+            "and it carries its own heading when it is there",
+            (in_list == 0) or ("more stories from culture" in sp.inner_text("main").lower()),
+        )
+        latest_hrefs = {
+            a.get_attribute("href") for a in sp.locator('main [data-block="latest"] a').all()
+        }
+        check(
+            "the latest-news column does not repeat what the page already shows",
+            not (latest_hrefs & set(seen_hrefs)),
+            str(latest_hrefs & set(seen_hrefs)),
         )
         shot(sp, "55-section-page.png")
 
@@ -3003,11 +3025,11 @@ def main():
         sp.wait_for_selector("text=Refresh the public site", timeout=20000)
         sp.wait_for_timeout(SETTLE_MS)
         go(sp, f"{BASE}/en/section/culture")
-        beside = sp.locator('main aside:not([aria-label="Advertisement"]) a').count()
+        beside = sp.locator('main [data-block="left"] article').count()
         check(
             "the owner's limit for the section page is obeyed",
             beside == 1,
-            f"{beside} beside the lead with the limit set to 1",
+            f"{beside} in the left column with the limit set to 1",
         )
         go(sp, f"{BASE}/admin")
         sp.wait_for_timeout(SETTLE_MS)
@@ -3038,7 +3060,7 @@ def main():
             go(sp, f"{BASE}/en/section/culture")
             # By link, not by headline: two test pieces can share the first few
             # words of a title, and the address is what actually identifies one.
-            lead_href = sp.locator("main article a").first.get_attribute("href") or ""
+            lead_href = sp.locator('main [data-block="lead"] a[href*="/article/"]').first.get_attribute("href") or ""
             check(
                 "the piece the desk chose leads its section page",
                 pick["slug"] in lead_href,
@@ -3046,10 +3068,8 @@ def main():
             )
             check(
                 "and it is not repeated in the column beside itself",
-                sp.locator(
-                    f'main aside:not([aria-label="Advertisement"]) a[href*="{pick["slug"]}"]'
-                ).count()
-                == 0,
+                sp.locator(f'main [data-block="left"] a[href*="{pick["slug"]}"]').count() == 0
+                and sp.locator(f'main [data-block="under-lead"] a[href*="{pick["slug"]}"]').count() == 0,
             )
             # Take it off again: the newest piece leads when nobody chooses.
             go(sp, f"{BASE}/editorial/{pick['id']}")
@@ -3058,7 +3078,7 @@ def main():
             sp.wait_for_selector("text=Taken off the top", timeout=20000)
             sp.wait_for_timeout(SETTLE_MS * 2)
             go(sp, f"{BASE}/en/section/culture")
-            back = sp.locator("main article a").first.get_attribute("href") or ""
+            back = sp.locator('main [data-block="lead"] a[href*="/article/"]').first.get_attribute("href") or ""
             check(
                 "taking it off hands the section back to the newest piece",
                 culture[0]["slug"] in back,

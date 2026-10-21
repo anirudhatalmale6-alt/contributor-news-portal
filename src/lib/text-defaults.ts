@@ -77,10 +77,16 @@ export const TEXT_DEFAULTS: Record<string, TextEntry> = {
   // --- Front page ---------------------------------------------------------
   "feed.alsoToday": { group: "Front page", en: "Also today", bn: "আজকের আরও খবর", note: "Heading over the left-hand column" },
   "feed.featured": { group: "Front page", en: "Featured", bn: "নির্বাচিত", note: "Heading over the right-hand column" },
+  "feed.latestNews": {
+    group: "Front page",
+    en: "Latest news",
+    bn: "সর্বশেষ সংবাদ",
+    note: "The running list of the newest pieces from every section, down the right of a section page",
+  },
   "feed.moreInSection": {
     group: "Front page",
-    en: "More in {name}",
-    bn: "{name} বিভাগের আরও",
+    en: "More stories from {name}",
+    bn: "{name} বিভাগের আরও খবর",
     note: "Above the grid at the foot of a section page. {name} is the section",
   },
   "feed.moreFromContributors": {

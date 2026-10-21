@@ -267,8 +267,8 @@ export function SiteForm({ settings }: { settings: Site }) {
             ["maxLeftRail", "Front page: left column"],
             ["maxRightRail", "Front page: right column"],
             ["maxMoreGrid", "Front page: grid at the foot"],
-            ["maxSectionRail", "Section page: beside the lead"],
-            ["maxSectionGrid", "Section page: grid underneath"],
+            ["maxSectionRail", "Section page: left column"],
+            ["maxSectionGrid", "Section page: more stories list"],
             ["maxRelated", "Article page: more on this"],
           ] as const).map(([key, label]) => (
             <label key={key} className="grid gap-1 text-sm">

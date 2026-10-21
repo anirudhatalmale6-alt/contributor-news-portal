@@ -29,7 +29,8 @@ export function readingTime(body: string) {
   return Math.max(1, Math.round(words / 220));
 }
 
-export function timeAgo(date: Date | string) {
+/** "17 minutes ago", or in Bangla "১৭ মিনিট আগে" with Bangla digits. */
+export function timeAgo(date: Date | string, locale: "EN" | "BN" = "EN") {
   const d = typeof date === "string" ? new Date(date) : date;
   const secs = Math.round((Date.now() - d.getTime()) / 1000);
   const steps: [number, string][] = [
@@ -49,8 +50,8 @@ export function timeAgo(date: Date | string) {
     value = Math.round(value / size);
     unit = name;
   }
-  if (unit === "second" && Math.abs(value) < 45) return "just now";
-  const rtf = new Intl.RelativeTimeFormat("en", { numeric: "auto" });
+  if (unit === "second" && Math.abs(value) < 45) return locale === "BN" ? "এইমাত্র" : "just now";
+  const rtf = new Intl.RelativeTimeFormat(locale === "BN" ? "bn" : "en", { numeric: "auto" });
   return rtf.format(-value, unit as Intl.RelativeTimeFormatUnit);
 }
 
