@@ -3593,6 +3593,109 @@ def main():
         check("a page can be deleted", pgp.request.get(f"{BASE}/en/p/{slug_now}").status == 404)
         pg_c.close()
 
+        # --- 10v. adding, renaming, reordering and removing sections ---------
+        sc_c = ctx.browser.new_context(viewport=DESKTOP, http_credentials=GATE)
+        scp = sc_c.new_page()
+        sign_in(scp, "admin@thedocument.test", STAFF_PASS)
+        go(scp, f"{BASE}/admin/sections")
+        check(
+            "admins have a Sections screen listing every section",
+            scp.locator("tr[data-section]").count() >= 14
+            and scp.locator('tr[data-section="General"]').count() == 1,
+            str(scp.locator("tr[data-section]").count()),
+        )
+        new_en = f"Sport {STAMP}"
+        new_bn = f"খেলা {STAMP}"
+        scp.fill('input[name="new-bn"]', new_bn)
+        scp.fill('input[name="new-en"]', new_en)
+        scp.click('button[name="add-section"]')
+        scp.wait_for_load_state("load")
+        scp.wait_for_timeout(SETTLE_MS * 2)
+        go(scp, f"{BASE}/admin/sections")
+        row = scp.locator(f'tr:has(input[value="{new_en}"])')
+        new_key = row.get_attribute("data-section")
+        new_slug = scp.input_value(f'input[name="slug-{new_key}"]')
+        check("a new section can be added", bool(new_key) and new_slug.startswith("sport"), f"{new_key} {new_slug}")
+        keys_in_order = [r.get_attribute("data-section") for r in scp.locator("tr[data-section]").all()]
+        check(
+            "it goes in just before General, which stays last",
+            keys_in_order[-1] == "General" and keys_in_order[-2] == new_key,
+            str(keys_in_order[-3:]),
+        )
+
+        go(scp, f"{BASE}/en")
+        check(
+            "the new section is in the English menu straight away",
+            scp.locator(f'nav a[href="/en/section/{new_slug}"]:has-text("{new_en}")').count() == 1,
+        )
+        go(scp, BASE)
+        check(
+            "and in the Bangla menu, under its Bangla name",
+            scp.locator(f'nav a[href="/section/{new_slug}"]:has-text("{new_bn}")').count() == 1,
+        )
+        r = scp.request.get(f"{BASE}/en/section/{new_slug}")
+        check("its page exists even while it is empty", r.status == 200, str(r.status))
+
+        # Rename it, move it up one, take it out of the menu.
+        go(scp, f"{BASE}/admin/sections")
+        scp.fill(f'input[name="en-{new_key}"]', f"Sports {STAMP}")
+        scp.click(f'tr[data-section="{new_key}"] button[aria-label^="Move"][aria-label$="up"]')
+        scp.click('button[name="save-sections"]')
+        scp.wait_for_selector("text=Sections saved", timeout=20000)
+        scp.wait_for_timeout(SETTLE_MS)
+        go(scp, f"{BASE}/en")
+        menu = [a.inner_text().strip() for a in scp.locator('nav a[href^="/en/section/"]').all()]
+        check(
+            "a renamed section shows its new name, in its new place",
+            f"Sports {STAMP}" in menu and menu.index(f"Sports {STAMP}") == len(menu) - 2,
+            str(menu[-3:]),
+        )
+        go(scp, f"{BASE}/admin/sections")
+        scp.uncheck(f'input[name="menu-{new_key}"]')
+        scp.click('button[name="save-sections"]')
+        scp.wait_for_selector("text=Sections saved", timeout=20000)
+        scp.wait_for_timeout(SETTLE_MS)
+        go(scp, f"{BASE}/en")
+        check(
+            "a section taken out of the menu leaves the menu",
+            scp.locator(f'nav a[href="/en/section/{new_slug}"]').count() == 0,
+        )
+
+        # Filing a piece in it, then deleting it: the piece must survive, moved.
+        made = scp.request.post(f"{BASE}/api/drafts", data={"language": "EN"}).json()["article"]
+        r = scp.request.patch(f"{BASE}/api/drafts/{made['id']}", data={"category": "NoSuchSection"})
+        check("a piece cannot be filed under a section that does not exist", r.status == 422, str(r.status))
+        r = scp.request.patch(
+            f"{BASE}/api/drafts/{made['id']}",
+            data={"category": new_key, "title": f"Filed in the new section {STAMP}", "body": "A piece filed in the new section to prove it survives the section being deleted."},
+        )
+        check("the composer accepts the new section", r.status == 200, str(r.status))
+        go(scp, f"{BASE}/dashboard/write/{made['id']}")
+        check(
+            "and offers it in the section list by name",
+            scp.locator(f'select[name="category"] option[value="{new_key}"]').count() == 1,
+        )
+
+        go(scp, f"{BASE}/admin/sections")
+        scp.click(f'button[name="delete-{new_key}"]')
+        scp.select_option('select[name="move-to"]', "Politics")
+        scp.once("dialog", lambda d: d.accept())
+        scp.click('button[name="confirm-delete-section"]')
+        scp.wait_for_selector("text=are now in", timeout=20000)
+        moved = scp.request.get(f"{BASE}/api/editorial/{made['id']}").json()["article"]["category"]
+        check(
+            "deleting a section moves its articles rather than losing them",
+            moved == "Politics" and scp.locator(f'tr[data-section="{new_key}"]').count() == 0,
+            moved,
+        )
+        check(
+            "and its page is gone",
+            scp.request.get(f"{BASE}/en/section/{new_slug}").status == 404,
+        )
+        shot(scp, "61-sections.png")
+        scp.request.delete(f"{BASE}/api/drafts/{made['id']}")
+        sc_c.close()
+
         # --- 11. mobile ------------------------------------------------------
         mob = ctx.browser.new_context(viewport=PHONE, device_scale_factor=2, http_credentials=GATE)
         mp = mob.new_page()

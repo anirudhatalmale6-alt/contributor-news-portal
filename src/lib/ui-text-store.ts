@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { setTextOverrides } from "@/lib/ui-text";
+import { setSections } from "@/lib/sections";
 
 /**
  * Keeps the running wording in step with the database.
@@ -21,10 +22,16 @@ let inFlight: Promise<void> | null = null;
 const MAX_AGE_MS = 30_000;
 
 async function load() {
-  const rows = await prisma.uiText.findMany({ select: { key: true, locale: true, value: true } });
+  // The sections ride along with the wording: their names ARE wording
+  // (section.<key>), and every page that needs one needs the other.
+  const [rows, sections] = await Promise.all([
+    prisma.uiText.findMany({ select: { key: true, locale: true, value: true } }),
+    prisma.section.findMany({ orderBy: { position: "asc" } }),
+  ]);
   setTextOverrides(
     Object.fromEntries(rows.map((r) => [`${r.locale}:${r.key}`, r.value])),
   );
+  setSections(sections.map((r) => ({ key: r.key, slug: r.slug, position: r.position, inMenu: r.inMenu })));
   loadedAt = Date.now();
 }
 

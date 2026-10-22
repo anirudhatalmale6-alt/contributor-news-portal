@@ -1,3 +1,4 @@
+import { menuSections, sectionFromSlug, sectionKeys, slugForSection } from "@/lib/sections";
 /**
  * Two languages, one newsroom.
  *
@@ -24,49 +25,21 @@ export const localeMeta: Record<Locale, { htmlLang: string; label: string; short
 export const other = (locale: Locale): Locale => (locale === "EN" ? "BN" : "EN");
 
 /**
- * Section pages: /section/politics, /en/section/law-and-order.
- *
- * A category with more than one word becomes hyphens in the address rather than
- * one run-together word, because the address is something readers see and share.
+ * Sections now come from the Section table (see sections.ts), so the owner can
+ * add, rename, reorder and hide them. These names are kept so the rest of the
+ * site did not have to change how it asks.
  */
-export const categorySlug = (category: string) =>
-  category.replace(/([a-z])([A-Z])/g, "$1-$2").toLowerCase();
+export const categorySlug = (category: string) => slugForSection(category);
 
 export const sectionPath = (locale: Locale, category: string) =>
-  localePath(locale, `/section/${categorySlug(category)}`);
+  localePath(locale, `/section/${slugForSection(category)}`);
 
-/** The category behind a section slug, or null if nobody publishes under it. */
-/**
- * Every section the paper runs, in the order the owner wants them in the menu.
- *
- * "General" is deliberately last and deliberately not in the public menu: it is
- * where the pieces filed before this list existed still sit, and it empties
- * itself as the desk re-files them.
- */
-export const CATEGORIES = [
-  "Politics",
-  "LawAndOrder",
-  "Technology",
-  "Economy",
-  "World",
-  "Opinion",
-  "Culture",
-  "Literature",
-  "Philosophy",
-  "Science",
-  "Entertainment",
-  "Lifestyle",
-  "Career",
-  "General",
-] as const;
-
-/** What the reader is offered in the top menu: everything except the legacy bucket. */
-export const MENU_CATEGORIES = CATEGORIES.filter((c) => c !== "General");
-export const categoryFromSlug = (slug: string) =>
-  CATEGORIES.find((c) => categorySlug(c) === slug.toLowerCase()) ??
-  // Older addresses used the run-together form; keep them working.
-  CATEGORIES.find((c) => c.toLowerCase() === slug.toLowerCase()) ??
-  null;
+/** Every section, in the owner's order. A function: the list can change while the site runs. */
+export const categories = () => sectionKeys();
+/** What the reader is offered in the top menu. */
+export const menuCategories = () => menuSections();
+/** The section behind a web address, or null. */
+export const categoryFromSlug = (slug: string) => sectionFromSlug(slug);
 
 /** Bangla is the root site; English is prefixed with `/en`. */
 export const localePath = (locale: Locale, path = "") =>
@@ -121,7 +94,7 @@ export const t = (locale: Locale): Dict => {
   return {
     latest: s("nav.latest"),
     sections: Object.fromEntries(
-      [...CATEGORIES, "All"].map((c) => [c, s(`section.${c}`)]),
+      [...sectionKeys(), "All"].map((c) => [c, s(`section.${c}`)]),
     ) as Record<string, string>,
     alsoToday: s("feed.alsoToday"),
     featured: s("feed.featured"),
@@ -189,3 +162,17 @@ export function localeDate(date: Date | string, locale: Locale) {
   }
   return d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
 }
+
+/**
+ * The sections offered in a writer's or editor's dropdown, with their names in
+ * both languages. "General" only appears for a piece already filed there: it
+ * is where old pieces wait to be re-filed, not somewhere to file new ones.
+ * Built on the server and handed to the screen, because the browser does not
+ * have the owner's current list.
+ */
+export const sectionOptions = (current?: string) =>
+  sectionKeys()
+    .filter((k) => k !== "General" || k === current)
+    .map((k) => ({ key: k, en: t("EN").sections[k] ?? k, bn: t("BN").sections[k] ?? k }));
+
+export type SectionOption = ReturnType<typeof sectionOptions>[number];

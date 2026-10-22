@@ -1,3 +1,4 @@
+import { assertSection } from "@/lib/section-store";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { errorResponse, requireUser } from "@/lib/rbac";
@@ -46,6 +47,7 @@ export async function POST(req: Request) {
       );
     }
     const data = parsed.data;
+    if (data.category !== "General") await assertSection(data.category);
     const article = await prisma.article.create({
       data: {
         title: data.title,

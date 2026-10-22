@@ -414,6 +414,12 @@ export const TEXT_DEFAULTS: Record<string, TextEntry> = {
     en: "Payouts",
     bn: "সম্মানী পরিশোধ",
   },
+  "nav.sections": {
+    group: "The writing desk",
+    en: "Sections",
+    bn: "বিভাগ",
+    note: "Where admins add, rename, reorder and remove the paper's sections",
+  },
   "nav.pages": {
     group: "The writing desk",
     en: "Pages",

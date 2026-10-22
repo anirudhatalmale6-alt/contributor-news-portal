@@ -27,6 +27,7 @@ export async function StaffNav({
     | "settings"
     | "wording"
     | "pages"
+    | "sections"
     | "payouts";
 }) {
   const staff = isStaff(user.role);
@@ -57,6 +58,7 @@ export async function StaffNav({
     ...(isAdmin(user.role)
       ? [
           { key: "payouts" as const, href: "/payouts", label: text("nav.payouts", locale), badge: payouts },
+          { key: "sections" as const, href: "/admin/sections", label: text("nav.sections", locale) },
           { key: "pages" as const, href: "/admin/pages", label: text("nav.pages", locale) },
         ]
       : []),

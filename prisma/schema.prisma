@@ -616,3 +616,15 @@ model Page {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
+
+/// The sections of the paper, in menu order. Articles store the `key`, which
+/// never changes, so renaming a section or changing its web address never
+/// orphans an article. The names readers see live in the Wording table as
+/// section.<key>, so the Sections and Wording screens can never disagree.
+model Section {
+  key       String   @id
+  slug      String   @unique
+  position  Int      @default(0)
+  inMenu    Boolean  @default(true)
+  createdAt DateTime @default(now())
+}

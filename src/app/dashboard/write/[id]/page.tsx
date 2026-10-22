@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { textGroups } from "@/lib/ui-text";
+import { sectionOptions } from "@/lib/i18n";
 import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { currentUser } from "@/lib/rbac";
@@ -50,6 +51,7 @@ export default async function WritePage({ params }: { params: Promise<{ id: stri
           &larr; Back to my desk
         </Link>
         <Composer
+          sections={sectionOptions(article.category)}
           // The form speaks the language the piece is being written in, using
           // whatever wording the owner has set in Settings - Wording.
           labels={{

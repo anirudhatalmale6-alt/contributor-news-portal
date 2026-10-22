@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { FormatToolbar } from "@/components/format-toolbar";
-import { CATEGORIES } from "@/lib/i18n";
+import type { SectionOption } from "@/lib/i18n";
 import Link from "next/link";
 import { StatusPill } from "@/components/ui";
 
@@ -36,7 +36,10 @@ export function Composer({
   lastNote,
   secondVersion,
   labels,
+  sections,
 }: {
+  /** The owner's sections, with their names, built on the server. */
+  sections: SectionOption[];
   article: ArticleState;
   lastNote: { action: string; note: string; editor: string } | null;
   /** The other-language version, if one already exists for this piece. */
@@ -331,9 +334,9 @@ export function Composer({
             disabled={locked}
             className="rounded-lg border border-line px-3 py-2 outline-none focus:border-navy"
           >
-            {CATEGORIES.map((c) => (
-              <option key={c} value={c}>
-                {c}
+            {sections.map((c) => (
+              <option key={c.key} value={c.key}>
+                {form.language === "BN" ? c.bn : c.en}
               </option>
             ))}
           </select>

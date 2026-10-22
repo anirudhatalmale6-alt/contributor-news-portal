@@ -1,3 +1,4 @@
+import { sectionOptions } from "@/lib/i18n";
 import Link from "next/link";
 import { aiTranslationReady } from "@/lib/translate";
 import { WriterContact } from "./writer-contact";
@@ -131,6 +132,7 @@ export default async function ReviewPage({ params }: { params: Promise<{ id: str
             }}
             authorTier={article.author.tier}
             aiReady={await aiTranslationReady()}
+            sections={sectionOptions(article.category)}
           />
 
 

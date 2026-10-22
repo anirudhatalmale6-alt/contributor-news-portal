@@ -1,3 +1,4 @@
+import { assertSection } from "@/lib/section-store";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { errorResponse, HttpError, requireStaff } from "@/lib/rbac";
@@ -90,6 +91,7 @@ export async function PATCH(req: Request, { params }: Ctx) {
       return Response.json({ error: said || "Check the form", issues }, { status: 422 });
     }
     const data = parsed.data;
+    if (data.category) await assertSection(data.category);
 
     const article = await prisma.article.update({
       where: { id },

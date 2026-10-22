@@ -1,3 +1,4 @@
+import { assertSection } from "@/lib/section-store";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { errorResponse, HttpError, requireUser } from "@/lib/rbac";
@@ -62,6 +63,7 @@ export async function PATCH(req: Request, { params }: Ctx) {
       );
     }
     const data = parsed.data;
+    if (data.category !== undefined) await assertSection(data.category);
 
     // A byline is the desk's to set. A contributor writes under their own name
     // and may not file something under somebody else's.

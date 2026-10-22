@@ -3,7 +3,7 @@ import { currentUser } from "@/lib/rbac";
 import { SignedInBar } from "@/components/signed-in-bar";
 import { SHELL } from "@/components/ui";
 import { feedArticles } from "@/lib/articles";
-import { MENU_CATEGORIES, type Locale, localeMeta, localePath, other, sectionPath, t } from "@/lib/i18n";
+import { menuCategories, type Locale, localeMeta, localePath, other, sectionPath, t } from "@/lib/i18n";
 import { siteSettings } from "@/lib/settings";
 
 export async function SiteHeader({
@@ -183,7 +183,7 @@ export async function SiteHeader({
           >
             {copy.latest}
           </Link>
-          {MENU_CATEGORIES.map((s) => (
+          {menuCategories().map((s) => (
             <Link
               key={s}
               href={sectionPath(locale, s)}

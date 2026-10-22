@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { CATEGORIES } from "@/lib/i18n";
+import type { SectionOption } from "@/lib/i18n";
 import { FormatToolbar } from "@/components/format-toolbar";
 
 /** The front-page positions, in the order they read down the page. */
@@ -43,7 +43,10 @@ export function ReviewPanel({
   settings,
   authorTier,
   aiReady = false,
+  sections,
 }: {
+  /** The owner's sections, with their names, built on the server. */
+  sections: SectionOption[];
   article: ArticleState;
   settings: { currency: string; suggestedCents: number; verifiedBonusPct: number };
   authorTier: string;
@@ -284,9 +287,9 @@ export function ReviewPanel({
             onChange={(e) => update("category", e.target.value)}
             className="rounded-lg border border-line px-3 py-1.5 outline-none focus:border-navy"
           >
-            {CATEGORIES.map((c) => (
-              <option key={c} value={c}>
-                {c}
+            {sections.map((c) => (
+              <option key={c.key} value={c.key}>
+                {c.en} / {c.bn}
               </option>
             ))}
           </select>
