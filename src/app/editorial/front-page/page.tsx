@@ -1,9 +1,8 @@
+import { DeskShell } from "@/components/desk-shell";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { currentUser, isStaff } from "@/lib/rbac";
-import { SiteHeader } from "@/components/site-header";
-import { StaffNav } from "@/components/staff-nav";
 import { FrontPageBoard } from "./front-page-board";
 import { planFrontPage } from "@/lib/front-page";
 
@@ -71,11 +70,7 @@ export default async function FrontPagePage() {
 
   return (
     <>
-      <SiteHeader />
-      <main className="mx-auto max-w-4xl px-4 pb-20">
-        <div className="pt-4">
-          <StaffNav user={user} current="frontpage" />
-        </div>
+      <DeskShell user={user} current="frontpage" width="max-w-4xl">
 
         <h1 className="font-serif text-2xl font-bold sm:text-3xl">Front page</h1>
         <p className="mt-1 max-w-2xl text-sm text-ink-soft">
@@ -93,7 +88,7 @@ export default async function FrontPagePage() {
             automatic={automatic}
           />
         </div>
-      </main>
+      </DeskShell>
     </>
   );
 }

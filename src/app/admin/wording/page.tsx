@@ -1,7 +1,6 @@
+import { DeskShell } from "@/components/desk-shell";
 import { redirect } from "next/navigation";
 import { currentUser, isOwner, isStaff } from "@/lib/rbac";
-import { SiteHeader } from "@/components/site-header";
-import { StaffNav } from "@/components/staff-nav";
 import { TEXT_DEFAULTS, TEXT_GROUPS } from "@/lib/text-defaults";
 import { currentOverrides } from "@/lib/ui-text";
 import { primeUiText } from "@/lib/ui-text-store";
@@ -29,11 +28,7 @@ export default async function WordingPage() {
 
   return (
     <>
-      <SiteHeader />
-      <main className="mx-auto max-w-5xl px-4 pb-20">
-        <div className="pt-4">
-          <StaffNav user={user} current="wording" />
-        </div>
+      <DeskShell user={user} current="wording" width="max-w-5xl">
 
         <h1 className="font-serif text-2xl font-bold sm:text-3xl">Wording</h1>
         <p className="mt-1 max-w-3xl text-sm text-ink-soft">
@@ -45,7 +40,7 @@ export default async function WordingPage() {
         <div className="mt-6">
           <WordingEditor lines={lines} groups={[...TEXT_GROUPS]} />
         </div>
-      </main>
+      </DeskShell>
     </>
   );
 }

@@ -1,9 +1,8 @@
+import { DeskShell } from "@/components/desk-shell";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { currentUser, isStaff } from "@/lib/rbac";
-import { SiteHeader } from "@/components/site-header";
-import { StaffNav } from "@/components/staff-nav";
 import { markRead, otherNames, threadWhere } from "@/lib/inbox";
 import { ReplyForm } from "./reply-form";
 
@@ -60,11 +59,7 @@ export default async function ThreadPage({ params }: { params: Promise<{ id: str
 
   return (
     <>
-      <SiteHeader />
-      <main className="mx-auto max-w-3xl px-4 pb-20">
-        <div className="pt-4">
-          <StaffNav user={user} current="inbox" />
-        </div>
+      <DeskShell user={user} current="inbox" width="max-w-3xl">
 
         <Link href="/inbox" className="text-sm text-ink-soft hover:text-ink">
           &larr; All conversations
@@ -116,7 +111,7 @@ export default async function ThreadPage({ params }: { params: Promise<{ id: str
         </ol>
 
         <ReplyForm threadId={thread.id} />
-      </main>
+      </DeskShell>
     </>
   );
 }

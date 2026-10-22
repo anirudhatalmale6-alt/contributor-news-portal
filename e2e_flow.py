@@ -3696,6 +3696,48 @@ def main():
         scp.request.delete(f"{BASE}/api/drafts/{made['id']}")
         sc_c.close()
 
+        # --- 10w. the desk is its own place, not the newspaper ---------------
+        dk_c = ctx.browser.new_context(viewport=DESKTOP, http_credentials=GATE)
+        dkp = dk_c.new_page()
+        sign_in(dkp, "maya@thedocument.test", STAFF_PASS)
+        go(dkp, f"{BASE}/dashboard")
+        check(
+            "the desk does not carry the newspaper's section menu",
+            dkp.locator('a[href^="/section/"], a[href^="/en/section/"]').count() == 0,
+            str(dkp.locator('a[href^="/section/"], a[href^="/en/section/"]').count()),
+        )
+        back = dkp.locator("[data-back-to-paper]")
+        check("it has a clear way back to the newspaper instead", back.count() == 1)
+        check(
+            "the desk opens like a profile: cover, picture, name",
+            dkp.locator('[data-desk="profile"]').count() == 1
+            and "Maya" in dkp.inner_text('[data-desk="profile"] h1'),
+        )
+        check(
+            "with one obvious place to start writing",
+            dkp.locator('[data-desk="write"] button:has-text("Start a new piece")').count() == 1,
+        )
+        check(
+            "and the desk's own menu down the side",
+            dkp.locator('[data-desk-sidebar] [data-nav="desk"]').count() == 1
+            and dkp.locator('[data-desk-sidebar] [data-nav="inbox"]').count() == 1,
+        )
+        shot(dkp, "62-desk-profile.png")
+        back.click()
+        dkp.wait_for_url(re.compile(r"/(en)?$"), timeout=20000)
+        check(
+            "Back to the newspaper goes to the newspaper",
+            dkp.locator('a[href^="/section/"], a[href^="/en/section/"]').count() > 0,
+            dkp.url,
+        )
+        go(dkp, f"{BASE}/inbox")
+        check(
+            "every working screen sits in the same desk, the inbox included",
+            dkp.locator("[data-desk-sidebar]").count() == 1
+            and dkp.locator('a[href^="/section/"], a[href^="/en/section/"]').count() == 0,
+        )
+        dk_c.close()
+
         # --- 11. mobile ------------------------------------------------------
         mob = ctx.browser.new_context(viewport=PHONE, device_scale_factor=2, http_credentials=GATE)
         mp = mob.new_page()

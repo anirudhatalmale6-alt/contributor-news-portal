@@ -1,8 +1,7 @@
+import { DeskShell } from "@/components/desk-shell";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { currentUser, isAdmin, isStaff } from "@/lib/rbac";
-import { SiteHeader } from "@/components/site-header";
-import { StaffNav } from "@/components/staff-nav";
 import { paymentSettings } from "@/lib/settings";
 import { methodLabel } from "@/lib/payout";
 import { money } from "@/lib/format";
@@ -46,11 +45,7 @@ export default async function PayoutsPage() {
 
   return (
     <>
-      <SiteHeader />
-      <main className="mx-auto max-w-4xl px-4 pb-20">
-        <div className="pt-4">
-          <StaffNav user={user} current="payouts" />
-        </div>
+      <DeskShell user={user} current="payouts" width="max-w-4xl">
 
         <h1 className="font-serif text-2xl font-bold sm:text-3xl">Payouts</h1>
         <p className="mt-1 max-w-2xl text-sm text-ink-soft">
@@ -119,7 +114,7 @@ export default async function PayoutsPage() {
             </ul>
           </section>
         ) : null}
-      </main>
+      </DeskShell>
     </>
   );
 }

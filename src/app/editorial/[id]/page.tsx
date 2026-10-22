@@ -1,3 +1,4 @@
+import { DeskShell } from "@/components/desk-shell";
 import { sectionOptions } from "@/lib/i18n";
 import Link from "next/link";
 import { aiTranslationReady } from "@/lib/translate";
@@ -7,7 +8,6 @@ import { prisma } from "@/lib/prisma";
 import { currentUser, isAdmin, isStaff } from "@/lib/rbac";
 import { timeAgo } from "@/lib/format";
 import { paymentSettings } from "@/lib/settings";
-import { SiteHeader } from "@/components/site-header";
 import { StatusPill, TierBadge } from "@/components/ui";
 import { ReviewPanel } from "./review-panel";
 import { TranslationPanel } from "./translation-panel";
@@ -56,8 +56,7 @@ export default async function ReviewPage({ params }: { params: Promise<{ id: str
 
   return (
     <>
-      <SiteHeader />
-      <main className="mx-auto max-w-5xl px-4 pb-20">
+      <DeskShell user={user} current="newsroom" width="max-w-5xl">
         <Link href="/editorial" className="inline-block py-4 text-sm text-ink-soft hover:text-ink">
           &larr; Back to the queue
         </Link>
@@ -220,7 +219,7 @@ export default async function ReviewPage({ params }: { params: Promise<{ id: str
             />
           </div>
         </div>
-      </main>
+      </DeskShell>
     </>
   );
 }

@@ -1,20 +1,18 @@
+import { DeskShell } from "@/components/desk-shell";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { currentUser } from "@/lib/rbac";
 import { longDate, money, timeAgo } from "@/lib/format";
-import { deskLocale, paymentSettings, siteSettings } from "@/lib/settings";
+import { deskLocale, paymentSettings } from "@/lib/settings";
 import { earningsFor, payableFor } from "@/lib/earnings";
 import { localeDate } from "@/lib/i18n";
 import { text } from "@/lib/ui-text";
-import { banglaFontCss } from "@/lib/fonts";
 import { noticesFor } from "@/lib/notices";
 import { NoticeBoard } from "./notice-board";
 import { SiteFooter } from "@/components/site-footer";
 import { RequestPayout } from "./request-payout";
 import { Notifications } from "@/components/notifications";
-import { SiteHeader } from "@/components/site-header";
-import { StaffNav } from "@/components/staff-nav";
 import { StatCard, StatusPill, TierBadge } from "@/components/ui";
 import { maskedDestination, methodLabel } from "@/lib/payout";
 import { NewDraftButton } from "./new-draft-button";
@@ -73,9 +71,12 @@ export default async function DashboardPage() {
   // language the owner set for the desk.
   const locale = await deskLocale();
   const s = (key: string, vars?: Record<string, string | number>) => text(key, locale, vars);
-  // A Bangla desk needs the Bangla face as well as the Bangla words: the serif
-  // the headings use has no Bengali glyphs at all, so it would draw boxes.
-  const site = locale === "BN" ? await siteSettings() : null;
+
+  const profile = await prisma.user.findUnique({
+    where: { id: user.id },
+    select: { image: true, bio: true, publicName: true },
+  });
+  const displayName = profile?.publicName?.trim() || user.name;
 
   const totalCents = earnings.totalCents;
   const inReview = articles.filter((a) => a.status === "SUBMITTED").length;
@@ -83,142 +84,76 @@ export default async function DashboardPage() {
 
   return (
     <>
-      <SiteHeader />
-      <main
-        lang={locale === "BN" ? "bn" : undefined}
-        style={
-          site
-            ? ({ "--bn-reading-font": banglaFontCss(site.banglaFont) } as React.CSSProperties)
-            : undefined
-        }
-        className="mx-auto max-w-5xl px-4 pb-16"
-      >
-        <div className="pt-4">
-          <StaffNav user={user} current="desk" />
-        </div>
-
+      <DeskShell user={user} current="desk" width="max-w-6xl">
         <div className="pt-2">
           <NoticeBoard notices={notices.map((n) => ({ id: n.id, body: n.body, forEveryone: n.forEveryone }))} />
         </div>
 
-        <div className="flex flex-wrap items-end justify-between gap-3 border-b border-line py-6">
-          <div>
-            <h1 className="font-serif text-2xl font-bold sm:text-3xl">
-              {s("desk.title", { name: user.name.split(" ")[0] })}
-            </h1>
-            <div className="mt-2 flex flex-wrap items-center gap-2">
-              <TierBadge tier={user.tier} role={user.role} />
-              <span className="text-xs text-ink-soft">{user.email}</span>
+        {/* The top of the desk reads like a profile: cover, picture, name, and
+            the two things a writer does from here - edit how they appear, and
+            see the page readers see. */}
+        <section data-desk="profile" className="overflow-hidden rounded-2xl border border-line">
+          <div aria-hidden className="h-24 bg-linear-to-r from-navy to-brand sm:h-32" />
+          <div className="flex flex-wrap items-end gap-4 px-5 pb-5">
+            {profile?.image ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={`${profile.image}?w=320`}
+                alt=""
+                className="-mt-12 size-24 shrink-0 rounded-full border-4 border-paper object-cover sm:-mt-14 sm:size-28"
+              />
+            ) : (
+              <span className="-mt-12 grid size-24 shrink-0 place-items-center rounded-full border-4 border-paper bg-navy font-serif text-4xl font-bold text-white sm:-mt-14 sm:size-28">
+                {displayName.charAt(0).toUpperCase()}
+              </span>
+            )}
+            <div className="min-w-0 flex-1 pt-3">
+              <h1 className="font-serif text-2xl font-bold sm:text-3xl">
+                {s("desk.title", { name: displayName.split(" ")[0] })}
+              </h1>
+              <div className="mt-1 flex flex-wrap items-center gap-2">
+                <TierBadge tier={user.tier} role={user.role} />
+                <span className="text-xs text-ink-soft">{user.email}</span>
+              </div>
+              {profile?.bio ? <p className="mt-2 line-clamp-2 text-sm text-ink-soft">{profile.bio}</p> : null}
+            </div>
+            <div className="flex flex-wrap gap-2">
               <Link
                 href="/dashboard/profile"
-                className="text-xs font-medium text-brand hover:underline"
+                className="rounded-full border border-line px-4 py-2 text-sm font-medium hover:bg-paper-soft"
               >
                 {s("desk.editProfile")}
               </Link>
+              <Link
+                href={`/author/${user.id}`}
+                className="rounded-full border border-line px-4 py-2 text-sm font-medium hover:bg-paper-soft"
+              >
+                {s("nav.publicPage")}
+              </Link>
             </div>
           </div>
-          <NewDraftButton label={s("desk.newPiece")} busyLabel={s("desk.opening")} />
-        </div>
-
-        <Notifications
-          words={{
-            updates: s("desk.updates"),
-            unreadNew: s("desk.unreadNew", { n: "{n}" }),
-            markAllRead: s("desk.markAllRead"),
-            marking: s("desk.marking"),
-            showEarlier: s("desk.showEarlier", { n: "{n}" }),
-            showFewer: s("desk.showFewer"),
-          }}
-          notes={notes.map((n) => ({
-            id: n.id,
-            kind: n.kind,
-            title: n.title,
-            body: n.body,
-            href: n.href,
-            read: Boolean(n.readAt),
-            createdAt: n.createdAt.toISOString(),
-          }))}
-        />
-
-        <section className="grid gap-3 py-6 sm:grid-cols-2 lg:grid-cols-4">
-          <StatCard
-            label={s("desk.totalEarnings")}
-            value={money(totalCents, settings.currency)}
-            // A contributor adding up their own articles and getting a different
-            // number would reasonably think the site was wrong.
-            hint={
-              earnings.adjustmentCents
-                ? `${money(earnings.articleCents, settings.currency)} from articles, ${
-                    earnings.adjustmentCents > 0 ? "plus" : "less"
-                  } ${money(Math.abs(earnings.adjustmentCents), settings.currency)} adjusted by the desk`
-                : s("desk.acrossEvery")
-            }
-            accent
-          />
-          <StatCard
-            label={s("desk.published")}
-            value={String(published.length)}
-            hint={s("desk.liveOnSite")}
-          />
-          <StatCard
-            label={s("desk.inReview")}
-            value={String(inReview)}
-            hint={s("desk.waitingEditor")}
-          />
-          <StatCard
-            label={s("desk.changesRequested")}
-            value={String(needsWork)}
-            hint={needsWork ? s("desk.editResubmit") : s("desk.nothingToFix")}
-          />
         </section>
 
-        <p className="-mt-2 mb-4 text-xs text-ink-soft">{settings.payoutNote}</p>
-
-        <div className="mb-4">
-          <RequestPayout
-            available={money(payable.availableCents, settings.currency)}
-            minimum={money(settings.minPayoutCents, settings.currency)}
-            hasDetails={Boolean(payout)}
-            canRequest={
-              Boolean(payout) && !pendingRequest && payable.availableCents >= settings.minPayoutCents
-            }
-            pending={
-              pendingRequest
-                ? {
-                    amount: money(pendingRequest.amountCents, settings.currency),
-                    since: localeDate(pendingRequest.createdAt, "EN"),
-                  }
-                : null
-            }
-          />
-        </div>
-
-        <section
-          className={`mb-8 flex flex-wrap items-center justify-between gap-3 rounded-xl border p-4 ${
-            payout ? "border-line bg-paper" : "border-amber-200 bg-amber-50"
-          }`}
-        >
-          <div>
-            <p className="text-sm font-medium">
-              {payout ? s("desk.paymentDetails") : s("desk.addPaymentTitle")}
+        <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1fr)_330px]">
+          {/* minmax(0,1fr): without it a long headline in the list widens this
+              column past its slot and it slides under the side column, which
+              then swallows clicks meant for the write button. */}
+          <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] content-start gap-6">
+          {/* "What's on your mind?" - the one place to start writing. */}
+          <section data-desk="write" className="flex items-center gap-3 rounded-2xl border border-line p-4">
+            {profile?.image ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={`${profile.image}?w=160`} alt="" className="size-11 shrink-0 rounded-full object-cover" />
+            ) : (
+              <span className="grid size-11 shrink-0 place-items-center rounded-full bg-navy font-serif text-lg font-bold text-white">
+                {displayName.charAt(0).toUpperCase()}
+              </span>
+            )}
+            <p className="min-w-0 flex-1 truncate rounded-full bg-paper-soft px-4 py-2.5 text-ink-soft">
+              {s("desk.prompt", { name: displayName.split(" ")[0] })}
             </p>
-            <p className="mt-0.5 text-sm text-ink-soft">
-              {payout
-                ? `${methodLabel(payout.method)} · ${payout.accountName} · ${maskedDestination(payout)}`
-                : s("desk.noDestination")}
-            </p>
-          </div>
-          <Link
-            href="/dashboard/payout"
-            className={`rounded-full px-4 py-2 text-sm font-medium ${
-              payout
-                ? "border border-line hover:bg-paper-soft"
-                : "bg-brand text-white hover:bg-brand-dark"
-            }`}
-          >
-            {payout ? s("desk.update") : s("desk.addDetails")}
-          </Link>
-        </section>
+            <NewDraftButton label={s("desk.newPiece")} busyLabel={s("desk.opening")} />
+          </section>
 
         <section>
           <h2 className="mb-3 text-xs font-bold uppercase tracking-widest text-ink-soft">
@@ -253,7 +188,9 @@ export default async function DashboardPage() {
                           </span>
                         </div>
                         <p className="mt-1.5 truncate font-serif text-lg font-bold">
-                          {a.title || s("desk.untitled")}
+                          {/* The headline's own language, so a Bangla headline gets
+                              the Bangla face even on an English desk. */}
+                          <span lang={a.language === "BN" ? "bn" : "en"}>{a.title || s("desk.untitled")}</span>
                         </p>
                         {a.dek ? (
                           <p className="mt-0.5 line-clamp-2 text-sm text-ink-soft">{a.dek}</p>
@@ -320,7 +257,111 @@ export default async function DashboardPage() {
             </ul>
           )}
         </section>
-      </main>
+          </div>
+
+          <aside className="grid min-w-0 grid-cols-[minmax(0,1fr)] content-start gap-4">
+        <Notifications
+          words={{
+            updates: s("desk.updates"),
+            unreadNew: s("desk.unreadNew", { n: "{n}" }),
+            markAllRead: s("desk.markAllRead"),
+            marking: s("desk.marking"),
+            showEarlier: s("desk.showEarlier", { n: "{n}" }),
+            showFewer: s("desk.showFewer"),
+          }}
+          notes={notes.map((n) => ({
+            id: n.id,
+            kind: n.kind,
+            title: n.title,
+            body: n.body,
+            href: n.href,
+            read: Boolean(n.readAt),
+            createdAt: n.createdAt.toISOString(),
+          }))}
+        />
+
+        <section data-desk="stats" className="grid grid-cols-2 gap-3 [&>*:first-child]:col-span-2">
+          <StatCard
+            label={s("desk.totalEarnings")}
+            value={money(totalCents, settings.currency)}
+            // A contributor adding up their own articles and getting a different
+            // number would reasonably think the site was wrong.
+            hint={
+              earnings.adjustmentCents
+                ? `${money(earnings.articleCents, settings.currency)} from articles, ${
+                    earnings.adjustmentCents > 0 ? "plus" : "less"
+                  } ${money(Math.abs(earnings.adjustmentCents), settings.currency)} adjusted by the desk`
+                : s("desk.acrossEvery")
+            }
+            accent
+          />
+          <StatCard
+            label={s("desk.published")}
+            value={String(published.length)}
+            hint={s("desk.liveOnSite")}
+          />
+          <StatCard
+            label={s("desk.inReview")}
+            value={String(inReview)}
+            hint={s("desk.waitingEditor")}
+          />
+          <StatCard
+            label={s("desk.changesRequested")}
+            value={String(needsWork)}
+            hint={needsWork ? s("desk.editResubmit") : s("desk.nothingToFix")}
+          />
+        </section>
+
+        <p className="text-xs text-ink-soft">{settings.payoutNote}</p>
+
+        <div>
+          <RequestPayout
+            available={money(payable.availableCents, settings.currency)}
+            minimum={money(settings.minPayoutCents, settings.currency)}
+            hasDetails={Boolean(payout)}
+            canRequest={
+              Boolean(payout) && !pendingRequest && payable.availableCents >= settings.minPayoutCents
+            }
+            pending={
+              pendingRequest
+                ? {
+                    amount: money(pendingRequest.amountCents, settings.currency),
+                    since: localeDate(pendingRequest.createdAt, "EN"),
+                  }
+                : null
+            }
+          />
+        </div>
+
+        <section
+          className={`flex flex-wrap items-center justify-between gap-3 rounded-xl border p-4 ${
+            payout ? "border-line bg-paper" : "border-amber-200 bg-amber-50"
+          }`}
+        >
+          <div>
+            <p className="text-sm font-medium">
+              {payout ? s("desk.paymentDetails") : s("desk.addPaymentTitle")}
+            </p>
+            <p className="mt-0.5 text-sm text-ink-soft">
+              {payout
+                ? `${methodLabel(payout.method)} · ${payout.accountName} · ${maskedDestination(payout)}`
+                : s("desk.noDestination")}
+            </p>
+          </div>
+          <Link
+            href="/dashboard/payout"
+            className={`rounded-full px-4 py-2 text-sm font-medium ${
+              payout
+                ? "border border-line hover:bg-paper-soft"
+                : "bg-brand text-white hover:bg-brand-dark"
+            }`}
+          >
+            {payout ? s("desk.update") : s("desk.addDetails")}
+          </Link>
+        </section>
+          </aside>
+        </div>
+      </DeskShell>
       <SiteFooter />
     </>
   );

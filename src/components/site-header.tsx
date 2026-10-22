@@ -5,6 +5,7 @@ import { SHELL } from "@/components/ui";
 import { feedArticles } from "@/lib/articles";
 import { menuCategories, type Locale, localeMeta, localePath, other, sectionPath, t } from "@/lib/i18n";
 import { siteSettings } from "@/lib/settings";
+import { text } from "@/lib/ui-text";
 
 export async function SiteHeader({
   locale = "EN",
@@ -14,7 +15,11 @@ export async function SiteHeader({
   teaserExclude = [],
   teaserNever,
   teaserPinned = [],
+  desk = false,
 }: {
+  /** The working screens: same masthead, no newspaper menu, and a way back to
+      the paper instead of the language switch. */
+  desk?: boolean;
   locale?: Locale;
   /** Where the language toggle goes; defaults to the same page in the other language. */
   switchHref?: string | null;
@@ -89,7 +94,7 @@ export async function SiteHeader({
             />
           </Link>
 
-          {strip.length > 0 ? (
+          {!desk && strip.length > 0 ? (
             <ul className="hidden flex-1 items-stretch divide-x divide-line border-x border-line xl:flex">
               {strip.map((a) => (
                 <li key={a.href} className="min-w-0 flex-1 px-4">
@@ -115,6 +120,18 @@ export async function SiteHeader({
             <div className="flex-1" />
           )}
 
+          {desk ? (
+            <div className="ml-auto flex shrink-0 items-center gap-2">
+              <Link
+                href={base}
+                data-back-to-paper
+                className="inline-flex items-center gap-1.5 rounded-full border-2 border-navy px-3 py-1.5 text-sm font-semibold text-navy transition-colors hover:bg-navy hover:text-white"
+              >
+                <span aria-hidden>&larr;</span>
+                {text("nav.backToPaper", locale)}
+              </Link>
+            </div>
+          ) : (
           <div className="ml-auto flex shrink-0 items-center gap-2">
             {/* The language switch is a deliberate, obvious button rather than a
                 small link - most readers arrive on the Bangla site and need to
@@ -166,12 +183,14 @@ export async function SiteHeader({
               </>
             )}
           </div>
+          )}
         </div>
       </header>
 
       {/* The section bar, and the only section menu on the page. It scrolls
           sideways on a phone and sits inline on a desktop - never both, which
           is what made it look like two menus. */}
+      {desk ? null : (
       <nav className="sticky top-0 z-40 border-b border-line bg-paper/95 backdrop-blur">
         <div className={`${SHELL} no-scrollbar flex gap-1 overflow-x-auto py-2 text-base lg:gap-0 lg:text-[15px]`}>
           <Link
@@ -199,6 +218,7 @@ export async function SiteHeader({
           ))}
         </div>
       </nav>
+      )}
 
     </>
   );

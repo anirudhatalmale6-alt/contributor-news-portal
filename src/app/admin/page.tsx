@@ -1,12 +1,11 @@
+import { DeskShell } from "@/components/desk-shell";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { currentUser, isOwner, isStaff } from "@/lib/rbac";
 import { money } from "@/lib/format";
 import { paymentSettings, siteSettings } from "@/lib/settings";
-import { SiteHeader } from "@/components/site-header";
 import { StatCard } from "@/components/ui";
-import { StaffNav } from "@/components/staff-nav";
 import { SettingsForm } from "./settings-form";
 import { NoticeComposer } from "../people/notice-composer";
 import { SiteForm } from "./site-form";
@@ -61,11 +60,7 @@ export default async function AdminPage() {
 
   return (
     <>
-      <SiteHeader />
-      <main className="mx-auto max-w-5xl px-4 pb-20">
-        <div className="pt-4">
-          <StaffNav user={user} current="settings" />
-        </div>
+      <DeskShell user={user} current="settings" width="max-w-5xl">
 
         <div className="flex flex-wrap items-end justify-between gap-3 border-b border-line py-6">
           <div>
@@ -163,7 +158,7 @@ export default async function AdminPage() {
           }}
         />
 
-      </main>
+      </DeskShell>
     </>
   );
 }

@@ -1,10 +1,10 @@
+import { DeskShell } from "@/components/desk-shell";
 import Link from "next/link";
 import { textGroups } from "@/lib/ui-text";
 import { sectionOptions } from "@/lib/i18n";
 import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { currentUser } from "@/lib/rbac";
-import { SiteHeader } from "@/components/site-header";
 import { Composer } from "./composer";
 
 /** The two groups of wording this screen uses. */
@@ -42,8 +42,7 @@ export default async function WritePage({ params }: { params: Promise<{ id: stri
 
   return (
     <>
-      <SiteHeader />
-      <main className="mx-auto max-w-3xl px-4 pb-20">
+      <DeskShell user={user} current="desk" width="max-w-3xl">
         <Link
           href="/dashboard"
           className="inline-block py-4 text-sm text-ink-soft hover:text-ink"
@@ -103,7 +102,7 @@ export default async function WritePage({ params }: { params: Promise<{ id: stri
               : null
           }
         />
-      </main>
+      </DeskShell>
     </>
   );
 }

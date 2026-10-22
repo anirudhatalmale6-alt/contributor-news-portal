@@ -1,9 +1,8 @@
+import { DeskShell } from "@/components/desk-shell";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { canChangeRole, currentUser, isAdmin, isStaff } from "@/lib/rbac";
-import { SiteHeader } from "@/components/site-header";
-import { StaffNav } from "@/components/staff-nav";
 import { ProfileForm } from "@/components/profile-form";
 import { SuspendPanel } from "./suspend-panel";
 import { RolePanel } from "./role-panel";
@@ -87,11 +86,7 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
 
   return (
     <>
-      <SiteHeader />
-      <main className="mx-auto max-w-3xl px-4 pb-20">
-        <div className="pt-4">
-          <StaffNav user={me} current="people" />
-        </div>
+      <DeskShell user={me} current="people" width="max-w-3xl">
 
         <Link href="/people" className="inline-block py-2 text-sm text-ink-soft hover:text-ink">
           &larr; Back to People
@@ -227,7 +222,7 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
             </ul>
           )}
         </section>
-      </main>
+      </DeskShell>
     </>
   );
 }

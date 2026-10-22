@@ -1,8 +1,8 @@
+import { DeskShell } from "@/components/desk-shell";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { currentUser } from "@/lib/rbac";
-import { SiteHeader } from "@/components/site-header";
 import { TierBadge } from "@/components/ui";
 import { PasswordForm } from "./password-form";
 
@@ -19,8 +19,7 @@ export default async function AccountPage() {
 
   return (
     <>
-      <SiteHeader />
-      <main className="mx-auto max-w-2xl px-4 pb-20">
+      <DeskShell user={user} width="max-w-2xl">
         <Link
           href={user.role === "CONTRIBUTOR" ? "/dashboard" : "/editorial"}
           className="inline-block py-4 text-sm text-ink-soft hover:text-ink"
@@ -64,7 +63,7 @@ export default async function AccountPage() {
         <div className="mt-6">
           <PasswordForm hasPassword={Boolean(account?.passwordHash)} />
         </div>
-      </main>
+      </DeskShell>
     </>
   );
 }

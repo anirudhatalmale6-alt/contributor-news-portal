@@ -49,10 +49,10 @@ export function TierBadge({
   label?: string;
   generalLabel?: string;
 }) {
-  if (role === "ADMIN" || role === "EDITOR") {
+  if (role === "SUPERADMIN" || role === "ADMIN" || role === "EDITOR") {
     return (
       <span className="inline-flex items-center rounded-full border border-indigo-200 bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-800">
-        {role === "ADMIN" ? "Admin" : "Editor"}
+        {role === "SUPERADMIN" ? "Owner" : role === "ADMIN" ? "Admin" : "Editor"}
       </span>
     );
   }

@@ -1,8 +1,7 @@
+import { DeskShell } from "@/components/desk-shell";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { currentUser, isOwner, isStaff } from "@/lib/rbac";
-import { SiteHeader } from "@/components/site-header";
-import { StaffNav } from "@/components/staff-nav";
 import { PeopleTable } from "./people-table";
 import { paymentSettings } from "@/lib/settings";
 import { earningsByUser } from "@/lib/earnings";
@@ -46,11 +45,7 @@ export default async function PeoplePage() {
 
   return (
     <>
-      <SiteHeader />
-      <main className="mx-auto max-w-7xl px-4 pb-20">
-        <div className="pt-4">
-          <StaffNav user={user} current="people" />
-        </div>
+      <DeskShell user={user} current="people" width="max-w-7xl">
 
         <h1 className="font-serif text-2xl font-bold sm:text-3xl">People</h1>
         <p className="mt-1 text-sm text-ink-soft">
@@ -86,7 +81,7 @@ export default async function PeoplePage() {
             earnedCents: earned.get(u.id)?.totalCents ?? 0,
           }))}
         />
-      </main>
+      </DeskShell>
     </>
   );
 }

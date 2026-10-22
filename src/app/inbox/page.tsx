@@ -1,10 +1,9 @@
+import { DeskShell } from "@/components/desk-shell";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { currentUser, isStaff } from "@/lib/rbac";
 import { siteSettings } from "@/lib/settings";
-import { SiteHeader } from "@/components/site-header";
-import { StaffNav } from "@/components/staff-nav";
 import { otherNames, threadWhere } from "@/lib/inbox";
 import { NewThread } from "./new-thread";
 
@@ -85,11 +84,7 @@ export default async function InboxPage() {
 
   return (
     <>
-      <SiteHeader />
-      <main className="mx-auto max-w-4xl px-4 pb-20">
-        <div className="pt-4">
-          <StaffNav user={user} current="inbox" />
-        </div>
+      <DeskShell user={user} current="inbox" width="max-w-4xl">
 
         <h1 className="font-serif text-2xl font-bold sm:text-3xl">Inbox</h1>
         <p className="mt-1 text-sm text-ink-soft">
@@ -153,7 +148,7 @@ export default async function InboxPage() {
             </li>
           ))}
         </ul>
-      </main>
+      </DeskShell>
     </>
   );
 }

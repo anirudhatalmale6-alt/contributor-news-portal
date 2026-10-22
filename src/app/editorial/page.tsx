@@ -1,3 +1,4 @@
+import { DeskShell } from "@/components/desk-shell";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
@@ -5,8 +6,6 @@ import { currentUser, isStaff } from "@/lib/rbac";
 import { money, timeAgo } from "@/lib/format";
 import { paymentSettings } from "@/lib/settings";
 import { earningsTotal } from "@/lib/earnings";
-import { SiteHeader } from "@/components/site-header";
-import { StaffNav } from "@/components/staff-nav";
 import { StatCard, StatusPill, TierBadge } from "@/components/ui";
 import { FeatureToggle } from "./feature-toggle";
 
@@ -73,11 +72,7 @@ export default async function EditorialPage({
 
   return (
     <>
-      <SiteHeader />
-      <main className="mx-auto max-w-5xl px-4 pb-16">
-        <div className="pt-4">
-          <StaffNav user={user} current={status === "APPROVED" ? "published" : "newsroom"} />
-        </div>
+      <DeskShell user={user} current={status === "APPROVED" ? "published" : "newsroom"} width="max-w-5xl">
 
         <div className="flex flex-wrap items-end justify-between gap-3 border-b border-line py-6">
           <div>
@@ -226,7 +221,7 @@ export default async function EditorialPage({
             ))}
           </ul>
         )}
-      </main>
+      </DeskShell>
     </>
   );
 }

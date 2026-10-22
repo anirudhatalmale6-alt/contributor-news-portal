@@ -1,8 +1,8 @@
+import { DeskShell } from "@/components/desk-shell";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { currentUser } from "@/lib/rbac";
-import { SiteHeader } from "@/components/site-header";
 import { ProfileForm } from "@/components/profile-form";
 
 export const metadata = { title: "My profile" };
@@ -30,8 +30,7 @@ export default async function MyProfilePage() {
 
   return (
     <>
-      <SiteHeader />
-      <main className="mx-auto max-w-2xl px-4 pb-20">
+      <DeskShell user={me} width="max-w-2xl">
         <Link href="/dashboard" className="inline-block py-4 text-sm text-ink-soft hover:text-ink">
           &larr; Back to my desk
         </Link>
@@ -64,7 +63,7 @@ export default async function MyProfilePage() {
             }}
           />
         </div>
-      </main>
+      </DeskShell>
     </>
   );
 }

@@ -231,6 +231,12 @@ export const TEXT_DEFAULTS: Record<string, TextEntry> = {
     bn: "{name}-এর ডেস্ক",
     note: "Heading at the top of a contributor's own desk",
   },
+  "desk.prompt": {
+    group: "The writing desk",
+    en: "What's your story, {name}?",
+    bn: "{name}, আজ কী খবর?",
+    note: "The prompt beside the write button at the top of the desk",
+  },
   "desk.editProfile": {
     group: "The writing desk",
     en: "Edit my profile",
@@ -413,6 +419,23 @@ export const TEXT_DEFAULTS: Record<string, TextEntry> = {
     group: "The writing desk",
     en: "Payouts",
     bn: "সম্মানী পরিশোধ",
+  },
+  "nav.backToPaper": {
+    group: "The writing desk",
+    en: "Back to the newspaper",
+    bn: "সংবাদপত্রে ফিরে যান",
+    note: "Top right of every working screen, instead of the newspaper's menu",
+  },
+  "nav.writeNew": {
+    group: "The writing desk",
+    en: "Write a new piece",
+    bn: "নতুন লেখা লিখুন",
+    note: "The big button at the top of the desk's side menu",
+  },
+  "nav.publicPage": {
+    group: "The writing desk",
+    en: "View my public page",
+    bn: "আমার পাবলিক পাতা দেখুন",
   },
   "nav.sections": {
     group: "The writing desk",
