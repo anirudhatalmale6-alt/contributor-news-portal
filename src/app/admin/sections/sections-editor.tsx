@@ -5,6 +5,9 @@ import { useRouter } from "next/navigation";
 
 type Row = { key: string; slug: string; inMenu: boolean; en: string; bn: string; articles: number };
 
+/** "1 article", "3 articles". */
+const articlesWord = (n: number) => `${n} ${n === 1 ? "article" : "articles"}`;
+
 const field = "w-full rounded-lg border border-line px-2.5 py-1.5 text-sm outline-none focus:border-navy";
 
 /**
@@ -85,7 +88,7 @@ export function SectionsEditor({ initial, limits }: { initial: Row[]; limits: { 
     if (!row) return;
     const target = rows.find((r) => r.key === removing.moveTo);
     const question = row.articles
-      ? `Delete "${row.en}" and move its ${row.articles} articles to "${target?.en}"?`
+      ? `Delete "${row.en}" and move its ${articlesWord(row.articles)} to "${target?.en}"?`
       : `Delete "${row.en}"?`;
     if (!window.confirm(question)) return;
     const qs = row.articles ? `?moveTo=${encodeURIComponent(removing.moveTo)}` : "";
@@ -102,7 +105,9 @@ export function SectionsEditor({ initial, limits }: { initial: Row[]; limits: { 
     setRemoving(null);
     setMessage({
       kind: "ok",
-      text: row.articles ? `"${row.en}" deleted. Its ${row.articles} articles are now in "${target?.en}".` : `"${row.en}" deleted.`,
+      text: row.articles
+        ? `"${row.en}" deleted. Its ${articlesWord(row.articles)} ${row.articles === 1 ? "is" : "are"} now in "${target?.en}".`
+        : `"${row.en}" deleted.`,
     });
     router.refresh();
   }
@@ -218,7 +223,7 @@ export function SectionsEditor({ initial, limits }: { initial: Row[]; limits: { 
                 <p className="font-medium">Delete &quot;{row.en}&quot;?</p>
                 {row.articles ? (
                   <label className="grid gap-1">
-                    <span>Its {row.articles} articles must go somewhere first. Move them to:</span>
+                    <span>Its {articlesWord(row.articles)} must go somewhere first. Move {row.articles === 1 ? "it" : "them"} to:</span>
                     <select
                       name="move-to"
                       value={removing.moveTo}

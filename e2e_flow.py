@@ -3681,7 +3681,7 @@ def main():
         scp.select_option('select[name="move-to"]', "Politics")
         scp.once("dialog", lambda d: d.accept())
         scp.click('button[name="confirm-delete-section"]')
-        scp.wait_for_selector("text=are now in", timeout=20000)
+        scp.wait_for_selector("text=now in", timeout=20000)
         moved = scp.request.get(f"{BASE}/api/editorial/{made['id']}").json()["article"]["category"]
         check(
             "deleting a section moves its articles rather than losing them",

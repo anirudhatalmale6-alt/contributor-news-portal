@@ -107,7 +107,9 @@ export async function deleteSection(key: string, moveTo: string | null) {
   if (!section) throw new HttpError(404, "That section no longer exists");
   const count = await prisma.article.count({ where: { category: key } });
   if (count > 0) {
-    if (!moveTo) throw new HttpError(409, `This section has ${count} articles. Choose where to move them first.`);
+    if (!moveTo) {
+      throw new HttpError(409, `This section has ${count} ${count === 1 ? "article" : "articles"}. Choose where to move ${count === 1 ? "it" : "them"} first.`);
+    }
     if (moveTo === key || !(await prisma.section.findUnique({ where: { key: moveTo } }))) {
       throw new HttpError(422, "Choose another section to move its articles to");
     }
