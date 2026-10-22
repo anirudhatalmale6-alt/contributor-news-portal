@@ -414,6 +414,12 @@ export const TEXT_DEFAULTS: Record<string, TextEntry> = {
     en: "Payouts",
     bn: "সম্মানী পরিশোধ",
   },
+  "nav.pages": {
+    group: "The writing desk",
+    en: "Pages",
+    bn: "পাতা",
+    note: "Where admins write About us, Contact and the other footer pages",
+  },
   "nav.settings": {
     group: "The writing desk",
     en: "Settings",

@@ -3,6 +3,7 @@ import { SHELL } from "@/components/ui";
 import { type Locale, localeDate, localePath, t } from "@/lib/i18n";
 import { siteSettings } from "@/lib/settings";
 import { text } from "@/lib/ui-text";
+import { footerPages } from "@/lib/pages";
 
 export async function SiteFooter({ locale = "EN" }: { locale?: Locale }) {
   const copy = t(locale);
@@ -18,6 +19,8 @@ export async function SiteFooter({ locale = "EN" }: { locale?: Locale }) {
     { href: site.footerContactUrl, label: text("footer.contact", locale) },
     { href: site.footerPrivacyUrl, label: text("footer.privacy", locale) },
   ].filter((link) => link.href.trim());
+  // Pages the owner wrote and ticked "Show in footer", in his order.
+  const pages = await footerPages(locale);
 
   return (
     <footer lang={locale === "BN" ? "bn" : "en"} className="border-t border-line bg-paper-soft">
@@ -52,6 +55,11 @@ export async function SiteFooter({ locale = "EN" }: { locale?: Locale }) {
           <Link href="/login" className="hover:text-ink">
             {copy.signIn}
           </Link>
+          {pages.map((page) => (
+            <Link key={page.href} href={page.href} className="hover:text-ink">
+              {page.label}
+            </Link>
+          ))}
           {extra.map((link) => (
             <Link key={link.href} href={link.href} className="hover:text-ink">
               {link.label}

@@ -3518,6 +3518,81 @@ def main():
         mc.close()
         pa.close()
 
+        # --- 10u. the owner's own pages, linked from the footer --------------
+        pg_c = ctx.browser.new_context(viewport=DESKTOP, http_credentials=GATE)
+        pgp = pg_c.new_page()
+        sign_in(pgp, "admin@thedocument.test", STAFF_PASS)
+        go(pgp, f"{BASE}/admin/pages")
+        check("admins have a Pages screen", "/admin/pages" in pgp.url and "Pages" in pgp.inner_text("main h1"))
+        page_title = f"About us {STAMP}"
+        pgp.click('button[name="new-page"]')
+        pgp.fill('input[name="titleBn"]', f"আমাদের সম্পর্কে {STAMP}")
+        pgp.fill('input[name="titleEn"]', page_title)
+        pgp.fill('textarea[name="bodyEn"]', "## Who we are\n\nA paper written by its readers and **checked by its editors**.")
+        pgp.fill('textarea[name="bodyBn"]', "## আমরা কারা\n\nপাঠকদের লেখা, সম্পাদকদের যাচাই করা সংবাদপত্র।")
+        pgp.fill('input[name="footerOrder"]', "1")
+        pgp.click('button[name="save-page"]')
+        pgp.wait_for_selector("text=Saved as a draft", timeout=20000)
+        slug_now = pgp.input_value('input[name="slug"]')
+        check("a new page gets a web address from its English title", slug_now.startswith("about-us"), slug_now)
+        r = pgp.request.get(f"{BASE}/en/p/{slug_now}")
+        check("a draft page cannot be visited", r.status == 404, str(r.status))
+
+        pgp.check('input[name="published"]')
+        pgp.click('button[name="save-page"]')
+        pgp.wait_for_selector("text=Saved and live", timeout=20000)
+        pgp.wait_for_timeout(SETTLE_MS)
+        go(pgp, f"{BASE}/en")
+        check(
+            "a published page ticked for the footer is linked there",
+            pgp.locator(f'footer a[href="/en/p/{slug_now}"]').count() == 1,
+        )
+        pgp.click(f'footer a[href="/en/p/{slug_now}"]')
+        pgp.wait_for_url(f"**/en/p/{slug_now}", timeout=20000)
+        body_txt = pgp.inner_text("main")
+        check(
+            "the page shows its English version, with its formatting",
+            page_title in body_txt and pgp.locator("main h2:text-is('Who we are')").count() == 1
+            and pgp.locator("main strong:text-is('checked by its editors')").count() == 1,
+            body_txt[:160].replace("\n", " "),
+        )
+        shot(pgp, "60-custom-page.png")
+        go(pgp, f"{BASE}/p/{slug_now}")
+        check(
+            "and the Bangla site shows the Bangla version, linked from its own footer",
+            "আমরা কারা" in pgp.inner_text("main")
+            and pgp.locator(f'footer a[href="/p/{slug_now}"]').count() == 1,
+        )
+
+        # Unticking "Show in footer" keeps the page but drops the link.
+        go(pgp, f"{BASE}/admin/pages")
+        pgp.locator(f'aside button:has-text("{page_title}")').click()
+        pgp.uncheck('input[name="inFooter"]')
+        pgp.click('button[name="save-page"]')
+        pgp.wait_for_selector("text=Saved and live", timeout=20000)
+        pgp.wait_for_timeout(SETTLE_MS)
+        go(pgp, f"{BASE}/en")
+        check(
+            "taking it out of the footer removes the link but not the page",
+            pgp.locator(f'footer a[href="/en/p/{slug_now}"]').count() == 0
+            and pgp.request.get(f"{BASE}/en/p/{slug_now}").status == 200,
+        )
+        mp_c = ctx.browser.new_context(viewport=DESKTOP, http_credentials=GATE)
+        mpp = mp_c.new_page()
+        sign_in(mpp, "maya@thedocument.test", STAFF_PASS)
+        r = mpp.request.post(f"{BASE}/api/admin/pages", data={"titleEn": "Sneaky"})
+        check("a contributor cannot create pages", r.status in (401, 403), str(r.status))
+        mp_c.close()
+
+        # Clear up: delete it.
+        go(pgp, f"{BASE}/admin/pages")
+        pgp.locator(f'aside button:has-text("{page_title}")').click()
+        pgp.once("dialog", lambda d: d.accept())
+        pgp.click('button[name="delete-page"]')
+        pgp.wait_for_selector("text=deleted", timeout=20000)
+        check("a page can be deleted", pgp.request.get(f"{BASE}/en/p/{slug_now}").status == 404)
+        pg_c.close()
+
         # --- 11. mobile ------------------------------------------------------
         mob = ctx.browser.new_context(viewport=PHONE, device_scale_factor=2, http_credentials=GATE)
         mp = mob.new_page()

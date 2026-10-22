@@ -216,10 +216,17 @@ export function SiteForm({ settings }: { settings: Site }) {
       {/* --- The foot of every public page ---------------------------- */}
       <section className="grid gap-3 border-t border-line pt-4">
         <h2 className="text-xs font-bold uppercase tracking-widest text-ink-soft">Footer</h2>
+        <p className="rounded-lg border border-navy/20 bg-navy/5 px-3 py-2 text-sm">
+          To write your own footer pages (About us, Contact, Privacy policy and so on), use{" "}
+          <a href="/admin/pages" className="font-medium text-navy underline">
+            Pages
+          </a>
+          . Pages you tick &ldquo;Show in footer&rdquo; there are linked automatically.
+        </p>
         <p className="text-xs text-ink-soft">
-          Addresses for the three extra footer links. Leave one empty and that link disappears
-          rather than going nowhere. The words themselves are in Wording, under &ldquo;Footer and
-          invitation&rdquo;.
+          The three boxes below are only for linking to an address somewhere else. Leave one empty
+          and that link disappears rather than going nowhere. Their words are in Wording, under
+          &ldquo;Footer and invitation&rdquo;.
         </p>
         <div className="grid gap-3 sm:grid-cols-3">
           <label className="grid gap-1 text-sm">

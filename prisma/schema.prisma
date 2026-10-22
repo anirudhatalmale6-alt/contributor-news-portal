@@ -598,3 +598,21 @@ model PasswordReset {
 
   @@index([userId, createdAt])
 }
+
+/// A page of the owner's own: About us, Contact, Privacy policy and the like.
+/// Written in Settings - Pages, in both languages, and linked from the footer
+/// when he ticks it. Served at /p/<slug> (Bangla) and /en/p/<slug> (English).
+model Page {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  titleBn     String   @default("")
+  titleEn     String   @default("")
+  bodyBn      String   @default("")
+  bodyEn      String   @default("")
+  /// Only a published page can be visited or linked.
+  published   Boolean  @default(false)
+  inFooter    Boolean  @default(true)
+  footerOrder Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
