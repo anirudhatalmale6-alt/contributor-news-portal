@@ -38,6 +38,12 @@ type Site = {
   maxSectionGrid: number;
   deskLanguage: string;
   contributorMessaging: boolean;
+  articleNoticeOn: boolean;
+  articleNoticeBn: string;
+  articleNoticeEn: string;
+  articleNoticeButtonBn: string;
+  articleNoticeButtonEn: string;
+  articleNoticeUrl: string;
 };
 
 /**
@@ -211,6 +217,71 @@ export function SiteForm({ settings }: { settings: Site }) {
           Prothom Alo reads in Shurjo, which is their own licensed typeface and cannot be copied
           onto another site. These are the closest freely licensed faces, hosted with the site.
         </p>
+      </section>
+
+      {/* --- A notice at the end of every article ---------------------- */}
+      <section id="article-notice" className="grid gap-3 border-t border-line pt-4">
+        <h2 className="text-xs font-bold uppercase tracking-widest text-ink-soft">
+          Notice at the end of every article
+        </h2>
+        <p className="text-xs text-ink-soft">
+          An appeal or announcement shown in a box after the text of every article, the way the
+          Guardian asks readers for support. Start a line with ## for a heading and wrap words in
+          **two stars** for bold. Leave one language empty and that side shows the other.
+        </p>
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            name="articleNoticeOn"
+            checked={form.articleNoticeOn}
+            onChange={(e) => setForm({ ...form, articleNoticeOn: e.target.checked })}
+            className="size-4"
+          />
+          <span className="font-medium">Show the notice on every article</span>
+        </label>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label className="grid gap-1">
+            <span className="text-xs font-medium text-ink-soft">Notice (বাংলা)</span>
+            <textarea
+              name="articleNoticeBn"
+              lang="bn"
+              rows={5}
+              value={form.articleNoticeBn}
+              onChange={set("articleNoticeBn")}
+              placeholder="## পাঠকের প্রতি আবেদন&#10;স্বাধীন সাংবাদিকতা টিকিয়ে রাখতে..."
+              className={field}
+            />
+          </label>
+          <label className="grid gap-1">
+            <span className="text-xs font-medium text-ink-soft">Notice (English)</span>
+            <textarea
+              name="articleNoticeEn"
+              rows={5}
+              value={form.articleNoticeEn}
+              onChange={set("articleNoticeEn")}
+              placeholder="## A note to our readers&#10;Independent reporting depends on..."
+              className={field}
+            />
+          </label>
+          <label className="grid gap-1">
+            <span className="text-xs font-medium text-ink-soft">Button text (বাংলা), optional</span>
+            <input name="articleNoticeButtonBn" lang="bn" value={form.articleNoticeButtonBn} onChange={set("articleNoticeButtonBn")} className={field} />
+          </label>
+          <label className="grid gap-1">
+            <span className="text-xs font-medium text-ink-soft">Button text (English), optional</span>
+            <input name="articleNoticeButtonEn" value={form.articleNoticeButtonEn} onChange={set("articleNoticeButtonEn")} className={field} />
+          </label>
+        </div>
+        <label className="grid gap-1">
+          <span className="text-xs font-medium text-ink-soft">Where the button goes</span>
+          <input
+            name="articleNoticeUrl"
+            value={form.articleNoticeUrl}
+            onChange={set("articleNoticeUrl")}
+            placeholder="/p/support-us or https://..."
+            className={field}
+          />
+        </label>
       </section>
 
       {/* --- The foot of every public page ---------------------------- */}

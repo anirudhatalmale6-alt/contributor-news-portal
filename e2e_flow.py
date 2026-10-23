@@ -3738,6 +3738,121 @@ def main():
         )
         dk_c.close()
 
+        # --- 10x. videos that actually upload, links that play, the article foot
+        vx_c = ctx.browser.new_context(viewport=DESKTOP, http_credentials=GATE)
+        vxp = vx_c.new_page()
+        sign_in(vxp, "maya@thedocument.test", STAFF_PASS)
+        draft = vxp.request.post(f"{BASE}/api/drafts", data={"language": "EN"}).json()["article"]
+        # A 12 MB clip: everything over 10 MB used to be cut off on its way in,
+        # so every ordinary phone video failed.
+        clip = b"\x00\x00\x00\x18ftypmp42" + os.urandom(12 * 1024 * 1024)
+        r = vxp.request.post(
+            f"{BASE}/api/uploads",
+            multipart={
+                "articleId": draft["id"],
+                "file": {"name": "street.mp4", "mimeType": "video/mp4", "buffer": clip},
+            },
+            timeout=120000,
+        )
+        check("a 12 MB phone video uploads", r.status == 201, f"{r.status} {r.text()[:120]}")
+        r = vxp.request.post(
+            f"{BASE}/api/uploads",
+            multipart={
+                "articleId": draft["id"],
+                "file": {"name": "iphone.mov", "mimeType": "video/quicktime", "buffer": clip[:2 * 1024 * 1024]},
+            },
+        )
+        check("and an iPhone .mov video too", r.status == 201, f"{r.status} {r.text()[:120]}")
+
+        go(vxp, f"{BASE}/dashboard/write/{draft['id']}")
+        vxp.wait_for_timeout(SETTLE_MS)
+        check(
+            "the writing screen says how big a video can be, and what to do with a longer one",
+            "150" in vxp.inner_text("main") and "YouTube" in vxp.inner_text("main"),
+        )
+        with vxp.expect_file_chooser() as fc:
+            vxp.click('button[name="attach-media"]')
+        fc.value.set_files(
+            files=[{"name": "huge.jpg", "mimeType": "image/jpeg", "buffer": b"\xff\xd8" + b"0" * (21 * 1024 * 1024)}]
+        )
+        vxp.wait_for_timeout(SETTLE_MS)
+        check(
+            "a photo that is too big is refused at once, before it is sent",
+            "Photos can be up to 20 MB" in vxp.inner_text("main"),
+            vxp.inner_text("main")[:200].replace("\n", " "),
+        )
+        vxp.request.delete(f"{BASE}/api/drafts/{draft['id']}")
+        vx_c.close()
+
+        ad_c = ctx.browser.new_context(viewport=DESKTOP, http_credentials=GATE)
+        adp = ad_c.new_page()
+        sign_in(adp, "admin@thedocument.test", STAFF_PASS)
+
+        # A YouTube link on a line of its own plays inside the text. Proved on a
+        # page, which is drawn by the same code as an article.
+        made = adp.request.post(
+            f"{BASE}/api/admin/pages",
+            data={
+                "titleEn": f"Video test {STAMP}",
+                "bodyEn": "Before the clip.\n\nhttps://www.youtube.com/watch?v=dQw4w9WgXcQ\n\nhttps://example.com/not-a-video\n\nAfter the clip.",
+                "published": True,
+                "inFooter": False,
+            },
+        ).json()["page"]
+        go(adp, f"{BASE}/en/p/{made['slug']}")
+        frames = adp.locator("main iframe")
+        check(
+            "a YouTube link on its own line becomes a player",
+            frames.count() == 1
+            and (frames.first.get_attribute("src") or "").startswith("https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ"),
+            str(frames.count()),
+        )
+        check(
+            "and any other address stays plain text",
+            "https://example.com/not-a-video" in adp.inner_text("main"),
+        )
+        adp.request.delete(f"{BASE}/api/admin/pages/{made['id']}")
+
+        # The owner's notice at the end of every article.
+        go(adp, f"{BASE}/admin")
+        adp.wait_for_timeout(SETTLE_MS)
+        adp.check('#site-settings input[name="articleNoticeOn"]')
+        adp.fill('#site-settings textarea[name="articleNoticeEn"]', f"## Support independent reporting {STAMP}\n\nEvery piece here is **checked by an editor**.")
+        adp.fill('#site-settings input[name="articleNoticeButtonEn"]', "Support us")
+        adp.fill('#site-settings input[name="articleNoticeUrl"]', "/en")
+        adp.click('button:has-text("Save site settings")')
+        adp.wait_for_selector("text=Refresh the public site", timeout=20000)
+        adp.wait_for_timeout(SETTLE_MS)
+        go(adp, f"{BASE}/en")
+        adp.locator('main a[href^="/en/article/"]').first.click()
+        adp.wait_for_url("**/en/article/**", timeout=20000)
+        wait_article(adp)
+        box = adp.locator("[data-article-notice]")
+        check(
+            "the owner's notice shows at the end of an article, with its button",
+            box.count() == 1
+            and f"Support independent reporting {STAMP}" in box.inner_text()
+            and box.locator('a:has-text("Support us")').count() == 1,
+        )
+        bottom = {a.get_attribute("href") for a in adp.locator("[data-more-on-this] a").all()}
+        side = {a.get_attribute("href") for a in adp.locator("main aside a[href*='/article/']").all()}
+        check(
+            "related articles also run under the article, none repeating the side panel",
+            len(bottom) >= 1 and not (bottom & side),
+            f"under={len(bottom)} shared={len(bottom & side)}",
+        )
+        shot(adp, "63-article-foot.png", scroll="[data-article-notice]")
+
+        go(adp, f"{BASE}/admin")
+        adp.wait_for_timeout(SETTLE_MS)
+        adp.uncheck('#site-settings input[name="articleNoticeOn"]')
+        adp.fill('#site-settings textarea[name="articleNoticeEn"]', "")
+        adp.fill('#site-settings input[name="articleNoticeButtonEn"]', "")
+        adp.fill('#site-settings input[name="articleNoticeUrl"]', "")
+        adp.click('button:has-text("Save site settings")')
+        adp.wait_for_selector("text=Refresh the public site", timeout=20000)
+        ad_c.close()
+
         # --- 11. mobile ------------------------------------------------------
         mob = ctx.browser.new_context(viewport=PHONE, device_scale_factor=2, http_credentials=GATE)
         mp = mob.new_page()

@@ -41,6 +41,11 @@ export const config = {
      * Everything except Next's own static output and the OAuth callback - a
      * provider redirecting a reader back here cannot send a Basic auth header.
      */
-    "/((?!_next/static|_next/image|favicon.ico|icon.png|api/auth/callback).*)",
+    // Uploads are left out too. Next copies every request this runs on into
+    // memory and stops at 10 MB, which cut every phone video short and made
+    // the upload fail with "Failed to parse body as FormData". The upload
+    // route checks the signed-in user itself, so the preview lock loses
+    // nothing by skipping it.
+    "/((?!_next/static|_next/image|favicon.ico|icon.png|api/auth/callback|api/uploads).*)",
   ],
 };

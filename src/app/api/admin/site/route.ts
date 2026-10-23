@@ -26,6 +26,17 @@ const schema = z.object({
   maxSectionGrid: z.coerce.number().int().min(0).max(60).optional(),
   deskLanguage: z.enum(["EN", "BN"]).optional(),
   contributorMessaging: z.boolean().optional(),
+  articleNoticeOn: z.boolean().optional(),
+  articleNoticeBn: z.string().max(4000).optional(),
+  articleNoticeEn: z.string().max(4000).optional(),
+  articleNoticeButtonBn: z.string().trim().max(60).optional(),
+  articleNoticeButtonEn: z.string().trim().max(60).optional(),
+  articleNoticeUrl: z
+    .string()
+    .trim()
+    .max(300)
+    .refine((v) => v === "" || v.startsWith("/") || /^https?:\/\//.test(v), "The button link must start with / or https://")
+    .optional(),
   logoUrl: z.string().trim().max(500).nullable().optional(),
   adsEnabled: z.boolean().optional(),
   adHomeHtml: z.string().max(4000).optional(),

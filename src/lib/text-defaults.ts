@@ -77,6 +77,12 @@ export const TEXT_DEFAULTS: Record<string, TextEntry> = {
   // --- Front page ---------------------------------------------------------
   "feed.alsoToday": { group: "Front page", en: "Also today", bn: "আজকের আরও খবর", note: "Heading over the left-hand column" },
   "feed.featured": { group: "Front page", en: "Featured", bn: "নির্বাচিত", note: "Heading over the right-hand column" },
+  "article.moreOnThisStory": {
+    group: "Article page",
+    en: "More on this story",
+    bn: "এ বিষয়ে আরও খবর",
+    note: "The row of related articles under every article",
+  },
   "feed.latestNews": {
     group: "Front page",
     en: "Latest news",
@@ -507,10 +513,16 @@ export const TEXT_DEFAULTS: Record<string, TextEntry> = {
     note: "The line under the contributor name box",
   },
   "compose.mediaTitle": { group: "Writing a piece", en: "Photos and video", bn: "ছবি ও ভিডিও", note: "Heading over the attachments" },
+  "compose.videoLink": {
+    group: "Writing a piece",
+    en: "Longer video? Put it on YouTube or Facebook and paste its link into the article on a line of its own. It plays inside the article.",
+    bn: "ভিডিও বড়? ইউটিউব বা ফেসবুকে তুলে লিংকটি লেখার মধ্যে আলাদা একটি লাইনে বসিয়ে দিন। ভিডিওটি লেখার ভেতরেই চলবে।",
+    note: "Under the photos and videos box",
+  },
   "compose.mediaNote": {
     group: "Writing a piece",
-    en: "Images up to 8 MB, clips up to 128 MB. The first photo becomes the cover.",
-    bn: "ছবি সর্বোচ্চ ৮ এমবি, ভিডিও সর্বোচ্চ ১২৮ এমবি। প্রথম ছবিটিই প্রচ্ছদ হবে।",
+    en: "Photos up to 20 MB, videos up to 150 MB (about one to two minutes from a phone). The first photo becomes the cover.",
+    bn: "ছবি সর্বোচ্চ ২০ এমবি, ভিডিও সর্বোচ্চ ১৫০ এমবি (ফোনে প্রায় এক থেকে দুই মিনিট)। প্রথম ছবিটিই প্রচ্ছদ হবে।",
     note: "The line under that heading",
   },
   "compose.mediaEmpty": { group: "Writing a piece", en: "No media attached yet.", bn: "এখনও কোনো ছবি বা ভিডিও যুক্ত করা হয়নি।", note: "Shown when nothing has been attached" },

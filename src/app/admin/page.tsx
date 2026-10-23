@@ -155,6 +155,12 @@ export default async function AdminPage() {
             maxSectionGrid: site.maxSectionGrid,
             deskLanguage: site.deskLanguage,
             contributorMessaging: site.contributorMessaging,
+            articleNoticeOn: site.articleNoticeOn,
+            articleNoticeBn: site.articleNoticeBn,
+            articleNoticeEn: site.articleNoticeEn,
+            articleNoticeButtonBn: site.articleNoticeButtonBn,
+            articleNoticeButtonEn: site.articleNoticeButtonEn,
+            articleNoticeUrl: site.articleNoticeUrl,
           }}
         />
 

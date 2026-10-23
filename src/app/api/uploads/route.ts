@@ -1,11 +1,10 @@
+import { MAX_IMAGE, MAX_IMAGE_MB, MAX_VIDEO, MAX_VIDEO_MB } from "@/lib/upload-limits";
 import { prisma } from "@/lib/prisma";
 import { errorResponse, HttpError, isStaff, requireUser } from "@/lib/rbac";
 import { saveUpload } from "@/lib/storage";
 
 const IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif", "image/avif"];
 const VIDEO_TYPES = ["video/mp4", "video/webm", "video/quicktime"];
-const MAX_IMAGE = 8 * 1024 * 1024; // 8 MB
-const MAX_VIDEO = 128 * 1024 * 1024; // 128 MB
 
 /**
  * POST /api/uploads  (multipart: file, articleId, caption?)
@@ -35,8 +34,8 @@ export async function POST(req: Request) {
     if (!isImage && !isVideo) {
       throw new HttpError(415, `Unsupported file type: ${file.type || "unknown"}`);
     }
-    if (isImage && file.size > MAX_IMAGE) throw new HttpError(413, "Images must be under 8 MB");
-    if (isVideo && file.size > MAX_VIDEO) throw new HttpError(413, "Videos must be under 128 MB");
+    if (isImage && file.size > MAX_IMAGE) throw new HttpError(413, `Photos can be up to ${MAX_IMAGE_MB} MB`);
+    if (isVideo && file.size > MAX_VIDEO) throw new HttpError(413, `Videos can be up to ${MAX_VIDEO_MB} MB`);
 
     const { url, originalName } = await saveUpload(file);
 

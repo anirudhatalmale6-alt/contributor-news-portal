@@ -333,6 +333,16 @@ model SiteSettings {
   aiKeyCipher String @default("")
   aiKeyHint   String @default("")
 
+  /// The owner's own notice at the end of every article - an appeal, an
+  /// announcement - in both languages, with an optional button. Off until he
+  /// writes one and switches it on.
+  articleNoticeOn       Boolean @default(false)
+  articleNoticeBn       String  @default("")
+  articleNoticeEn       String  @default("")
+  articleNoticeButtonBn String  @default("")
+  articleNoticeButtonEn String  @default("")
+  articleNoticeUrl      String  @default("")
+
   /// Which language the contributor's desk and the newsroom bar are written
   /// in. The words themselves are all on the Wording screen; this only says
   /// which column of it those screens read.

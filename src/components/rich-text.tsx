@@ -38,6 +38,49 @@ function inline(text: string, keyBase: string) {
   return out.length ? out : text;
 }
 
+
+/**
+ * A YouTube or Facebook video address on a line of its own becomes a player.
+ *
+ * Only these two, recognised by their exact address shapes, and only ever as
+ * a player pointing back at that service - nothing a writer types is turned
+ * into markup. YouTube is loaded from its no-cookie address, so readers are
+ * not tracked just for scrolling past.
+ */
+export function videoEmbed(line: string): { src: string; title: string } | null {
+  let url: URL;
+  try {
+    url = new URL(line.trim());
+  } catch {
+    return null;
+  }
+  if (url.protocol !== "https:" && url.protocol !== "http:") return null;
+  const host = url.hostname.replace(/^www\.|^m\./, "");
+  const id = (v: string | null | undefined) => (v && /^[A-Za-z0-9_-]{6,20}$/.test(v) ? v : null);
+
+  let yt: string | null = null;
+  if (host === "youtu.be") yt = id(url.pathname.slice(1));
+  else if (host === "youtube.com" || host === "music.youtube.com") {
+    if (url.pathname === "/watch") yt = id(url.searchParams.get("v"));
+    else {
+      const m = url.pathname.match(/^\/(?:shorts|live|embed)\/([^/?#]+)/);
+      yt = id(m?.[1]);
+    }
+  }
+  if (yt) return { src: `https://www.youtube-nocookie.com/embed/${yt}`, title: "YouTube video" };
+
+  const isFacebookVideo =
+    (host === "facebook.com" && (/\/videos\//.test(url.pathname) || url.pathname.startsWith("/watch") || url.pathname.startsWith("/reel/"))) ||
+    host === "fb.watch";
+  if (isFacebookVideo) {
+    return {
+      src: `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(url.toString())}&show_text=false`,
+      title: "Facebook video",
+    };
+  }
+  return null;
+}
+
 export function renderBody(body: string) {
   const lines = body.replace(/\r\n/g, "\n").split("\n");
   const out: React.ReactElement[] = [];
@@ -96,6 +139,24 @@ export function renderBody(body: string) {
       flushAll();
       const text = line.startsWith("## ") ? line.slice(3) : line.slice(2);
       out.push(<h2 key={key++}>{inline(text, `h2${key}`)}</h2>);
+      continue;
+    }
+    const video = videoEmbed(line);
+    if (video) {
+      flushAll();
+      out.push(
+        <div key={key++} className="not-prose my-6 aspect-video w-full overflow-hidden rounded-lg bg-black">
+          <iframe
+            src={video.src}
+            title={video.title}
+            loading="lazy"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            referrerPolicy="strict-origin-when-cross-origin"
+            allowFullScreen
+            className="h-full w-full border-0"
+          />
+        </div>,
+      );
       continue;
     }
     if (/^[-*] /.test(line)) {

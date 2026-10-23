@@ -1,5 +1,6 @@
 "use client";
 
+import { sendWithProgress, tooBig, uploadFailure } from "@/lib/upload-limits";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { FormatToolbar } from "@/components/format-toolbar";
@@ -71,6 +72,9 @@ export function Composer({
   const [witnesses, setWitnesses] = useState(article.witnesses);
   const isStaff = article.isStaff;
   const [uploading, setUploading] = useState(false);
+  /** "video.mp4 - 42%" while a file is on its way, so a slow phone upload
+      visibly moves instead of looking frozen. */
+  const [progress, setProgress] = useState<{ name: string; percent: number } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const dirty = useRef(false);
 
@@ -134,20 +138,31 @@ export function Composer({
     if (!files?.length) return;
     setUploading(true);
     setMessage(null);
+    const problems: string[] = [];
     for (const file of Array.from(files)) {
+      // Refuse it here, before the upload, rather than after minutes of data.
+      const big = tooBig(file);
+      if (big) {
+        problems.push(big);
+        continue;
+      }
       const body = new FormData();
       body.append("file", file);
       body.append("articleId", article.id);
-      const res = await fetch("/api/uploads", { method: "POST", body });
+      setProgress({ name: file.name, percent: 0 });
+      const res = await sendWithProgress("/api/uploads", body, (percent) =>
+        setProgress({ name: file.name, percent }),
+      );
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        setMessage(data.error ?? `Could not upload ${file.name}`);
+        problems.push(uploadFailure(file.name, res.status, res.data));
         continue;
       }
-      const { media: created } = await res.json();
+      const created = res.data.media as MediaItem;
       setMedia((m) => [...m, created]);
     }
+    setProgress(null);
     setUploading(false);
+    if (problems.length) setMessage(problems.join(" "));
     if (fileRef.current) fileRef.current.value = "";
     router.refresh();
   }
@@ -414,7 +429,7 @@ export function Composer({
                 ref={fileRef}
                 type="file"
                 multiple
-                accept="image/*,video/mp4,video/webm"
+                accept="image/*,video/mp4,video/webm,video/quicktime"
                 onChange={(e) => void upload(e.target.files)}
                 className="hidden"
               />
@@ -430,6 +445,22 @@ export function Composer({
             </>
           ) : null}
         </div>
+
+        {progress ? (
+          <div className="mt-3 grid gap-1" role="status" aria-live="polite">
+            <span className="text-xs text-ink-soft">
+              {progress.name} · {progress.percent}%
+            </span>
+            <span className="h-2 overflow-hidden rounded-full bg-paper-soft">
+              <span
+                data-upload-progress
+                className="block h-full rounded-full bg-navy transition-[width]"
+                style={{ width: `${progress.percent}%` }}
+              />
+            </span>
+          </div>
+        ) : null}
+        {!locked ? <p className="mt-2 text-xs text-ink-soft">{w("compose.videoLink")}</p> : null}
 
         {media.length > 0 ? (
           <ul className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">

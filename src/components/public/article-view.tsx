@@ -37,7 +37,24 @@ export async function ArticleView({ locale, slug }: { locale: Locale; slug: stri
     .filter((m) => m.isEvidence && m.url !== article.coverImage)
     .sort((a, b) => a.sortOrder - b.sortOrder);
   // How many pieces the right-hand panel carries is the owner's decision.
-  const related = await relatedArticles(locale, article.id, article.category, site.maxRelated);
+  // The side panel takes the first few; the row under the article (like the
+  // Guardian's "More on this story") takes the next four, so the two never
+  // repeat each other.
+  const pool = await relatedArticles(locale, article.id, article.category, site.maxRelated + 4);
+  const related = pool.slice(0, site.maxRelated);
+  const moreOnThis = pool.slice(site.maxRelated, site.maxRelated + 4);
+
+  // The owner's notice for the end of every article, in this side's language
+  // or, if he only wrote one, the other.
+  const notice = site.articleNoticeOn
+    ? {
+        body: (locale === "BN" ? site.articleNoticeBn : site.articleNoticeEn).trim() ||
+          (locale === "BN" ? site.articleNoticeEn : site.articleNoticeBn).trim(),
+        button: (locale === "BN" ? site.articleNoticeButtonBn : site.articleNoticeButtonEn).trim() ||
+          (locale === "BN" ? site.articleNoticeButtonEn : site.articleNoticeButtonBn).trim(),
+        url: site.articleNoticeUrl.trim(),
+      }
+    : null;
 
   return (
     <div
@@ -177,6 +194,23 @@ export async function ArticleView({ locale, slug }: { locale: Locale; slug: stri
             </section>
           ) : null}
 
+          {notice?.body ? (
+            <aside
+              data-article-notice
+              className="mt-10 rounded-xl border-t-4 border-brand bg-amber-50/60 p-5 text-[15px] leading-relaxed ring-1 ring-line"
+            >
+              <div className="prose-article [&>h2]:mt-0 [&>h2]:text-xl">{renderBody(notice.body)}</div>
+              {notice.button && notice.url ? (
+                <Link
+                  href={notice.url}
+                  className="mt-4 inline-block rounded-full bg-brand px-5 py-2.5 text-sm font-medium text-white hover:bg-brand-dark"
+                >
+                  {notice.button}
+                </Link>
+              ) : null}
+            </aside>
+          ) : null}
+
           {/* A name the desk typed has no account behind it, so there is no
               profile to introduce and no bio to print. */}
           {article.author.id || article.author.bio ? (
@@ -251,6 +285,33 @@ export async function ArticleView({ locale, slug }: { locale: Locale; slug: stri
           ) : null}
         </aside>
       </main>
+
+      {moreOnThis.length > 0 ? (
+        <section data-more-on-this className={`${SHELL} border-t-2 border-ink pb-16 pt-6`}>
+          <h2 className="mb-5 font-serif text-2xl font-bold">{copy.moreOnThisStory}</h2>
+          <ul className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            {moreOnThis.map((r) => (
+              <li key={r.href}>
+                <Link href={r.href} className="group block">
+                  {r.coverImage ? (
+                    <span className="block aspect-16/9 overflow-hidden rounded-sm bg-paper-soft">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={`${r.coverImage}?w=480`} alt="" loading="lazy" decoding="async" className="size-full object-cover" />
+                    </span>
+                  ) : null}
+                  <span className="mt-2 block text-[12px] font-bold uppercase tracking-wide text-brand">
+                    {copy.sections[r.category] ?? r.category}
+                  </span>
+                  <span className="mt-0.5 block font-serif text-lg font-bold leading-snug group-hover:underline">
+                    {r.title}
+                  </span>
+                  <span className="mt-1 block text-xs text-ink-soft">{r.author.name}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
       <SiteFooter locale={locale} />
     </div>
   );
