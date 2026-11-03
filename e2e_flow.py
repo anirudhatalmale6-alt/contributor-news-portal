@@ -3781,6 +3781,34 @@ def main():
             "Photos can be up to 20 MB" in vxp.inner_text("main"),
             vxp.inner_text("main")[:200].replace("\n", " "),
         )
+        # The video his contributor uploaded on 27 October had a Bangla name,
+        # and its download button failed: a header cannot carry Bangla as is.
+        bn_clip = vxp.request.post(
+            f"{BASE}/api/uploads",
+            multipart={
+                "articleId": draft["id"],
+                "file": {"name": "LIVE_মুক্তিযোদ্ধা ভিডিও.mp4", "mimeType": "video/mp4", "buffer": clip[: 3 * 1024 * 1024]},
+            },
+        ).json()["media"]
+        r = vxp.request.get(f"{BASE}{bn_clip['url']}?download=1")
+        check(
+            "a video with a Bangla file name can be downloaded under that name",
+            r.status == 200 and "UTF-8''" in r.headers.get("content-disposition", "")
+            and len(r.body()) == 3 * 1024 * 1024,
+            f"{r.status} {r.headers.get('content-disposition', '')[:80]}",
+        )
+        r = vxp.request.get(f"{BASE}{bn_clip['url']}", headers={"Range": "bytes=0-1"})
+        check(
+            "a phone asking for the first two bytes of a video gets exactly those (iPhones need this to play it)",
+            r.status == 206 and r.headers.get("content-range") == f"bytes 0-1/{3 * 1024 * 1024}" and len(r.body()) == 2,
+            f"{r.status} {r.headers.get('content-range')}",
+        )
+        r = vxp.request.get(f"{BASE}{bn_clip['url']}", headers={"Range": "bytes=1048576-"})
+        check(
+            "and skipping ahead in a video sends only the rest of it",
+            r.status == 206 and len(r.body()) == 2 * 1024 * 1024,
+            f"{r.status} {len(r.body())}",
+        )
         vxp.request.delete(f"{BASE}/api/drafts/{draft['id']}")
         vx_c.close()
 

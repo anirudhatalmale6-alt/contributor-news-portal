@@ -100,3 +100,26 @@ export async function readUpload(name: string): Promise<StoredFile | null> {
     return null;
   }
 }
+
+/**
+ * Where a file sits on disk and how big it is, without reading it. Lets the
+ * media route send a slice of a video (what a phone asks for when it starts
+ * playing or skips ahead) instead of loading the whole clip into memory.
+ * Null on the database driver, or when there is no such file.
+ */
+export async function locateUpload(name: string) {
+  if (driver === "db") return null;
+  const file = path.join(uploadDir(), name);
+  try {
+    const info = await stat(file);
+    if (!info.isFile()) return null;
+    return {
+      path: file,
+      size: info.size,
+      contentType: contentTypeFor(name),
+      etag: `"${info.size.toString(16)}-${Math.trunc(info.mtimeMs).toString(16)}"`,
+    };
+  } catch {
+    return null;
+  }
+}
