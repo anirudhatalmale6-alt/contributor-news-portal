@@ -1,7 +1,7 @@
 import { renderBody } from "@/components/rich-text";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { articleForLocale, relatedArticles } from "@/lib/articles";
+import { articleForLocale, feedArticles, relatedArticles, type LocalisedArticle } from "@/lib/articles";
 import { AdSlot } from "@/components/ad-slot";
 import { SiteHeader } from "@/components/site-header";
 import { siteSettings } from "@/lib/settings";
@@ -43,6 +43,25 @@ export async function ArticleView({ locale, slug }: { locale: Locale; slug: stri
   const pool = await relatedArticles(locale, article.id, article.category, site.maxRelated + 4);
   const related = pool.slice(0, site.maxRelated);
   const moreOnThis = pool.slice(site.maxRelated, site.maxRelated + 4);
+
+  // On a desktop the column of related pieces down the right runs far longer
+  // than most articles, which left a big empty space under the text. That
+  // space now carries the newest pieces from across the paper, a few from
+  // each section in turn so it is not all one section, and none of them a
+  // piece already on the page.
+  const onPage = new Set([article.href, ...pool.map((a) => a.href)]);
+  const recent = (await feedArticles(locale, "All", 40)).filter((a) => !onPage.has(a.href));
+  const fillCount = Math.max(4, site.maxRelated);
+  const fromEverySection: LocalisedArticle[] = [];
+  const bySection = new Map<string, LocalisedArticle[]>();
+  for (const a of recent) bySection.set(a.category, [...(bySection.get(a.category) ?? []), a]);
+  while (fromEverySection.length < fillCount && [...bySection.values()].some((l) => l.length)) {
+    for (const list of bySection.values()) {
+      const next = list.shift();
+      if (next) fromEverySection.push(next);
+      if (fromEverySection.length >= fillCount) break;
+    }
+  }
 
   // The owner's notice for the end of every article, in this side's language
   // or, if he only wrote one, the other.
@@ -240,6 +259,33 @@ export async function ArticleView({ locale, slug }: { locale: Locale; slug: stri
           <AdSlot slot="article" locale={locale} />
 
         </article>
+
+        {fromEverySection.length > 0 ? (
+          <section data-latest-fill className="mt-12 border-t-2 border-ink pt-5">
+            <h2 className="mb-5 font-serif text-2xl font-bold">{copy.latestNews}</h2>
+            <ul className="grid gap-x-6 gap-y-7 sm:grid-cols-2">
+              {fromEverySection.map((r) => (
+                <li key={r.href}>
+                  <Link href={r.href} className="group block">
+                    {r.coverImage ? (
+                      <span className="block aspect-16/9 overflow-hidden rounded-sm bg-paper-soft">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={`${r.coverImage}?w=480`} alt="" loading="lazy" decoding="async" className="size-full object-cover" />
+                      </span>
+                    ) : null}
+                    <span className="mt-2 block text-[12px] font-bold uppercase tracking-wide text-brand">
+                      {copy.sections[r.category] ?? r.category}
+                    </span>
+                    <span className="mt-0.5 block font-serif text-lg font-bold leading-snug group-hover:underline">
+                      {r.title}
+                    </span>
+                    <span className="mt-1 block text-xs text-ink-soft">{r.author.name}</span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
         </div>
 
         {/* Other news, as rectangular blocks down the right. It sticks as you

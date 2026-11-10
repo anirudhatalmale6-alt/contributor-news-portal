@@ -43,14 +43,15 @@ export default async function EditorialPage({
       : {}),
   };
 
-  // A review queue wants the oldest first so nothing waits behind newer work.
-  // A list of published work wants the opposite: the newest piece is the one
-  // most likely to need a correction.
+  // Newest first everywhere. The owner wants a piece that has just come in at
+  // the top of the review queue, not at the bottom of a long list (it used to
+  // be oldest first, so each new submission landed out of sight). Published
+  // work is newest first too: the newest piece is the likeliest to need a fix.
   const orderBy =
     status === "APPROVED"
       ? [{ publishedAt: "desc" as const }, { updatedAt: "desc" as const }]
       : status === "SUBMITTED"
-        ? [{ submittedAt: "asc" as const }, { updatedAt: "desc" as const }]
+        ? [{ submittedAt: "desc" as const }, { updatedAt: "desc" as const }]
         : [{ updatedAt: "desc" as const }];
 
   const [articles, settings, counts] = await Promise.all([

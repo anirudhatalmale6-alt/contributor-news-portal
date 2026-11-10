@@ -33,6 +33,7 @@ async function main() {
     create: {
       email: email.toLowerCase(),
       name,
+      publicName: name,
       role: "ADMIN",
       passwordHash: await bcrypt.hash(password, 11),
     },

@@ -40,9 +40,18 @@ export async function PUT(req: Request) {
       );
     }
 
+    // The byline is the desk's. An account that somehow has none stored yet
+    // keeps the name it has now as its byline, before that name changes -
+    // otherwise renaming the account would quietly rename every article.
+    const current = await prisma.user.findUnique({
+      where: { id: me.id },
+      select: { name: true, publicName: true },
+    });
+    const freeze = current && !current.publicName?.trim() ? { publicName: current.name } : {};
+
     const user = await prisma.user.update({
       where: { id: me.id },
-      data: profileData(parsed.data),
+      data: { ...profileData(parsed.data), ...freeze },
       select: {
         id: true,
         name: true,

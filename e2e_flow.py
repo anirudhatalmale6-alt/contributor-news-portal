@@ -2953,6 +2953,31 @@ def main():
         sp = s30.new_page()
         sign_in(sp, "admin@thedocument.test", STAFF_PASS)
 
+        # The section page's blocks fill in order (lead, three under it, the
+        # left column, a row of four, the list), so its checks need a section
+        # with enough stories. A freshly seeded database has only a handful;
+        # on a local run, top Culture up to nine published English pieces.
+        if "127.0.0.1" in BASE or "localhost" in BASE:
+            have = len(
+                [a for a in sp.request.get(f"{BASE}/api/articles?category=Culture&perPage=50").json()["articles"]]
+            )
+            for n in range(max(0, 9 - have)):
+                d = sp.request.post(f"{BASE}/api/drafts", data={"language": "EN"}).json()["article"]
+                sp.request.patch(
+                    f"{BASE}/api/drafts/{d['id']}",
+                    data={
+                        "title": f"Culture desk note {n + 1} {STAMP}",
+                        "body": "A short culture piece filed by the desk so the section page has enough stories to lay out.",
+                        "category": "Culture",
+                    },
+                )
+                sp.request.post(f"{BASE}/api/drafts/{d['id']}/submit", data={})
+                sp.request.put(
+                    f"{BASE}/api/editorial/{d['id']}/translation",
+                    data={"locale": "BN", "title": f"সংস্কৃতি ডেস্ক নোট {n + 1}", "body": "বিভাগের পাতার জন্য একটি ছোট লেখা।"},
+                )
+                sp.request.post(f"{BASE}/api/editorial/{d['id']}/decision", data={"decision": "APPROVE", "payoutCents": 0})
+
         go(sp, f"{BASE}/admin")
         sp.wait_for_timeout(SETTLE_MS)
         rail_was = sp.input_value('#site-settings input[name="maxSectionRail"]')
@@ -2971,10 +2996,16 @@ def main():
             order.startswith("H2"),
             order,
         )
+        # Fill order is lead, three under it, then the left column - so the
+        # column only has stories once the section has more than four.
+        in_section = 1 + sum(
+            sp.locator(f'main [data-block="{b}"] article').count() for b in ("under-lead", "left", "cards", "list")
+        )
+        left_n = sp.locator('main [data-block="left"] article').count()
         check(
-            "a column of headlines runs down the left, The Hindu's way",
-            sp.locator('main [data-block="left"] article').count() >= 2,
-            str(sp.locator('main [data-block="left"] article').count()),
+            "a column of headlines runs down the left, The Hindu's way, once there are enough stories",
+            (left_n >= 1) if in_section > 4 else (left_n == 0),
+            f"{left_n} in the column, {in_section} in the section",
         )
         check(
             "and the newest pieces from the whole paper run down the right",
@@ -3880,6 +3911,71 @@ def main():
         adp.click('button:has-text("Save site settings")')
         adp.wait_for_selector("text=Refresh the public site", timeout=20000)
         ad_c.close()
+
+        # --- 10y. the review queue is newest first; no gap under an article --
+        qy_c = ctx.browser.new_context(viewport=DESKTOP, http_credentials=GATE)
+        qyp = qy_c.new_page()
+        sign_in(qyp, "maya@thedocument.test", STAFF_PASS)
+        made = []
+        for tag in ("first", "second"):
+            d = qyp.request.post(f"{BASE}/api/drafts", data={"language": "EN"}).json()["article"]
+            qyp.request.patch(
+                f"{BASE}/api/drafts/{d['id']}",
+                data={"title": f"Queue order {tag} {STAMP}", "body": "Filed to check the order of the review queue, newest first.", "category": "Politics"},
+            )
+            qyp.request.post(f"{BASE}/api/drafts/{d['id']}/submit", data={"contactPhone": "01711000111"})
+            made.append(d["id"])
+            qyp.wait_for_timeout(1100)
+        qy_c.close()
+        ed_c = ctx.browser.new_context(viewport=DESKTOP, http_credentials=GATE)
+        edp = ed_c.new_page()
+        sign_in(edp, "editor@thedocument.test", STAFF_PASS)
+        go(edp, f"{BASE}/editorial")
+        rows = [t.strip() for t in edp.locator("main li").all_inner_texts()]
+        first_at = next((i for i, t in enumerate(rows) if f"Queue order first {STAMP}" in t), None)
+        second_at = next((i for i, t in enumerate(rows) if f"Queue order second {STAMP}" in t), None)
+        check(
+            "the review queue puts the newest submission at the top",
+            second_at is not None and first_at is not None and second_at < first_at and second_at <= 1,
+            f"second={second_at} first={first_at}",
+        )
+        ed_c.close()
+        # Clear the two test pieces away (deleting is an admin's job).
+        cl_c = ctx.browser.new_context(viewport=DESKTOP, http_credentials=GATE)
+        clp = cl_c.new_page()
+        sign_in(clp, "admin@thedocument.test", STAFF_PASS)
+        for i in made:
+            clp.request.delete(f"{BASE}/api/editorial/{i}/delete")
+        cl_c.close()
+
+        gp_c = ctx.browser.new_context(viewport=DESKTOP, http_credentials=GATE)
+        gpp = gp_c.new_page()
+        go(gpp, BASE)
+        gpp.locator('main a[href^="/article/"]').first.click()
+        gpp.wait_for_url("**/article/**", timeout=20000)
+        wait_article(gpp)
+        fill = [a.get_attribute("href") for a in gpp.locator("[data-latest-fill] a").all()]
+        side = {a.get_attribute("href") for a in gpp.locator("main aside a[href*='/article/']").all()}
+        under = {a.get_attribute("href") for a in gpp.locator("[data-more-on-this] a").all()}
+        check(
+            "the space under the article carries the latest news, nothing repeated from elsewhere on the page",
+            len(fill) >= 2 and len(fill) == len(set(fill)) and not (set(fill) & (side | under)),
+            f"fill={len(fill)} shared={len(set(fill) & (side | under))}",
+        )
+        gap = gpp.evaluate("""() => {
+            const col = document.querySelector('main > div');
+            const aside = document.querySelector('main > aside');
+            const fill = document.querySelector('[data-latest-fill]');
+            if (!col || !aside || !fill) return null;
+            return Math.round(aside.getBoundingClientRect().bottom - fill.getBoundingClientRect().bottom);
+        }""")
+        check(
+            "and on a desktop the text column no longer ends far above the right-hand column",
+            gap is not None and gap < 700,
+            f"{gap}px left between them",
+        )
+        shot(gpp, "64-article-filled.png", scroll="[data-latest-fill]")
+        gp_c.close()
 
         # --- 11. mobile ------------------------------------------------------
         mob = ctx.browser.new_context(viewport=PHONE, device_scale_factor=2, http_credentials=GATE)

@@ -435,7 +435,7 @@ function upsertUser(
 ) {
   return prisma.user.upsert({
     where: { email },
-    create: { email, name, role, tier, passwordHash, bio, phone, whatsapp },
+    create: { email, name, publicName: name, role, tier, passwordHash, bio, phone, whatsapp },
     update: { name, role, tier, passwordHash, bio, phone, whatsapp },
   });
 }
