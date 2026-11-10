@@ -3977,6 +3977,60 @@ def main():
         shot(gpp, "64-article-filled.png", scroll="[data-latest-fill]")
         gp_c.close()
 
+        # --- 10z. front-page picks lapse after a day; sides spread across sections
+        if "127.0.0.1" in BASE or "localhost" in BASE:
+            import subprocess
+
+            def sql(q):
+                return subprocess.run(
+                    ["psql", "-h", "127.0.0.1", "-p", "55432", "-U", "portal", "-d", "newsportal", "-tAc", q],
+                    capture_output=True, text=True,
+                ).stdout.strip()
+
+            fz_c = ctx.browser.new_context(viewport=DESKTOP, http_credentials=GATE)
+            fzp = fz_c.new_page()
+            sign_in(fzp, "admin@thedocument.test", STAFF_PASS)
+            pick = fzp.request.get(f"{BASE}/api/articles?perPage=50").json()["articles"][-1]
+            r = fzp.request.patch(f"{BASE}/api/editorial/{pick['id']}/home-slot", data={"homeSlot": "LEFT"})
+            check("an editor can place a piece in the left column", r.status == 200, str(r.status))
+
+            def left_hrefs():
+                go(fzp, f"{BASE}/")
+                return [a.get_attribute("href") for a in fzp.locator('main aside:not([aria-label="Advertisement"])').first.locator("a").all()]
+
+            check(
+                "a fresh placement shows in the left column",
+                any(pick["slug"] in (h or "") for h in left_hrefs()),
+            )
+            # Make the placement 25 hours old, as if a day had passed.
+            sql(f"""UPDATE "Article" SET "homeSlotAt" = now() - interval '25 hours' WHERE id = '{pick['id']}'""")
+            fzp.wait_for_timeout(1500)
+            # The public page is cached for up to a minute; any write clears it.
+            fzp.request.patch(f"{BASE}/api/admin/site", data={})
+            check(
+                "after a day the placement lapses and the column fills itself again",
+                not any(pick["slug"] in (h or "") for h in left_hrefs()),
+            )
+            go(fzp, f"{BASE}/editorial/front-page")
+            check(
+                "and the board clears it too, so it never shows a pin that is not in force",
+                sql(f"""SELECT coalesce("homeSlot", 'none') FROM "Article" WHERE id = '{pick['id']}'""") == "none",
+            )
+
+            go(fzp, f"{BASE}/")
+            labels = fzp.evaluate(
+                """() => [...document.querySelectorAll('main aside:not([aria-label="Advertisement"])')]
+                       .flatMap((a) => [...a.querySelectorAll('a span.uppercase')].map((s) => s.textContent.trim()))
+                       .filter(Boolean)"""
+            )
+            check(
+                "the side columns carry news from several sections, not one",
+                len(set(labels)) >= 2,
+                str(sorted(set(labels))),
+            )
+            shot(fzp, "65-front-page-sides.png")
+            fz_c.close()
+
         # --- 11. mobile ------------------------------------------------------
         mob = ctx.browser.new_context(viewport=PHONE, device_scale_factor=2, http_credentials=GATE)
         mp = mob.new_page()

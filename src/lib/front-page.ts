@@ -86,3 +86,28 @@ export function planFrontPage<T>({
     automatic,
   };
 }
+
+/**
+ * The same newest-first list, reordered so the sections take turns: the
+ * newest piece of each section, then the next newest of each, and so on.
+ * The first `keep` stay exactly as they are, so the lead and the pieces
+ * under it are still simply the newest news; everything after (the side
+ * columns, the grid) gets a spread of sections instead of one busy section
+ * filling a whole column.
+ */
+export function takeTurnsBySection<T>(items: T[], section: (item: T) => string, keep = 3): T[] {
+  const head = items.slice(0, keep);
+  const groups = new Map<string, T[]>();
+  for (const item of items.slice(keep)) {
+    const key = section(item);
+    groups.set(key, [...(groups.get(key) ?? []), item]);
+  }
+  const out: T[] = [...head];
+  while ([...groups.values()].some((g) => g.length)) {
+    for (const g of groups.values()) {
+      const next = g.shift();
+      if (next) out.push(next);
+    }
+  }
+  return out;
+}

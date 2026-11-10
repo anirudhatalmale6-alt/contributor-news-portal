@@ -42,13 +42,14 @@ export async function PATCH(req: Request, { params }: Ctx) {
     if (homeSlot === "LEAD") {
       await prisma.article.updateMany({
         where: { homeSlot: "LEAD", id: { not: id } },
-        data: { homeSlot: null },
+        data: { homeSlot: null, homeSlotAt: null },
       });
     }
 
     const updated = await prisma.article.update({
       where: { id },
-      data: { homeSlot, homeOrder: homeOrder ?? 0 },
+      // The placement is dated so it can lapse after a day (see pinnedArticles).
+      data: { homeSlot, homeOrder: homeOrder ?? 0, homeSlotAt: homeSlot ? new Date() : null },
       select: { id: true, homeSlot: true, homeOrder: true },
     });
     refreshPublicPages();

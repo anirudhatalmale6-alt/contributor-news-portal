@@ -175,6 +175,10 @@ model Article {
   /// LEAD, STRIP (beside the masthead), LEFT, MIDDLE or RIGHT. Null means the
   /// page decides for itself, newest first, which is what most pieces do.
   homeSlot  String?
+  /// When an editor put it in that place. A manual placement lasts one day:
+  /// after that the place fills itself with the newest news again, so the
+  /// front page never goes stale because nobody remembered to unpin.
+  homeSlotAt DateTime?
 
   /// Leads its own section page. One per category: setting a new one clears
   /// the old. Nothing to do with the front page, so a piece can lead its

@@ -153,11 +153,18 @@ export async function sectionLeadArticle(locale: Locale, category: string) {
  * Returned slot by slot so the page can take what it was given and fill the
  * rest itself - a half-planned front page still has to look finished.
  */
+/** A manual placement on the front page lasts this long, then lapses. */
+export const PIN_LIFETIME_MS = 24 * 60 * 60 * 1000;
+export const pinCutoff = () => new Date(Date.now() - PIN_LIFETIME_MS);
+
 export async function pinnedArticles(locale: Locale) {
   const rows = await prisma.article.findMany({
     where: {
       status: "APPROVED",
       homeSlot: { not: null },
+      // Placed within the last day. An older placement has lapsed and the
+      // place fills itself with the newest news, as if it was never pinned.
+      homeSlotAt: { gte: pinCutoff() },
       OR: [{ language: locale }, { translations: { some: { locale } } }],
     },
     orderBy: [{ homeOrder: "asc" }, { publishedAt: "desc" }],

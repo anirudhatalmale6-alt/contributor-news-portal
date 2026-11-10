@@ -12,7 +12,7 @@ import { SiteFooter } from "@/components/site-footer";
 import { AdSlot } from "@/components/ad-slot";
 import { ArticleCard, RailItem, SHELL } from "@/components/ui";
 import { type Locale, localeMeta, t } from "@/lib/i18n";
-import { planFrontPage } from "@/lib/front-page";
+import { planFrontPage, takeTurnsBySection } from "@/lib/front-page";
 
 /**
  * The front page.
@@ -44,7 +44,9 @@ export async function Feed({ locale, category }: { locale: Locale; category: str
   // arranges the page on, so the two can never disagree.
   const { lead, underLead, leftRail, rightRail, strip, more } = planFrontPage({
     featured,
-    latest,
+    // Newest first for the lead and the two under it; after that the sections
+    // take turns, so the side columns carry a spread of the newest news.
+    latest: takeTurnsBySection(latest, (a) => a.category),
     pinned,
     key: (a) => a.href,
     // How many each position holds is the owner's decision, in Settings.

@@ -4,7 +4,8 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { currentUser, isStaff } from "@/lib/rbac";
 import { FrontPageBoard } from "./front-page-board";
-import { planFrontPage } from "@/lib/front-page";
+import { planFrontPage, takeTurnsBySection } from "@/lib/front-page";
+import { pinCutoff } from "@/lib/articles";
 
 export const metadata = { title: "Front page" };
 export const dynamic = "force-dynamic";
@@ -14,6 +15,16 @@ export default async function FrontPagePage() {
   const user = await currentUser();
   if (!user) redirect("/login");
   if (!isStaff(user.role)) redirect("/dashboard");
+
+  // Placements older than a day have lapsed on the public page already;
+  // clear them here too, so the board never shows a pin that is not in force.
+  await prisma.article.updateMany({
+    where: {
+      homeSlot: { not: null },
+      OR: [{ homeSlotAt: null }, { homeSlotAt: { lt: pinCutoff() } }],
+    },
+    data: { homeSlot: null, homeSlotAt: null },
+  });
 
   const published = await prisma.article.findMany({
     where: { status: "APPROVED" },
@@ -63,7 +74,7 @@ export default async function FrontPagePage() {
       .filter((a) => a.featured)
       .sort((x, y) => (y.featuredAt?.getTime() ?? 0) - (x.featuredAt?.getTime() ?? 0))
       .map(shape),
-    latest: onBanglaPage.map(shape),
+    latest: takeTurnsBySection(onBanglaPage.map(shape), (a) => a.category),
     pinned: pinnedBySlot,
     key: (p) => p.id,
   });
@@ -74,8 +85,10 @@ export default async function FrontPagePage() {
 
         <h1 className="font-serif text-2xl font-bold sm:text-3xl">Front page</h1>
         <p className="mt-1 max-w-2xl text-sm text-ink-soft">
-          Choose what sits where. Anything you leave empty fills itself with the newest published
-          work - and each position below shows you exactly which pieces that will be, in order.{" "}
+          Choose what sits where. A piece you place stays there for one day, then the place fills
+          itself again. Anything you leave empty fills itself with the newest published work, with the
+          side columns spread across the sections - and each position below shows you exactly which
+          pieces that will be, in order.{" "}
           <Link href="/" className="font-medium text-brand hover:underline">
             See the front page
           </Link>
